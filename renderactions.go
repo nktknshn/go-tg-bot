@@ -277,8 +277,14 @@ func ExecuteRenderActions[A any](ctx context.Context, renderer ChatRenderer, act
 		case *RenderActionReplace:
 			if a.RenderedElement.renderedKind() == KindRenderedBotMessage && a.NewElement.OutcomingKind() == KindOutcomingTextMessage {
 
+				logger.Debug("ExecuteRenderActions: replacing rendered element", zap.Any("a", a.RenderedElement))
+
 				outcoming := a.NewElement.(*OutcomingTextMessage[A])
 				renderedElement := a.RenderedElement.(*RenderedBotMessage[A])
+
+				logger.Debug("ExecuteRenderActions: replacing rendered element",
+					zap.Any("outcoming", outcoming), zap.Any("renderedElement", renderedElement),
+				)
 
 				message, err := renderer.Message(ctx, &ChatRendererMessageProps{
 					Text:          GetOrText(outcoming.Text, emptyString),

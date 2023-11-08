@@ -96,7 +96,7 @@ func getCallbackHandlersMap[A any](outcomingMessages []OutcomingMessage) map[str
 				for _, butt := range row {
 
 					logger.Info("Setting callback handler", zap.String("key", butt.CallbackData()))
-
+					butt := butt
 					callbackHandlers[butt.CallbackData()] = func() *A {
 						v := butt.OnClick()
 						return &v
@@ -167,7 +167,11 @@ func (a *Application[S, A]) PreRender(ac *ApplicationContext[S, A]) *PreRenderDa
 				res.OutcomingMessages,
 			)
 
-			logger.Info("RenderActions", zap.Any("actions", actions))
+			// logger.Info("RenderActions", zap.Any("actions", actions))
+
+			for _, a := range actions {
+				logger.Info("RenderActions", zap.Any("action", a))
+			}
 
 			rendered, err := ExecuteRenderActions[A](
 				context.Background(),

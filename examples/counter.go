@@ -102,6 +102,8 @@ var counterApp = &tgbot.Application[State, Action]{
 		if ac.State.CallbackHandler != nil {
 			action := ac.State.CallbackHandler(tc.Update.CallbackQuery.Data)
 
+			ac.Logger.Debug("HandleCallback", zap.Any("action", action))
+
 			if action == nil {
 				return
 			}
@@ -144,11 +146,13 @@ var counterApp = &tgbot.Application[State, Action]{
 }
 
 func EmulatorMain(
+	server *emulator.FakeServer,
 	dispatcher *tgbot.ChatsDispatcher,
 ) {
 	a := app.New()
 	w := a.NewWindow("Emulator")
 	bot := emulator.NewFakeBot()
+
 	chatID := int64(1)
 
 	handlers := emulator.ActionsHandler{
@@ -191,20 +195,30 @@ func EmulatorMain(
 		},
 	}
 
-	output := emulator.EmulatorDraw(
-		emulator.FakeServerToInput(server),
-		&handlers,
-	)
+	updateInterface := func() {
 
-	wc := container.NewGridWrap(
-		fyne.Size{Width: 300},
-		container.NewStack(
-			canvas.NewRectangle(color.Black),
-			output,
-		),
-	)
+		output := emulator.EmulatorDraw(
+			emulator.FakeServerToInput(server),
+			&handlers,
+		)
 
-	w.SetContent(container.NewCenter(wc))
+		wc := container.NewGridWrap(
+			fyne.Size{Width: 300},
+			container.NewStack(
+				canvas.NewRectangle(color.Black),
+				output,
+			),
+		)
+
+		w.SetContent(container.NewCenter(wc))
+	}
+
+	updateInterface()
+
+	server.SetUpdateCallback(func() {
+		go updateInterface()
+	})
+
 	w.ShowAndRun()
 }
 
@@ -217,6 +231,6 @@ func main() {
 		},
 	})
 
-	EmulatorMain(dispatcher)
+	EmulatorMain(server, dispatcher)
 
 }

@@ -52,10 +52,10 @@ func (r *RenderedUserMessage) Equal(other RenderedElement) bool {
 	return r.MessageId == otherUserMessage.MessageId
 }
 
-func (r *RenderedUserMessage) String() string {
+func (r RenderedUserMessage) String() string {
 	return fmt.Sprintf(
-		"RenderedUserMessage{OutcomingUserMessage: %v, MessageId: %v}",
-		r.OutcomingUserMessage, r.MessageId,
+		"RenderedUserMessage{MessageId: %v, OutcomingUserMessage: %v}",
+		r.MessageId, r.OutcomingUserMessage,
 	)
 }
 
@@ -67,7 +67,7 @@ type RenderedBotMessage[A any] struct {
 func (rbm RenderedBotMessage[A]) String() string {
 	return fmt.Sprintf(
 		"RenderedBotMessage{OutcomingTextMessage: %v, Message: %v}",
-		rbm.OutcomingTextMessage, rbm.Message,
+		rbm.OutcomingTextMessage, rbm.Message.ID,
 	)
 }
 
@@ -99,7 +99,7 @@ type RenderedBotDocumentMessage struct {
 	OutcomingFileMessage *OutcomingFileMessage
 }
 
-func (r *RenderedBotDocumentMessage) String() string {
+func (r RenderedBotDocumentMessage) String() string {
 	return fmt.Sprintf(
 		"RenderedBotDocumentMessage{OutcomingFileMessage: %v}",
 		r.OutcomingFileMessage,

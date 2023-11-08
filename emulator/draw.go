@@ -35,8 +35,17 @@ func EmulatorDraw(inp *DrawInput, handler *ActionsHandler) *fyne.Container {
 			row := container.NewHBox()
 
 			for _, b := range r.Butts {
+				b := b
 				butt := widget.NewButton(
-					b.Title, func() { handler.CallbackHandlers(b.CallbackString) },
+					b.Title,
+					func() {
+						data := b.CallbackString
+						if data == "" {
+							data = b.Title
+						}
+
+						handler.CallbackHandlers(data)
+					},
 				)
 				row.Add(butt)
 			}

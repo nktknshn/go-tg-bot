@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-telegram/bot/models"
 	tgbot "github.com/nktknshn/go-tg-bot"
+	"go.uber.org/zap"
 )
 
 /*
@@ -12,8 +13,9 @@ This is a fake telegram server for testing purposes
 */
 
 type FakeServer struct {
-	lastID   int
-	Messages map[int]*models.Message
+	lastID         int
+	Messages       map[int]*models.Message
+	updateCallback func()
 }
 
 func NewFakeServer() *FakeServer {
@@ -21,6 +23,10 @@ func NewFakeServer() *FakeServer {
 		lastID:   0,
 		Messages: make(map[int]*models.Message),
 	}
+}
+
+func (fs *FakeServer) SetUpdateCallback(cb func()) {
+	fs.updateCallback = cb
 }
 
 func (fs *FakeServer) getNewID() int {
@@ -32,7 +38,7 @@ func (fs *FakeServer) createMessage(props *tgbot.ChatRendererMessageProps) *mode
 	botMessage := &models.Message{
 		ID:          fs.getNewID(),
 		Text:        props.Text,
-		ReplyMarkup: models.InlineKeyboardMarkup{},
+		ReplyMarkup: props.Extra,
 	}
 
 	fs.Messages[botMessage.ID] = botMessage
@@ -43,6 +49,11 @@ func (fs *FakeServer) createMessage(props *tgbot.ChatRendererMessageProps) *mode
 func (fs *FakeServer) Delete(messageID int) error {
 	if _, ok := fs.Messages[messageID]; ok {
 		delete(fs.Messages, messageID)
+
+		if fs.updateCallback != nil {
+			fs.updateCallback()
+		}
+
 		return nil
 	}
 
@@ -53,6 +64,9 @@ func (fs *FakeServer) Message(ctx context.Context, props *tgbot.ChatRendererMess
 
 	var editMessage bool
 	var deleteMessage bool
+	var m *models.Message
+
+	logger.Debug("FakeServer.Message", zap.Any("props", props), zap.Int("total", len(fs.Messages)))
 
 	if props.TargetMessage != nil {
 		targetID := props.TargetMessage.ID
@@ -70,12 +84,20 @@ func (fs *FakeServer) Message(ctx context.Context, props *tgbot.ChatRendererMess
 
 		if deleteMessage {
 			delete(fs.Messages, targetID)
-
+			m = fs.createMessage(props)
 		} else if editMessage {
-			m := fs.Messages[targetID]
+			m = fs.Messages[targetID]
 			m.Text = props.Text
 		}
+	} else {
+		m = fs.createMessage(props)
 	}
 
-	return fs.createMessage(props), nil
+	if fs.updateCallback != nil {
+		fs.updateCallback()
+	}
+
+	logger.Debug("Returning", zap.Any("m", m))
+
+	return m, nil
 }

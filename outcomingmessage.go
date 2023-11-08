@@ -168,7 +168,20 @@ func (t *OutcomingTextMessage[T]) concatText(text string) {
 // }
 
 func (t *OutcomingTextMessage[T]) getExtra() models.InlineKeyboardMarkup {
-	return models.InlineKeyboardMarkup{}
+	res := models.InlineKeyboardMarkup{}
+
+	for _, row := range t.Buttons {
+		br := make([]models.InlineKeyboardButton, 0)
+		for _, b := range row {
+			br = append(br, models.InlineKeyboardButton{
+				Text:         b.Text,
+				CallbackData: b.CallbackData(),
+			})
+		}
+		res.InlineKeyboard = append(res.InlineKeyboard, br)
+	}
+
+	return res
 }
 
 func (t *OutcomingTextMessage[T]) AddButton(button *ElementButton[T]) {
