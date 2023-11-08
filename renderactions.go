@@ -2,6 +2,7 @@ package tgbot
 
 import (
 	"context"
+	"fmt"
 	"slices"
 
 	"go.uber.org/zap"
@@ -18,6 +19,7 @@ const (
 
 type RenderActionType interface {
 	RenderActionKind() string
+	String() string
 }
 
 type RenderActionKeep struct {
@@ -29,6 +31,10 @@ func (a *RenderActionKeep) RenderActionKind() string {
 	return KindRenderActionKeep
 }
 
+func (a RenderActionKeep) String() string {
+	return fmt.Sprintf("RenderActionKeep{RenderedElement: %v, NewElement: %v}", a.RenderedElement, a.NewElement)
+}
+
 type RenderActionReplace struct {
 	RenderedElement RenderedElement
 	NewElement      OutcomingMessage
@@ -36,6 +42,10 @@ type RenderActionReplace struct {
 
 func (a *RenderActionReplace) RenderActionKind() string {
 	return KindRenderActionReplace
+}
+
+func (a RenderActionReplace) String() string {
+	return fmt.Sprintf("RenderActionReplace{RenderedElement: %v, NewElement: %v}", a.RenderedElement, a.NewElement)
 }
 
 type RenderActionRemove struct {
@@ -46,6 +56,10 @@ func (a *RenderActionRemove) RenderActionKind() string {
 	return KindRenderActionRemove
 }
 
+func (a RenderActionRemove) String() string {
+	return fmt.Sprintf("RenderActionRemove{RenderedElement: %v}", a.RenderedElement)
+}
+
 type RenderActionCreate struct {
 	NewElement OutcomingMessage
 }
@@ -54,7 +68,11 @@ func (a *RenderActionCreate) RenderActionKind() string {
 	return KindRenderActionCreate
 }
 
-func areSame(a RenderedElement, b OutcomingMessage) bool {
+func (a RenderActionCreate) String() string {
+	return fmt.Sprintf("RenderActionCreate{NewElement: %v}", a.NewElement)
+}
+
+func areSame[A any](a RenderedElement, b OutcomingMessage) bool {
 
 	if b == nil {
 		return false
@@ -66,8 +84,8 @@ func areSame(a RenderedElement, b OutcomingMessage) bool {
 
 		return m.MessageId == om.ElementUserMessage.MessageId
 	} else if a.renderedKind() == KindRenderedBotMessage && b.OutcomingKind() == KindOutcomingTextMessage {
-		m := a.(*RenderedBotMessage)
-		om := b.(*OutcomingTextMessage[any])
+		m := a.(*RenderedBotMessage[A])
+		om := b.(*OutcomingTextMessage[A])
 
 		return m.OutcomingTextMessage.Equal(om)
 
@@ -91,13 +109,13 @@ func areSame(a RenderedElement, b OutcomingMessage) bool {
 Rules are:
 1. never talk about the fight club
 */
-func GetRenderActions(renderedElements []RenderedElement, nextElements []OutcomingMessage) []RenderActionType {
+func GetRenderActions[A any](renderedElements []RenderedElement, nextElements []OutcomingMessage) []RenderActionType {
 
 	logger := GetLogger()
 
 	logger.Debug("GetRenderActions",
-		zap.Any("renderedElements", renderedElements),
-		zap.Any("nextElements", nextElements),
+		zap.Any("renderedElements", len(renderedElements)),
+		zap.Any("nextElements", len(nextElements)),
 	)
 
 	actions := make([]RenderActionType, 0)
@@ -134,9 +152,9 @@ func GetRenderActions(renderedElements []RenderedElement, nextElements []Outcomi
 			n = nil
 		}
 
-		logger.Debug("GetRenderActions iteration",
-			zap.Any("r", r), zap.Any("n", n), zap.Any("idx", idx), zap.Any("len(result)", len(result)),
-		)
+		// logger.Debug("GetRenderActions iteration",
+		// 	zap.Any("r", r), zap.Any("n", n), zap.Any("idx", idx), zap.Any("len(result)", len(result)),
+		// )
 
 		if n == nil {
 			// we are out of new elements to render so we can delete all remaining rendered elements
@@ -147,9 +165,9 @@ func GetRenderActions(renderedElements []RenderedElement, nextElements []Outcomi
 			// we are out of rendered elements so we can create all remaining new elements
 			actions = append(actions, &RenderActionCreate{NewElement: n})
 			continue
-		} else if areSame(r, n) {
+		} else if areSame[A](r, n) {
 			actions = append(actions, &RenderActionKeep{RenderedElement: r, NewElement: n})
-		} else if slices.IndexFunc(renderedElements, func(re RenderedElement) bool { return areSame(re, n) }) > idx {
+		} else if slices.IndexFunc(renderedElements, func(re RenderedElement) bool { return areSame[A](re, n) }) > idx {
 			// if we have the next outcoming element rendered somewhere else ahead of current rendered element
 			// we can delete current rendered element
 			result = slices.Delete(result, idx, idx+1)
@@ -184,9 +202,10 @@ func GetOrText(text string, fallback string) string {
 	return text
 }
 
-func create(ctx context.Context, renderer ChatRenderer, action *RenderActionCreate) (RenderedElement, error) {
+func create[A any](ctx context.Context, renderer ChatRenderer, action *RenderActionCreate) (RenderedElement, error) {
+
 	switch a := action.NewElement.(type) {
-	case *OutcomingTextMessage[any]:
+	case *OutcomingTextMessage[A]:
 
 		message, err := renderer.Message(ctx, &ChatRendererMessageProps{
 			Text:  GetOrText(a.Text, emptyString),
@@ -197,7 +216,7 @@ func create(ctx context.Context, renderer ChatRenderer, action *RenderActionCrea
 			return nil, err
 		}
 
-		return &RenderedBotMessage{
+		return &RenderedBotMessage[A]{
 			Message:              message,
 			OutcomingTextMessage: a,
 		}, nil
@@ -221,7 +240,7 @@ func create(ctx context.Context, renderer ChatRenderer, action *RenderActionCrea
 }
 
 // Takes actions and applies them to the renderer
-func ExecuteRenderActions(ctx context.Context, renderer ChatRenderer, actions []RenderActionType) ([]RenderedElement, error) {
+func ExecuteRenderActions[A any](ctx context.Context, renderer ChatRenderer, actions []RenderActionType) ([]RenderedElement, error) {
 	result := make([]RenderedElement, 0)
 	actionsRemove := make([]RenderActionRemove, 0)
 	actionsOther := make([]RenderActionType, 0)
@@ -238,7 +257,7 @@ func ExecuteRenderActions(ctx context.Context, renderer ChatRenderer, actions []
 	for _, action := range actionsOther {
 		switch a := action.(type) {
 		case *RenderActionCreate:
-			rendereredMessage, err := create(ctx, renderer, a)
+			rendereredMessage, err := create[A](ctx, renderer, a)
 
 			if err != nil {
 				return nil, err
@@ -247,9 +266,9 @@ func ExecuteRenderActions(ctx context.Context, renderer ChatRenderer, actions []
 			result = append(result, rendereredMessage)
 		case *RenderActionKeep:
 			if a.RenderedElement.renderedKind() == KindRenderedBotMessage && a.NewElement.OutcomingKind() == KindOutcomingTextMessage {
-				rendereredMessage := &RenderedBotMessage{
-					OutcomingTextMessage: a.NewElement.(*OutcomingTextMessage[any]),
-					Message:              a.RenderedElement.(*RenderedBotMessage).Message,
+				rendereredMessage := &RenderedBotMessage[A]{
+					OutcomingTextMessage: a.NewElement.(*OutcomingTextMessage[A]),
+					Message:              a.RenderedElement.(*RenderedBotMessage[A]).Message,
 				}
 
 				result = append(result, rendereredMessage)
@@ -258,8 +277,8 @@ func ExecuteRenderActions(ctx context.Context, renderer ChatRenderer, actions []
 		case *RenderActionReplace:
 			if a.RenderedElement.renderedKind() == KindRenderedBotMessage && a.NewElement.OutcomingKind() == KindOutcomingTextMessage {
 
-				outcoming := a.NewElement.(*OutcomingTextMessage[any])
-				renderedElement := a.RenderedElement.(*RenderedBotMessage)
+				outcoming := a.NewElement.(*OutcomingTextMessage[A])
+				renderedElement := a.RenderedElement.(*RenderedBotMessage[A])
 
 				message, err := renderer.Message(ctx, &ChatRendererMessageProps{
 					Text:          GetOrText(outcoming.Text, emptyString),
@@ -272,7 +291,7 @@ func ExecuteRenderActions(ctx context.Context, renderer ChatRenderer, actions []
 					return nil, err
 				}
 
-				rendereredMessage := &RenderedBotMessage{
+				rendereredMessage := &RenderedBotMessage[A]{
 					OutcomingTextMessage: outcoming,
 					Message:              message,
 				}

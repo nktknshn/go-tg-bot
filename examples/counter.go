@@ -4,6 +4,7 @@ import (
 	"context"
 	"image/color"
 	"math/rand"
+	"strconv"
 
 	fyne "fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -17,16 +18,40 @@ import (
 
 type State struct {
 	Counter int
+	Error   error
 }
 
 type Action struct {
 	Increment int
+	Error     error
 }
 
-func App(props struct{ counter int }) tgbot.Comp[Action] {
+func App(props struct {
+	counter int
+	err     error
+}) tgbot.Comp[Action] {
 	return func(o tgbot.O[Action]) {
 
+		o.InputHandler(func(s string) Action {
+
+			if s == "/start" {
+				return Action{}
+			}
+
+			v, err := strconv.Atoi(s)
+
+			if err != nil {
+				return Action{Error: err}
+			}
+
+			return Action{Increment: v}
+		})
+
 		o.Messagef("Counter value: %v", props.counter)
+		if props.err != nil {
+			o.Messagef("Error: %v", props.err)
+		}
+
 		o.Button("Increment", func() Action {
 			return Action{Increment: 1}
 		})
@@ -55,39 +80,51 @@ var counterApp = &tgbot.Application[State, Action]{
 		tc.Logger.Info("HandleAction", zap.Any("Increment", a.Increment))
 
 		ac.State.AppState.Counter += a.Increment
+		err := ac.App.RenderFunc(ac)
+
+		if err != nil {
+			tc.Logger.Error("Error rendering state", zap.Error(err))
+		}
 	},
 	HandleMessage: func(ac *tgbot.ApplicationContext[State, Action], tc *tgbot.TelegramContext) {
 		tc.Logger.Info("HandleMessage", zap.Any("text", tc.Update.Message.Text))
 
-		ac.State.InputHandler(tc)
+		if ac.State.InputHandler != nil {
+			action := ac.State.InputHandler(tc.Update.Message.Text)
+			ac.App.HandleAction(ac, tc, action)
+		} else {
+			tc.Logger.Error("Missing InputHandler")
+		}
 	},
 	HandleCallback: func(ac *tgbot.ApplicationContext[State, Action], tc *tgbot.TelegramContext) {
 		tc.Logger.Info("HandleCallback", zap.Any("data", tc.Update.CallbackQuery.Data))
 
-		act, err := ac.State.CallbackHandler(tc)
+		if ac.State.CallbackHandler != nil {
+			action := ac.State.CallbackHandler(tc.Update.CallbackQuery.Data)
 
-		if err != nil {
-			logger.Error("Error in HandleCallback", zap.Error(err))
-			return
+			if action == nil {
+				return
+			}
+
+			ac.App.HandleAction(ac, tc, *action)
+		} else {
+			tc.Logger.Error("Missing CallbackHandler")
 		}
 
-		ac.State.AppState.Counter += act.Increment
 	},
 	StateToComp: func(s State) tgbot.Comp[Action] {
-		return App(struct{ counter int }{
+		return App(struct {
+			counter int
+			err     error
+		}{
 			counter: s.Counter,
+			err:     nil,
 		})
 	},
 	RenderFunc: func(ac *tgbot.ApplicationContext[State, Action]) error {
 		logger.Info("RenderFunc")
 
-		res, err := ac.App.PreRender(ac)
-
-		if err != nil {
-			logger.Error("Error in RenderFunc", zap.Error(err))
-			return err
-		}
-
+		res := ac.App.PreRender(ac)
 		rendered, err := res.ExecuteRender(ac.State.Renderer)
 
 		if err != nil {

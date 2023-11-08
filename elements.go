@@ -1,5 +1,7 @@
 package tgbot
 
+import "fmt"
+
 const (
 	KindElementPhotoGroup   = "ElementPhotoGroup"
 	KindElementFile         = "ElementFile"
@@ -13,13 +15,13 @@ const (
 
 func EndMessage() *ElementMessagePart {
 	return &ElementMessagePart{
-		text: "",
+		Text: "",
 	}
 }
 
 func MessagePart(text string) *ElementMessagePart {
 	return &ElementMessagePart{
-		text: text,
+		Text: text,
 	}
 }
 
@@ -42,7 +44,7 @@ func Component[A any](comp Comp[A]) *ElementComponent[A] {
 	}
 }
 
-func AInputHandler[A any](handler InputHandler[A]) *ElementInputHandler[A] {
+func AInputHandler[A any](handler func(string) A) *ElementInputHandler[A] {
 	return &ElementInputHandler[A]{
 		Handler: handler,
 	}
@@ -50,18 +52,15 @@ func AInputHandler[A any](handler InputHandler[A]) *ElementInputHandler[A] {
 
 // Element is button, message, handler etc...
 type BasicElement interface {
+	String() string
 	elementKind() string
-	// Equal(other BasicElement) bool
 }
 
 // Element is BasicElement or another component etc...
 type Element interface {
+	String() string
 	elementKind() string
 }
-
-// func (e Element) String() string {
-// 	return e.elementKind()
-// }
 
 type ElementComponent[A any] struct {
 	comp Comp[A]
@@ -71,12 +70,20 @@ func (c *ElementComponent[A]) elementKind() string {
 	return KindElementComponent
 }
 
+func (c ElementComponent[A]) String() string {
+	return "ElementComponent{...}"
+}
+
 type ElementInputHandler[A any] struct {
-	Handler InputHandler[A]
+	Handler func(string) A
 }
 
 func (c *ElementInputHandler[A]) elementKind() string {
 	return KindElementInputHandler
+}
+
+func (c ElementInputHandler[A]) String() string {
+	return "ElementInputHandler{}"
 }
 
 type ElementPhotoGroup struct {
@@ -85,6 +92,10 @@ type ElementPhotoGroup struct {
 
 func (c *ElementPhotoGroup) elementKind() string {
 	return KindElementPhotoGroup
+}
+
+func (c ElementPhotoGroup) String() string {
+	return fmt.Sprintf("ElementPhotoGroup{photos=%v}", c.photos)
 }
 
 func (c *ElementPhotoGroup) Equal(other BasicElement) bool {
@@ -111,6 +122,10 @@ type ElementFile struct {
 	FileId string
 }
 
+func (ef ElementFile) String() string {
+	return fmt.Sprintf("ElementFile{FileId=%s}", ef.FileId)
+}
+
 func (c ElementFile) elementKind() string {
 	return KindElementFile
 }
@@ -133,12 +148,40 @@ func (c *ElementMessage) elementKind() string {
 	return KindElementMessage
 }
 
+func (c ElementMessage) String() string {
+	return fmt.Sprintf("ElementMessage{Text=%s}", c.Text)
+}
+
+func (c *ElementMessage) Equal(other BasicElement) bool {
+	if other.elementKind() != KindElementMessage {
+		return false
+	}
+
+	otherMessage := other.(*ElementMessage)
+
+	return c.Text == otherMessage.Text
+}
+
 type ElementMessagePart struct {
-	text string
+	Text string
 }
 
 func (c *ElementMessagePart) elementKind() string {
 	return KindElementMessagePart
+}
+
+func (c *ElementMessagePart) String() string {
+	return fmt.Sprintf("ElementMessagePart{Text=%s}", c.Text)
+}
+
+func (c *ElementMessagePart) Equal(other BasicElement) bool {
+	if other.elementKind() != KindElementMessagePart {
+		return false
+	}
+
+	otherMessagePart := other.(*ElementMessagePart)
+
+	return c.Text == otherMessagePart.Text
 }
 
 type ElementButton[A any] struct {
@@ -147,8 +190,30 @@ type ElementButton[A any] struct {
 	OnClick func() A
 }
 
+func (b *ElementButton[A]) CallbackData() string {
+	if b.Action != "" {
+		return b.Action
+	}
+
+	return b.Text
+}
+
 func (c *ElementButton[A]) elementKind() string {
 	return KindElementButton
+}
+
+func (c ElementButton[A]) String() string {
+	return fmt.Sprintf("ElementButton{Text=%s, Action=%s}", c.Text, c.Action)
+}
+
+func (c *ElementButton[A]) Equal(other BasicElement) bool {
+	if other.elementKind() != KindElementButton {
+		return false
+	}
+
+	otherButton := other.(*ElementButton[A])
+
+	return c.Text == otherButton.Text && c.Action == otherButton.Action
 }
 
 type ElementUserMessage struct {
@@ -157,4 +222,19 @@ type ElementUserMessage struct {
 
 func (c *ElementUserMessage) elementKind() string {
 	return KindElementUserMessage
+}
+
+func (c ElementUserMessage) String() string {
+	return fmt.Sprintf("ElementUserMessage{MessageId=%d}", c.MessageId)
+}
+
+func (c *ElementUserMessage) Equal(other BasicElement) bool {
+
+	if other.elementKind() != KindElementUserMessage {
+		return false
+	}
+
+	otherUserMessage := other.(*ElementUserMessage)
+
+	return c.MessageId == otherUserMessage.MessageId
 }

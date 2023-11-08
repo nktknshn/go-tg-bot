@@ -2,14 +2,13 @@ package tgbot
 
 import (
 	"context"
-	"fmt"
 
 	"go.uber.org/zap"
 )
 
 // A is a type of returned Action to be used in actions reducers
-type InputHandler[A any] func(*TelegramContext) (A, error)
-type CallbackHandler[A any] func(*TelegramContext) (*A, error)
+type ChatInputHandler[A any] func(string) A
+type ChatCallbackHandler[A any] func(string) *A
 
 type InternalChatState[S any, A any] struct {
 	ChatID int64
@@ -20,10 +19,10 @@ type InternalChatState[S any, A any] struct {
 	RenderedElements []RenderedElement
 
 	// handler for text messages
-	InputHandler InputHandler[A]
+	InputHandler ChatInputHandler[A]
 
 	// handler for callback queries
-	CallbackHandler CallbackHandler[A]
+	CallbackHandler ChatCallbackHandler[A]
 
 	Renderer ChatRenderer
 }
@@ -32,11 +31,11 @@ type InternalChatState[S any, A any] struct {
 // 	return
 // }
 
-type renderFunc[S any] func(S) *renderFuncResult[S]
+// type renderFunc[S any] func(S) *renderFuncResult[S]
 
-type renderFuncResult[S any] struct {
-	chatState *S
-}
+// type renderFuncResult[S any] struct {
+// 	chatState *S
+// }
 
 type HandleMessageFunc[S any, A any] func(*ApplicationContext[S, A], *TelegramContext)
 type HandleCallbackFunc[S any, A any] func(*ApplicationContext[S, A], *TelegramContext)
@@ -50,8 +49,9 @@ type RenderFuncType[S any, A any] func(*ApplicationContext[S, A]) error
 type StateToCompFuncType[S any, A any] func(S) Comp[A]
 
 type ApplicationContext[S any, A any] struct {
-	App   *Application[S, A]
-	State *InternalChatState[S, A]
+	App    *Application[S, A]
+	State  *InternalChatState[S, A]
+	Logger *zap.Logger
 }
 
 // Defines Application with state S
@@ -94,9 +94,10 @@ func getCallbackHandlersMap[A any](outcomingMessages []OutcomingMessage) map[str
 		case *OutcomingTextMessage[A]:
 			for _, row := range el.Buttons {
 				for _, butt := range row {
-					logger.Info("Setting callback handler", zap.String("key", butt.Action))
 
-					callbackHandlers[butt.Action] = func() *A {
+					logger.Info("Setting callback handler", zap.String("key", butt.CallbackData()))
+
+					callbackHandlers[butt.CallbackData()] = func() *A {
 						v := butt.OnClick()
 						return &v
 					}
@@ -108,48 +109,46 @@ func getCallbackHandlersMap[A any](outcomingMessages []OutcomingMessage) map[str
 	return callbackHandlers
 }
 
-func callbackMapToHandler[A any](cbmap map[string]func() *A) CallbackHandler[A] {
-	return func(tc *TelegramContext) (*A, error) {
+func callbackMapToHandler[A any](cbmap map[string]func() *A) ChatCallbackHandler[A] {
+	return func(callbackData string) *A {
 
-		logger.Info("Callback handler", zap.String("data", tc.Update.CallbackQuery.Data))
+		logger.Info("Callback handler", zap.String("data", callbackData))
 
-		key := tc.Update.CallbackQuery.Data
-
-		if handler, ok := cbmap[key]; ok {
+		if handler, ok := cbmap[callbackData]; ok {
 			// ac.App.HandleAction(ac, tc, )
-			logger.Info("Calling handler", zap.String("data", tc.Update.CallbackQuery.Data))
+			logger.Info("Calling handler", zap.String("data", callbackData))
 
-			return handler(), nil
+			return handler()
 		} else {
-			err := fmt.Errorf("no handler for callback %v", key)
-			logger.Error("No handler for callback", zap.String("key", key))
-			return nil, err
+			// err := fmt.Errorf("no handler for callback %v", key)
+			logger.Error("No handler for callback", zap.String("key", callbackData))
+			return nil
 		}
 
 	}
 }
 
-func (a *Application[S, A]) PreRender(ac *ApplicationContext[S, A]) (*PreRenderData[S, A], error) {
+func (a *Application[S, A]) PreRender(ac *ApplicationContext[S, A]) *PreRenderData[S, A] {
 
 	els := ComponentToElements2(
 		ac.App.StateToComp(ac.State.AppState),
 	)
 
-	res, err := ElementsToMessagesAndHandlers[A](els)
+	res := ElementsToMessagesAndHandlers[A](els)
 
-	if err != nil {
-		return nil, err
-	}
+	ac.Logger.Debug("PreRender", zap.Any("res", res))
 
-	var inputHandler InputHandler[A]
+	var inputHandler ChatInputHandler[A]
 	callbackMap := getCallbackHandlersMap[A](res.OutcomingMessages)
 	callbackHandler := callbackMapToHandler[A](callbackMap)
 
 	if len(res.InputHandlers) > 0 {
-		inputHandler = res.InputHandlers[0].Handler
+		inputHandler = func(text string) A {
+			return res.InputHandlers[0].Handler(text)
+		}
 	}
 
-	stateCopy := InternalChatState[S, A]{
+	nextState := InternalChatState[S, A]{
 		ChatID:           ac.State.ChatID,
 		AppState:         ac.State.AppState,
 		RenderedElements: ac.State.RenderedElements,
@@ -159,16 +158,18 @@ func (a *Application[S, A]) PreRender(ac *ApplicationContext[S, A]) (*PreRenderD
 	}
 
 	return &PreRenderData[S, A]{
-		InternalChatState: stateCopy,
+		InternalChatState: nextState,
 		ExecuteRender: func(renderer ChatRenderer) ([]RenderedElement, error) {
-			actions := GetRenderActions(
+			ac.Logger.Info("ExecuteRender")
+
+			actions := GetRenderActions[A](
 				ac.State.RenderedElements,
 				res.OutcomingMessages,
 			)
 
-			logger.Info("RenderActions", zap.Any("count", len(actions)))
+			logger.Info("RenderActions", zap.Any("actions", actions))
 
-			rendered, err := ExecuteRenderActions(
+			rendered, err := ExecuteRenderActions[A](
 				context.Background(),
 				ac.State.Renderer,
 				actions,
@@ -181,16 +182,21 @@ func (a *Application[S, A]) PreRender(ac *ApplicationContext[S, A]) (*PreRenderD
 				return []RenderedElement{}, err
 			}
 
+			for _, r := range rendered {
+				logger.Info("Rendered", zap.Any("element", r.renderedKind()))
+			}
+
 			return rendered, nil
 
 		},
-	}, nil
+	}
 
 }
 
 type Handler[S any, A any] struct {
-	justCreated bool
-	ChatState   InternalChatState[S, A]
+	app        Application[S, A]
+	appContext *ApplicationContext[S, A]
+	// ChatState  InternalChatState[S, A]
 }
 
 func NewHandler[S any, A any](app Application[S, A], tc *TelegramContext) *Handler[S, A] {
@@ -198,21 +204,29 @@ func NewHandler[S any, A any](app Application[S, A], tc *TelegramContext) *Handl
 
 	appState := app.CreateAppState(tc)
 
-	// app.RenderFunc()
+	chatState := InternalChatState[S, A]{
+		ChatID:           tc.ChatID,
+		AppState:         appState,
+		RenderedElements: []RenderedElement{},
+		InputHandler:     nil,
+		CallbackHandler:  nil,
+		Renderer:         app.CreateChatRenderer(tc),
+	}
+
+	ac := &ApplicationContext[S, A]{
+		App:    &app,
+		State:  &chatState,
+		Logger: GetLogger().With(zap.Int("chat_id", int(tc.ChatID))),
+	}
+
+	res := app.PreRender(ac)
 
 	return &Handler[S, A]{
-		justCreated: true,
-		ChatState: InternalChatState[S, A]{
-			ChatID:           tc.ChatID,
-			AppState:         appState,
-			RenderedElements: []RenderedElement{},
-			// InputHandler: func(chc *ChatHandlerContext, u *models.Update) A {
-			// 	return 0
-			// },
-			// CallbackHandler: func(chc *ChatHandlerContext, u *models.Update) A {
-			// 	return 0
-			// },
-			Renderer: app.CreateChatRenderer(tc),
+		app: app,
+		appContext: &ApplicationContext[S, A]{
+			App:    &app,
+			State:  &res.InternalChatState,
+			Logger: ac.Logger,
 		},
 	}
 }
@@ -220,22 +234,11 @@ func NewHandler[S any, A any](app Application[S, A], tc *TelegramContext) *Handl
 func (h *Handler[S, A]) HandleUpdate(tc *TelegramContext) {
 	tc.Logger.Info("HandleUpdate")
 
-	if tc.Update.Message != nil {
-		if h.ChatState.InputHandler == nil {
-			tc.Logger.Info("No input handler, skipping")
-			return
-		}
-
-		h.ChatState.InputHandler(tc)
-		return
+	if tc.Update.Message != nil && tc.Update.Message.Text != "" {
+		h.app.HandleMessage(h.appContext, tc)
 	}
 
 	if tc.Update.CallbackQuery != nil {
-		if h.ChatState.CallbackHandler == nil {
-			tc.Logger.Info("No callback handler, skipping")
-			return
-		}
-		h.ChatState.CallbackHandler(tc)
-		return
+		h.app.HandleCallback(h.appContext, tc)
 	}
 }

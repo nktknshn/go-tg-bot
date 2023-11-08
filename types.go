@@ -1,6 +1,10 @@
 package tgbot
 
-import "github.com/go-telegram/bot/models"
+import (
+	"fmt"
+
+	"github.com/go-telegram/bot/models"
+)
 
 const (
 	KindRenderedUserMessage        = "RenderedUserMessage"
@@ -12,6 +16,7 @@ const (
 
 // Telegram entities
 type RenderedElement interface {
+	String() string
 	renderedKind() string
 	canReplace(OutcomingMessage) bool
 	Equal(RenderedElement) bool
@@ -47,20 +52,34 @@ func (r *RenderedUserMessage) Equal(other RenderedElement) bool {
 	return r.MessageId == otherUserMessage.MessageId
 }
 
-type RenderedBotMessage struct {
-	OutcomingTextMessage *OutcomingTextMessage[any]
+func (r *RenderedUserMessage) String() string {
+	return fmt.Sprintf(
+		"RenderedUserMessage{OutcomingUserMessage: %v, MessageId: %v}",
+		r.OutcomingUserMessage, r.MessageId,
+	)
+}
+
+type RenderedBotMessage[A any] struct {
+	OutcomingTextMessage *OutcomingTextMessage[A]
 	Message              *models.Message
 }
 
-func (r *RenderedBotMessage) ID() int {
+func (rbm RenderedBotMessage[A]) String() string {
+	return fmt.Sprintf(
+		"RenderedBotMessage{OutcomingTextMessage: %v, Message: %v}",
+		rbm.OutcomingTextMessage, rbm.Message,
+	)
+}
+
+func (r *RenderedBotMessage[A]) ID() int {
 	return r.Message.ID
 }
 
-func (r *RenderedBotMessage) renderedKind() string {
+func (r *RenderedBotMessage[A]) renderedKind() string {
 	return KindRenderedBotMessage
 }
 
-func (r *RenderedBotMessage) canReplace(outcoming OutcomingMessage) bool {
+func (r *RenderedBotMessage[A]) canReplace(outcoming OutcomingMessage) bool {
 	return outcoming.OutcomingKind() == KindOutcomingTextMessage
 	// && this.input.keyboardButtons.length == 0
 	// && other.keyboardButtons.length == 0
@@ -68,16 +87,23 @@ func (r *RenderedBotMessage) canReplace(outcoming OutcomingMessage) bool {
 }
 
 // Equal
-func (r *RenderedBotMessage) Equal(other RenderedElement) bool {
+func (r *RenderedBotMessage[A]) Equal(other RenderedElement) bool {
 	if other.renderedKind() != KindRenderedBotMessage {
 		return false
 	}
-	otherBotMessage := other.(*RenderedBotMessage)
+	otherBotMessage := other.(*RenderedBotMessage[A])
 	return r.OutcomingTextMessage.Equal(otherBotMessage.OutcomingTextMessage)
 }
 
 type RenderedBotDocumentMessage struct {
 	OutcomingFileMessage *OutcomingFileMessage
+}
+
+func (r *RenderedBotDocumentMessage) String() string {
+	return fmt.Sprintf(
+		"RenderedBotDocumentMessage{OutcomingFileMessage: %v}",
+		r.OutcomingFileMessage,
+	)
 }
 
 func (r *RenderedBotDocumentMessage) ID() int {

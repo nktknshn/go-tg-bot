@@ -12,7 +12,7 @@ type O[A any] interface {
 	MessagePart(string)
 	Button(string, func() A)
 	EndMessage()
-	InputHandler(InputHandler[A])
+	InputHandler(func(string) A)
 }
 
 type Comp[A any] func(O[A])
@@ -50,7 +50,7 @@ func (o *outputImpl[A]) EndMessage() {
 	o.result = append(o.result, EndMessage())
 }
 
-func (o *outputImpl[A]) InputHandler(handler InputHandler[A]) {
+func (o *outputImpl[A]) InputHandler(handler func(string) A) {
 	o.result = append(o.result, AInputHandler(handler))
 }
 
@@ -77,10 +77,29 @@ func ComponentToElements[T any, A any](compFunc ComponentCons[T, A], props *T) [
 type ProcessElementsResult[A any] struct {
 	OutcomingMessages []OutcomingMessage
 	InputHandlers     []ElementInputHandler[A]
-	CallbackHandlers  map[string]CallbackHandler[A]
+	CallbackHandlers  map[string]ChatCallbackHandler[A]
 }
 
-func ElementsToMessagesAndHandlers[A any](elements []Element) (*ProcessElementsResult[A], error) {
+func (per *ProcessElementsResult[A]) String() string {
+	messagesStr := ""
+
+	for _, m := range per.OutcomingMessages {
+		messagesStr += fmt.Sprintf("%v,", m.OutcomingKind())
+	}
+
+	cbhsStr := ""
+
+	for k := range per.CallbackHandlers {
+		cbhsStr += fmt.Sprintf("%v,", k)
+	}
+
+	return fmt.Sprintf(
+		"OutcomingMessages: %v, InputHandlers: %v, CallbackHandlers: %v",
+		messagesStr, len(per.InputHandlers), cbhsStr,
+	)
+}
+
+func ElementsToMessagesAndHandlers[A any](elements []Element) *ProcessElementsResult[A] {
 	messages := make([]OutcomingMessage, 0)
 	inputHandlers := make([]ElementInputHandler[A], 0)
 	callbackHandlers := make(map[string]func() A)
@@ -114,10 +133,10 @@ func ElementsToMessagesAndHandlers[A any](elements []Element) (*ProcessElementsR
 			messages = append(messages, outcoming)
 
 		case *ElementMessagePart:
-			getLastMessage().concatText(element.(*ElementMessagePart).text)
+			getLastMessage().concatText(element.(*ElementMessagePart).Text)
 
 		case *ElementButton[A]:
-			getLastMessage().addButton(element.(*ElementButton[A]))
+			getLastMessage().AddButton(element.(*ElementButton[A]))
 
 			act := el.Action
 			if act == "" {
@@ -134,5 +153,5 @@ func ElementsToMessagesAndHandlers[A any](elements []Element) (*ProcessElementsR
 	return &ProcessElementsResult[A]{
 		OutcomingMessages: messages,
 		InputHandlers:     inputHandlers,
-	}, nil
+	}
 }

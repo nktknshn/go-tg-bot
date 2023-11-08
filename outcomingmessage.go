@@ -19,6 +19,7 @@ const (
 )
 
 type OutcomingMessage interface {
+	String() string
 	OutcomingKind() string
 	Equal(other OutcomingMessage) bool
 }
@@ -26,6 +27,13 @@ type OutcomingMessage interface {
 type OutcomingFileMessage struct {
 	ElementFile ElementFile
 	Message     *models.Message
+}
+
+func (m OutcomingFileMessage) String() string {
+	return fmt.Sprintf(
+		"OutcomingFileMessage{ElementFile: %v, Message: %v}",
+		m.ElementFile, m.Message,
+	)
 }
 
 func (t *OutcomingFileMessage) OutcomingKind() string {
@@ -46,6 +54,13 @@ type OutcomingUserMessage struct {
 	ElementUserMessage ElementUserMessage
 }
 
+func (m OutcomingUserMessage) String() string {
+	return fmt.Sprintf(
+		"OutcomingUserMessage{ElementUserMessage: %v}",
+		m.ElementUserMessage,
+	)
+}
+
 func (t *OutcomingUserMessage) OutcomingKind() string {
 	return KindOutcomingUserMessage
 }
@@ -62,6 +77,13 @@ func (t *OutcomingUserMessage) Equal(other OutcomingMessage) bool {
 
 type OutcomingPhotoGroupMessage struct {
 	ElementPhotoGroup ElementPhotoGroup
+}
+
+func (m OutcomingPhotoGroupMessage) String() string {
+	return fmt.Sprintf(
+		"OutcomingPhotoGroupMessage{ElementPhotoGroup: %v}",
+		m.ElementPhotoGroup,
+	)
 }
 
 func (t *OutcomingPhotoGroupMessage) OutcomingKind() string {
@@ -85,7 +107,7 @@ type OutcomingTextMessage[A any] struct {
 }
 
 func (t *OutcomingTextMessage[T]) String() string {
-	return fmt.Sprintf("OutcomingTextMessage[text=%s, buttons=%v, isComplete=%v]", t.Text, t.Buttons, t.isComplete)
+	return fmt.Sprintf("OutcomingTextMessage{text: %s, buttons: %v, isComplete: %v}", t.Text, t.Buttons, t.isComplete)
 }
 
 func EqualInlineKeyboardMarkup(a models.InlineKeyboardMarkup, b models.InlineKeyboardMarkup) bool {
@@ -141,15 +163,15 @@ func (t *OutcomingTextMessage[T]) concatText(text string) {
 	t.Text += "\n" + text
 }
 
-func (t *OutcomingTextMessage[T]) complete() {
-	t.isComplete = true
-}
+// func (t *OutcomingTextMessage[T]) complete() {
+// 	t.isComplete = true
+// }
 
 func (t *OutcomingTextMessage[T]) getExtra() models.InlineKeyboardMarkup {
 	return models.InlineKeyboardMarkup{}
 }
 
-func (t *OutcomingTextMessage[T]) addButton(button *ElementButton[T]) {
+func (t *OutcomingTextMessage[T]) AddButton(button *ElementButton[T]) {
 	t.Buttons[0] = append(t.Buttons[0], button)
 }
 

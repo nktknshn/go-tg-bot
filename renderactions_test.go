@@ -1,6 +1,7 @@
 package tgbot_test
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -14,7 +15,7 @@ func Check(
 	outcomingMessages []tgbot.OutcomingMessage,
 	expected []tgbot.RenderActionType,
 ) {
-	res0 := tgbot.GetRenderActions(renderedElements, outcomingMessages)
+	res0 := tgbot.GetRenderActions[any](renderedElements, outcomingMessages)
 
 	if len(res0) != len(expected) {
 		for i, v := range res0 {
@@ -81,19 +82,19 @@ var (
 	m3 = tgbot.NewOutcomingTextMessage[any]("message 3")
 	m4 = tgbot.NewOutcomingTextMessage[any]("message 4")
 
-	rm1 = &tgbot.RenderedBotMessage{
+	rm1 = &tgbot.RenderedBotMessage[any]{
 		OutcomingTextMessage: m1,
 		Message:              &models.Message{},
 	}
-	rm2 = &tgbot.RenderedBotMessage{
+	rm2 = &tgbot.RenderedBotMessage[any]{
 		OutcomingTextMessage: m2,
 		Message:              &models.Message{},
 	}
-	rm3 = &tgbot.RenderedBotMessage{
+	rm3 = &tgbot.RenderedBotMessage[any]{
 		OutcomingTextMessage: m3,
 		Message:              &models.Message{},
 	}
-	rm4 = &tgbot.RenderedBotMessage{
+	rm4 = &tgbot.RenderedBotMessage[any]{
 		OutcomingTextMessage: m4,
 		Message:              &models.Message{},
 	}
@@ -148,14 +149,14 @@ func TestGetRenderActionsBasic(t *testing.T) {
 
 	Check(t,
 		[]tgbot.RenderedElement{
-			&tgbot.RenderedBotMessage{
+			&tgbot.RenderedBotMessage[any]{
 				OutcomingTextMessage: m2,
 			},
 		},
 		[]tgbot.OutcomingMessage{m2},
 		[]tgbot.RenderActionType{
 			&tgbot.RenderActionKeep{
-				RenderedElement: &tgbot.RenderedBotMessage{
+				RenderedElement: &tgbot.RenderedBotMessage[any]{
 					OutcomingTextMessage: m2,
 				},
 				NewElement: m2,
@@ -183,4 +184,34 @@ func TestGetRenderActionsBasic(t *testing.T) {
 			},
 		})
 
+}
+
+type MockRenderer struct {
+	OutcomingMessages []tgbot.OutcomingMessage
+}
+
+func (mr *MockRenderer) Message(ctx context.Context, props *tgbot.ChatRendererMessageProps) (*models.Message, error) {
+	return &models.Message{}, nil
+}
+
+func (mr *MockRenderer) Delete(messageId int) error {
+	return nil
+}
+
+func TestCreate(t *testing.T) {
+	re := &MockRenderer{}
+
+	m := tgbot.NewOutcomingTextMessage[int]("message 1")
+	b1 := tgbot.Button("button 1", func() int { return 1 })
+	m.AddButton(b1)
+
+	tgbot.ExecuteRenderActions[int](
+		context.Background(),
+		re,
+		[]tgbot.RenderActionType{
+			&tgbot.RenderActionCreate{
+				NewElement: m,
+			},
+		},
+	)
 }
