@@ -52,9 +52,10 @@ func EmulatorDraw(inp *DrawInput, handler *ActionsHandler) *fyne.Container {
 
 	textInput := widget.NewEntry()
 	textInput.SetPlaceHolder("Write message here...")
+	textInput.SetText("/start")
 
 	sendButton := widget.NewButton(">", func() {
-		handler.CallbackHandlers(textInput.Text)
+		handler.UserInputHandler(textInput.Text)
 	})
 
 	textInputContainer := container.NewBorder(nil, nil, nil, sendButton, textInput)

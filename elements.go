@@ -59,6 +59,10 @@ type Element interface {
 	elementKind() string
 }
 
+// func (e Element) String() string {
+// 	return e.elementKind()
+// }
+
 type ElementComponent[A any] struct {
 	comp Comp[A]
 }

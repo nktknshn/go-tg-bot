@@ -13,14 +13,18 @@ type ChatHandlerFactory func(*TelegramContext) ChatHandler
 // ChatsDispatcher is a map of chats
 // dispatches updates to chats
 type ChatsDispatcher struct {
-	chats       map[int64]ChatHandler
-	chatFactory ChatHandlerFactory
+	Chats       map[int64]ChatHandler
+	ChatFactory ChatHandlerFactory
 }
 
-func NewChatsDispatcher(chatFactory ChatHandlerFactory) *ChatsDispatcher {
+type ChatsDispatcherProps struct {
+	ChatFactory ChatHandlerFactory
+}
+
+func NewChatsDispatcher(props *ChatsDispatcherProps) *ChatsDispatcher {
 	return &ChatsDispatcher{
-		chats:       make(map[int64]ChatHandler),
-		chatFactory: chatFactory,
+		Chats:       make(map[int64]ChatHandler),
+		ChatFactory: props.ChatFactory,
 	}
 }
 
@@ -37,7 +41,8 @@ func (cd *ChatsDispatcher) HandleUpdate(ctx context.Context, bot *bot.Bot, updat
 		return
 	}
 
-	chat, ok := cd.chats[chatID]
+	chat, ok := cd.Chats[chatID]
+
 	tc := &TelegramContext{
 		Bot: bot,
 		Logger: logger.With(
@@ -50,9 +55,11 @@ func (cd *ChatsDispatcher) HandleUpdate(ctx context.Context, bot *bot.Bot, updat
 	}
 
 	if !ok {
-		chat = cd.chatFactory(tc)
-		cd.chats[chatID] = chat
+		logger.Debug("Creating new chat")
+		chat = cd.ChatFactory(tc)
+		cd.Chats[chatID] = chat
 	}
 
+	logger.Debug("Handling update")
 	chat.HandleUpdate(tc)
 }

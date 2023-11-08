@@ -71,6 +71,10 @@ func (a *Application[S, A]) NewHandler(tc *TelegramContext) *Handler[S, A] {
 	return NewHandler[S, A](*a, tc)
 }
 
+func (a *Application[S, A]) PreRender() {
+
+}
+
 type Handler[S any, A any] struct {
 	justCreated bool
 	ChatState   InternalChatState[S, A]
@@ -80,6 +84,8 @@ func NewHandler[S any, A any](app Application[S, A], tc *TelegramContext) *Handl
 	// app.HandleInit(tc)
 
 	appState := app.CreateAppState(tc)
+
+	app.RenderFunc()
 
 	return &Handler[S, A]{
 		justCreated: true,
@@ -99,13 +105,23 @@ func NewHandler[S any, A any](app Application[S, A], tc *TelegramContext) *Handl
 }
 
 func (h *Handler[S, A]) HandleUpdate(tc *TelegramContext) {
+	tc.Logger.Info("HandleUpdate")
 
 	if tc.Update.Message != nil {
+		if h.ChatState.InputHandler == nil {
+			tc.Logger.Info("No input handler, skipping")
+			return
+		}
+
 		h.ChatState.InputHandler(tc)
 		return
 	}
 
 	if tc.Update.CallbackQuery != nil {
+		if h.ChatState.CallbackHandler == nil {
+			tc.Logger.Info("No callback handler, skipping")
+			return
+		}
 		h.ChatState.CallbackHandler(tc)
 		return
 	}
