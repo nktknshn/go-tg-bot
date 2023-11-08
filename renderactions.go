@@ -221,7 +221,7 @@ func create(ctx context.Context, renderer ChatRenderer, action *RenderActionCrea
 }
 
 // Takes actions and applies them to the renderer
-func RenderActions(ctx context.Context, renderer ChatRenderer, actions []RenderActionType) ([]RenderedElement, error) {
+func ExecuteRenderActions(ctx context.Context, renderer ChatRenderer, actions []RenderActionType) ([]RenderedElement, error) {
 	result := make([]RenderedElement, 0)
 	actionsRemove := make([]RenderActionRemove, 0)
 	actionsOther := make([]RenderActionType, 0)

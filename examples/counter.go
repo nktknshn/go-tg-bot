@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"image/color"
 	"math/rand"
 
@@ -74,83 +73,32 @@ var counterApp = &tgbot.Application[State, Action]{
 
 		ac.State.AppState.Counter += act.Increment
 	},
-	RenderFunc: func(ac *tgbot.ApplicationContext[State, Action]) []tgbot.RenderedElement {
+	StateToComp: func(s State) tgbot.Comp[Action] {
+		return App(struct{ counter int }{
+			counter: s.Counter,
+		})
+	},
+	RenderFunc: func(ac *tgbot.ApplicationContext[State, Action]) error {
 		logger.Info("RenderFunc")
 
-		els := tgbot.ComponentToElements2(
-			App(struct{ counter int }{
-				counter: ac.State.AppState.Counter,
-			}),
-		)
-
-		logger.Info("Produced elements", zap.Any("count", len(els)))
-		// logger.Info("Produced elements", zap.Any("count", len(els)))
-
-		res, err := tgbot.ElementsToMessagesAndHandlers[Action](els)
+		res, err := ac.App.PreRender(ac)
 
 		if err != nil {
 			logger.Error("Error in RenderFunc", zap.Error(err))
+			return err
 		}
 
-		if len(res.InputHandlers) == 0 {
-			logger.Debug("No input handlers")
-		} else {
-			ac.State.InputHandler = res.InputHandlers[0].Handler
-		}
-
-		callbackHandlers := make(map[string]func() Action)
-
-		for _, m := range res.OutcomingMessages {
-			switch el := m.(type) {
-			case *tgbot.OutcomingTextMessage[Action]:
-				for _, row := range el.Buttons {
-					for _, butt := range row {
-						logger.Info("Setting callback handler", zap.String("key", butt.Action))
-
-						callbackHandlers[butt.Action] = butt.OnClick
-					}
-				}
-			}
-		}
-
-		ac.State.CallbackHandler = func(tc *tgbot.TelegramContext) (Action, error) {
-
-			logger.Info("Callback handler", zap.String("data", tc.Update.CallbackQuery.Data))
-
-			key := tc.Update.CallbackQuery.Data
-
-			if handler, ok := callbackHandlers[key]; ok {
-				// ac.App.HandleAction(ac, tc, )
-				logger.Info("Calling handler", zap.String("data", tc.Update.CallbackQuery.Data))
-
-				return handler(), nil
-			} else {
-				err := fmt.Errorf("no handler for callback %v", key)
-				logger.Error("No handler for callback", zap.String("key", key))
-				return Action{}, err
-			}
-		}
-
-		actions := tgbot.GetRenderActions(
-			ac.State.RenderedElements,
-			res.OutcomingMessages,
-		)
-
-		logger.Info("RenderActions", zap.Any("count", len(actions)))
-
-		rendered, err := tgbot.RenderActions(context.Background(), ac.State.Renderer, actions)
+		rendered, err := res.ExecuteRender(ac.State.Renderer)
 
 		if err != nil {
 			logger.Error("Error in RenderFunc", zap.Error(err))
-			return []tgbot.RenderedElement{}
+			return err
 		}
 
-		logger.Info("Rendered", zap.Any("count", len(rendered)))
+		ac.State = &res.InternalChatState
+		ac.State.RenderedElements = rendered
 
-		return rendered
-
-		// return res.OutcomingMessages
-
+		return nil
 	},
 	CreateChatRenderer: func(tc *tgbot.TelegramContext) tgbot.ChatRenderer {
 		// return emulator.NewFakeServer()
