@@ -25,6 +25,7 @@ type OutcomingMessage interface {
 
 type OutcomingFileMessage struct {
 	ElementFile ElementFile
+	Message     *models.Message
 }
 
 func (t *OutcomingFileMessage) OutcomingKind() string {
@@ -87,6 +88,30 @@ func (t *OutcomingTextMessage[T]) String() string {
 	return fmt.Sprintf("OutcomingTextMessage[text=%s, buttons=%v, isComplete=%v]", t.Text, t.Buttons, t.isComplete)
 }
 
+func EqualInlineKeyboardMarkup(a models.InlineKeyboardMarkup, b models.InlineKeyboardMarkup) bool {
+	if len(a.InlineKeyboard) != len(b.InlineKeyboard) {
+		return false
+	}
+
+	for i, row := range a.InlineKeyboard {
+		if len(row) != len(b.InlineKeyboard[i]) {
+			return false
+		}
+
+		for j, button := range row {
+			if button.Text != b.InlineKeyboard[i][j].Text {
+				return false
+			}
+
+			if button.CallbackData != b.InlineKeyboard[i][j].CallbackData {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
 func NewOutcomingTextMessage[A any](text string) *OutcomingTextMessage[A] {
 	buttons := make([][]*ElementButton[A], 0)
 	buttons = append(buttons, make([]*ElementButton[A], 0))
@@ -109,7 +134,7 @@ func (t *OutcomingTextMessage[T]) Equal(other OutcomingMessage) bool {
 
 	oth := other.(*OutcomingTextMessage[T])
 
-	return t.Text == oth.Text && t.getExtra() == oth.getExtra()
+	return t.Text == oth.Text && EqualInlineKeyboardMarkup(t.getExtra(), oth.getExtra())
 }
 
 func (t *OutcomingTextMessage[T]) concatText(text string) {
@@ -120,8 +145,8 @@ func (t *OutcomingTextMessage[T]) complete() {
 	t.isComplete = true
 }
 
-func (t *OutcomingTextMessage[T]) getExtra() models.ReplyMarkup {
-	return nil
+func (t *OutcomingTextMessage[T]) getExtra() models.InlineKeyboardMarkup {
+	return models.InlineKeyboardMarkup{}
 }
 
 func (t *OutcomingTextMessage[T]) addButton(button *ElementButton[T]) {

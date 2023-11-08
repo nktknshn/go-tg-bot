@@ -67,17 +67,25 @@ type Application[S any, A any] struct {
 	CreateChatRenderer func(*TelegramContext) ChatRenderer
 }
 
+func (a *Application[S, A]) NewHandler(tc *TelegramContext) *Handler[S, A] {
+	return NewHandler[S, A](*a, tc)
+}
+
 type Handler[S any, A any] struct {
 	justCreated bool
 	ChatState   InternalChatState[S, A]
 }
 
 func NewHandler[S any, A any](app Application[S, A], tc *TelegramContext) *Handler[S, A] {
+	// app.HandleInit(tc)
+
+	appState := app.CreateAppState(tc)
+
 	return &Handler[S, A]{
 		justCreated: true,
 		ChatState: InternalChatState[S, A]{
 			ChatID:           tc.ChatID,
-			AppState:         app.CreateAppState(tc),
+			AppState:         appState,
 			RenderedElements: []RenderedElement{},
 			// InputHandler: func(chc *ChatHandlerContext, u *models.Update) A {
 			// 	return 0
@@ -101,14 +109,4 @@ func (h *Handler[S, A]) HandleUpdate(tc *TelegramContext) {
 		h.ChatState.CallbackHandler(tc)
 		return
 	}
-
-	// if it's a text message handle with input handler
-	// if it's a callback handle with callback handler
-
-	// if ctx != nil {
-	// 	ctx.Bot.SendMessage(ctx.Ctx, &bot.SendMessageParams{
-	// 		ChatID: ctx.ChatID,
-	// 		Text:   "Hello, world!",
-	// 	})
-	// }
 }

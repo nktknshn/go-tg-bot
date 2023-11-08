@@ -17,7 +17,10 @@ type FakeServer struct {
 }
 
 func NewFakeServer() *FakeServer {
-	return &FakeServer{}
+	return &FakeServer{
+		lastID:   0,
+		Messages: make(map[int]*models.Message),
+	}
 }
 
 func (fs *FakeServer) getNewID() int {

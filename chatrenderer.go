@@ -22,7 +22,7 @@ type TelegramChatRenderer struct {
 
 type ChatRendererMessageProps struct {
 	Text          string
-	Extra         *models.InlineKeyboardMarkup
+	Extra         models.InlineKeyboardMarkup
 	TargetMessage *models.Message
 	RemoveTarget  bool
 }

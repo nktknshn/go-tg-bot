@@ -8,10 +8,6 @@ import (
 	"go.uber.org/zap"
 )
 
-var logger = GetLogger().With(
-	zap.String("module", "ChatHandler"),
-)
-
 type ChatHandlerFactory func(*TelegramContext) ChatHandler
 
 // ChatsDispatcher is a map of chats
@@ -29,6 +25,10 @@ func NewChatsDispatcher(chatFactory ChatHandlerFactory) *ChatsDispatcher {
 }
 
 func (cd *ChatsDispatcher) HandleUpdate(ctx context.Context, bot *bot.Bot, update *models.Update) {
+
+	var logger = GetLogger().With(
+		zap.String("module", "ChatHandler"),
+	)
 
 	chatID := GetUpdateChatId(update)
 

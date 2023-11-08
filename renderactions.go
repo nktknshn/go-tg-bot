@@ -1,10 +1,13 @@
 package tgbot
 
 import (
+	"context"
 	"slices"
 
 	"go.uber.org/zap"
 )
+
+var logger = GetLogger()
 
 const (
 	KindRenderActionKeep    = "RenderActionKeep"
@@ -169,4 +172,124 @@ func GetRenderActions(renderedElements []RenderedElement, nextElements []Outcomi
 	}
 
 	return actions
+}
+
+const emptyString = "<empty>"
+
+func GetOrText(text string, fallback string) string {
+	if text == "" {
+		return fallback
+	}
+
+	return text
+}
+
+func create(ctx context.Context, renderer ChatRenderer, action *RenderActionCreate) (RenderedElement, error) {
+	switch a := action.NewElement.(type) {
+	case *OutcomingTextMessage[any]:
+
+		message, err := renderer.Message(ctx, &ChatRendererMessageProps{
+			Text:  GetOrText(a.Text, emptyString),
+			Extra: a.getExtra(),
+		})
+
+		if err != nil {
+			return nil, err
+		}
+
+		return &RenderedBotMessage{
+			Message:              message,
+			OutcomingTextMessage: a,
+		}, nil
+
+	case *OutcomingUserMessage:
+		return &RenderedUserMessage{
+			MessageId:            a.ElementUserMessage.MessageId,
+			OutcomingUserMessage: a,
+		}, nil
+	// TODO
+	// case *OutcomingFileMessage:
+	// 	return renderer.File(a.ElementFile)
+	// case *OutcomingPhotoGroupMessage:
+	// 	return renderer.PhotoGroup(a.ElementPhotoGroup)
+	default:
+		logger.Error("create: unsupported outcoming message type", zap.Any("a", a))
+	}
+
+	return nil, nil
+
+}
+
+// Takes actions and applies them to the renderer
+func RenderActions(ctx context.Context, renderer ChatRenderer, actions []RenderActionType) ([]RenderedElement, error) {
+	result := make([]RenderedElement, 0)
+	actionsRemove := make([]RenderActionRemove, 0)
+	actionsOther := make([]RenderActionType, 0)
+
+	for _, action := range actions {
+		switch a := action.(type) {
+		case *RenderActionRemove:
+			actionsRemove = append(actionsRemove, *a)
+		default:
+			actionsOther = append(actionsOther, a)
+		}
+	}
+
+	for _, action := range actionsOther {
+		switch a := action.(type) {
+		case *RenderActionCreate:
+			rendereredMessage, err := create(ctx, renderer, a)
+
+			if err != nil {
+				return nil, err
+			}
+
+			result = append(result, rendereredMessage)
+		case *RenderActionKeep:
+			if a.RenderedElement.renderedKind() == KindRenderedBotMessage && a.NewElement.OutcomingKind() == KindOutcomingTextMessage {
+				rendereredMessage := &RenderedBotMessage{
+					OutcomingTextMessage: a.NewElement.(*OutcomingTextMessage[any]),
+					Message:              a.RenderedElement.(*RenderedBotMessage).Message,
+				}
+
+				result = append(result, rendereredMessage)
+			}
+
+		case *RenderActionReplace:
+			if a.RenderedElement.renderedKind() == KindRenderedBotMessage && a.NewElement.OutcomingKind() == KindOutcomingTextMessage {
+
+				outcoming := a.NewElement.(*OutcomingTextMessage[any])
+				renderedElement := a.RenderedElement.(*RenderedBotMessage)
+
+				message, err := renderer.Message(ctx, &ChatRendererMessageProps{
+					Text:          GetOrText(outcoming.Text, emptyString),
+					Extra:         outcoming.getExtra(),
+					TargetMessage: renderedElement.Message,
+					RemoveTarget:  false,
+				})
+
+				if err != nil {
+					return nil, err
+				}
+
+				rendereredMessage := &RenderedBotMessage{
+					OutcomingTextMessage: outcoming,
+					Message:              message,
+				}
+
+				result = append(result, rendereredMessage)
+			}
+			// renderer.ReplaceElement(a.RenderedElement, a.NewElement)
+		}
+	}
+
+	for _, action := range actionsRemove {
+		err := renderer.Delete(action.RenderedElement.ID())
+
+		if err != nil {
+			logger.Error("Error removing rendered element", zap.Error(err))
+		}
+	}
+
+	return result, nil
 }

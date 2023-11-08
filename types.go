@@ -15,6 +15,7 @@ type RenderedElement interface {
 	renderedKind() string
 	canReplace(OutcomingMessage) bool
 	Equal(RenderedElement) bool
+	ID() int
 }
 
 // ta ne
@@ -33,6 +34,10 @@ func (r *RenderedUserMessage) canReplace(outcoming OutcomingMessage) bool {
 	return false
 }
 
+func (r *RenderedUserMessage) ID() int {
+	return r.MessageId
+}
+
 // Equal
 func (r *RenderedUserMessage) Equal(other RenderedElement) bool {
 	if other.renderedKind() != KindRenderedUserMessage {
@@ -45,6 +50,10 @@ func (r *RenderedUserMessage) Equal(other RenderedElement) bool {
 type RenderedBotMessage struct {
 	OutcomingTextMessage *OutcomingTextMessage[any]
 	Message              *models.Message
+}
+
+func (r *RenderedBotMessage) ID() int {
+	return r.Message.ID
 }
 
 func (r *RenderedBotMessage) renderedKind() string {
@@ -71,6 +80,10 @@ type RenderedBotDocumentMessage struct {
 	OutcomingFileMessage *OutcomingFileMessage
 }
 
+func (r *RenderedBotDocumentMessage) ID() int {
+	return r.OutcomingFileMessage.Message.ID
+}
+
 func (r *RenderedBotDocumentMessage) renderedKind() string {
 	return KindRenderedBotDocumentMessage
 }
@@ -95,7 +108,14 @@ func (r *RenderedBotDocumentMessage) Equal(other RenderedElement) bool {
 // 	return KindRenderedMediaMessage
 // }
 
-type RenderedPhotoGroup struct{}
+type RenderedPhotoGroup struct {
+	OutcomingPhotoGroupMessage *OutcomingPhotoGroupMessage
+	Message                    *models.Message
+}
+
+func (r *RenderedPhotoGroup) ID() int {
+	return r.Message.ID
+}
 
 func (r *RenderedPhotoGroup) renderedKind() string {
 	return KindRenderedPhotoGroup
