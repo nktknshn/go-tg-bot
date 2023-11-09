@@ -27,7 +27,7 @@ func NewChatsDispatcher(props *ChatsDispatcherProps) *ChatsDispatcher {
 	}
 }
 
-func (cd *ChatsDispatcher) HandleUpdate(ctx context.Context, bot TelegramContextBot, update *models.Update) {
+func (cd *ChatsDispatcher) HandleUpdate(ctx context.Context, bot TelegramBot, update *models.Update) {
 
 	var logger = GetLogger().With(
 		zap.String("module", "ChatHandler"),

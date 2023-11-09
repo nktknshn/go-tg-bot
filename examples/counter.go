@@ -1,10 +1,15 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
+	"os"
+	"os/signal"
 	"strconv"
 
+	"github.com/go-telegram/bot"
+	"github.com/go-telegram/bot/models"
 	tgbot "github.com/nktknshn/go-tg-bot"
 	"github.com/nktknshn/go-tg-bot/emulator"
 	"go.uber.org/zap"
@@ -55,8 +60,6 @@ func App(props struct {
 	}
 }
 
-var logger = tgbot.GetLogger()
-
 var counterApp = tgbot.NewApplication[State, Action](
 	func(tc *tgbot.TelegramContext) State {
 		tc.Logger.Info("CreateAppState")
@@ -79,8 +82,42 @@ var counterApp = tgbot.NewApplication[State, Action](
 	&tgbot.NewApplicationProps[State, Action]{},
 )
 
+func runEmulator(dispatcher *tgbot.ChatsDispatcher) {
+	bot := emulator.NewFakeBot()
+	emulator.EmulatorMain(bot, dispatcher)
+}
+
+func runReal(dispatcher *tgbot.ChatsDispatcher) {
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
+	token := os.Getenv("BOT_TOKEN")
+
+	if token == "" {
+		logger.Fatal("BOT_TOKEN env variable is not set")
+		os.Exit(1)
+	}
+
+	bot, err := bot.New(token, bot.WithDefaultHandler(func(ctx context.Context, bot *bot.Bot, update *models.Update) {
+		dispatcher.HandleUpdate(ctx, bot, update)
+	}))
+
+	if err != nil {
+		logger.Fatal("Error creating bot", zap.Error(err))
+		os.Exit(1)
+	}
+
+	bot.Start(ctx)
+
+}
+
+var logger = tgbot.GetLogger()
+
 func main() {
-	fmt.Println(flag.Arg(0))
+	// if first argument is "emulator", run emulator
+	flag.Parse()
+
+	logger.Debug("Starting bot", zap.Any("args", flag.Args()))
 
 	dispatcher := tgbot.NewChatsDispatcher(&tgbot.ChatsDispatcherProps{
 		ChatFactory: func(tc *tgbot.TelegramContext) tgbot.ChatHandler {
@@ -88,8 +125,13 @@ func main() {
 		},
 	})
 
-	bot := emulator.NewFakeBot()
-
-	emulator.EmulatorMain(bot, dispatcher)
-
+	if len(flag.Args()) > 0 && flag.Args()[0] == "emulator" {
+		runEmulator(dispatcher)
+	} else if len(flag.Args()) > 0 && flag.Args()[0] == "real" {
+		runReal(dispatcher)
+	} else {
+		logger.Fatal("Unknown argument", zap.Any("args", flag.Args()))
+		fmt.Println("emulator or real")
+		os.Exit(1)
+	}
 }

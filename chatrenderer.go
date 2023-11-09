@@ -38,7 +38,7 @@ type TelegramChatRenderer struct {
 	ChatID int64
 }
 
-func NewTelegramChatRenderer(bot TelegramContextBot, chatID int64) *TelegramChatRenderer {
+func NewTelegramChatRenderer(bot TelegramBot, chatID int64) *TelegramChatRenderer {
 	return &TelegramChatRenderer{
 		Bot:    bot,
 		ChatID: chatID,
