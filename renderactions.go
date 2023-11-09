@@ -8,8 +8,6 @@ import (
 	"go.uber.org/zap"
 )
 
-var logger = GetLogger()
-
 const (
 	KindRenderActionKeep    = "RenderActionKeep"
 	KindRenderActionReplace = "RenderActionReplace"
@@ -208,8 +206,8 @@ func create[A any](ctx context.Context, renderer ChatRenderer, action *RenderAct
 	case *OutcomingTextMessage[A]:
 
 		message, err := renderer.Message(ctx, &ChatRendererMessageProps{
-			Text:  GetOrText(a.Text, emptyString),
-			Extra: a.getExtra(),
+			Text:        GetOrText(a.Text, emptyString),
+			ReplyMarkup: a.ReplyMarkup(),
 		})
 
 		if err != nil {
@@ -232,7 +230,7 @@ func create[A any](ctx context.Context, renderer ChatRenderer, action *RenderAct
 	// case *OutcomingPhotoGroupMessage:
 	// 	return renderer.PhotoGroup(a.ElementPhotoGroup)
 	default:
-		logger.Error("create: unsupported outcoming message type", zap.Any("a", a))
+		globalLogger.Error("create: unsupported outcoming message type", zap.Any("a", a))
 	}
 
 	return nil, nil
@@ -277,18 +275,18 @@ func ExecuteRenderActions[A any](ctx context.Context, renderer ChatRenderer, act
 		case *RenderActionReplace:
 			if a.RenderedElement.renderedKind() == KindRenderedBotMessage && a.NewElement.OutcomingKind() == KindOutcomingTextMessage {
 
-				logger.Debug("ExecuteRenderActions: replacing rendered element", zap.Any("a", a.RenderedElement))
+				globalLogger.Debug("ExecuteRenderActions: replacing rendered element", zap.Any("a", a.RenderedElement))
 
 				outcoming := a.NewElement.(*OutcomingTextMessage[A])
 				renderedElement := a.RenderedElement.(*RenderedBotMessage[A])
 
-				logger.Debug("ExecuteRenderActions: replacing rendered element",
+				globalLogger.Debug("ExecuteRenderActions: replacing rendered element",
 					zap.Any("outcoming", outcoming), zap.Any("renderedElement", renderedElement),
 				)
 
 				message, err := renderer.Message(ctx, &ChatRendererMessageProps{
 					Text:          GetOrText(outcoming.Text, emptyString),
-					Extra:         outcoming.getExtra(),
+					ReplyMarkup:   outcoming.ReplyMarkup(),
 					TargetMessage: renderedElement.Message,
 					RemoveTarget:  false,
 				})
@@ -312,7 +310,7 @@ func ExecuteRenderActions[A any](ctx context.Context, renderer ChatRenderer, act
 		err := renderer.Delete(action.RenderedElement.ID())
 
 		if err != nil {
-			logger.Error("Error removing rendered element", zap.Error(err))
+			globalLogger.Error("Error removing rendered element", zap.Error(err))
 		}
 	}
 

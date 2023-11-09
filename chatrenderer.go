@@ -47,7 +47,7 @@ func NewTelegramChatRenderer(bot TelegramBot, chatID int64) *TelegramChatRendere
 
 type ChatRendererMessageProps struct {
 	Text          string
-	Extra         models.ReplyMarkup
+	ReplyMarkup   models.ReplyMarkup
 	TargetMessage *models.Message
 	RemoveTarget  bool
 }
@@ -84,7 +84,7 @@ func (r *TelegramChatRenderer) Message(ctx context.Context, props *ChatRendererM
 				ChatID:      r.ChatID,
 				MessageID:   props.TargetMessage.ID,
 				Text:        props.Text,
-				ReplyMarkup: props.Extra,
+				ReplyMarkup: props.ReplyMarkup,
 			})
 
 			if err != nil {
@@ -99,7 +99,7 @@ func (r *TelegramChatRenderer) Message(ctx context.Context, props *ChatRendererM
 	message, err := r.Bot.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID:      r.ChatID,
 		Text:        props.Text,
-		ReplyMarkup: props.Extra,
+		ReplyMarkup: props.ReplyMarkup,
 	})
 
 	if err != nil {

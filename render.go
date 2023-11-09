@@ -48,10 +48,8 @@ func (a *Application[S, A]) PreRender(ac *ApplicationContext[S, A]) *PreRenderDa
 				res.OutcomingMessages,
 			)
 
-			// logger.Info("RenderActions", zap.Any("actions", actions))
-
 			for _, a := range actions {
-				logger.Info("RenderActions", zap.Any("action", a))
+				ac.Logger.Info("RenderActions", zap.Any("action", a))
 			}
 
 			rendered, err := ExecuteRenderActions[A](
@@ -60,15 +58,15 @@ func (a *Application[S, A]) PreRender(ac *ApplicationContext[S, A]) *PreRenderDa
 				actions,
 			)
 
-			logger.Info("Rendered", zap.Any("count", len(rendered)))
+			ac.Logger.Info("Rendered", zap.Any("count", len(rendered)))
 
 			if err != nil {
-				logger.Error("Error rendering", zap.Error(err))
+				ac.Logger.Error("Error rendering", zap.Error(err))
 				return []RenderedElement{}, err
 			}
 
 			for _, r := range rendered {
-				logger.Info("Rendered", zap.Any("element", r.renderedKind()))
+				ac.Logger.Info("Rendered", zap.Any("element", r.renderedKind()))
 			}
 
 			return rendered, nil

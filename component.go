@@ -98,14 +98,14 @@ func getCallbackHandlersMap[A any](outcomingMessages []OutcomingMessage) map[str
 func callbackMapToHandler[A any](cbmap map[string]func() *A) ChatCallbackHandler[A] {
 	return func(callbackData string) *A {
 
-		logger.Info("Callback handler", zap.String("data", callbackData))
+		globalLogger.Info("Callback handler", zap.String("data", callbackData))
 
 		if handler, ok := cbmap[callbackData]; ok {
-			logger.Info("Calling handler", zap.String("data", callbackData))
+			globalLogger.Info("Calling handler", zap.String("data", callbackData))
 
 			return handler()
 		} else {
-			logger.Error("No handler for callback", zap.String("key", callbackData))
+			globalLogger.Error("No handler for callback", zap.String("key", callbackData))
 			return nil
 		}
 
@@ -117,6 +117,39 @@ type ProcessElementsResult[A any] struct {
 	InputHandlers     []ElementInputHandler[A]
 	CallbackHandler   ChatCallbackHandler[A]
 	CallbackMap       map[string]func() *A
+	BottomButtons     []ElementBottomButton
+	isComplete        bool
+}
+
+func (per *ProcessElementsResult[A]) lastTextMessage() *OutcomingTextMessage[A] {
+	for i := len(per.OutcomingMessages) - 1; i >= 0; i-- {
+		if per.OutcomingMessages[i].OutcomingKind() == KindOutcomingTextMessage {
+			return per.OutcomingMessages[i].(*OutcomingTextMessage[A])
+		}
+	}
+	return nil
+}
+
+// adds keyboard extra to the last message
+func (per *ProcessElementsResult[A]) Complete() {
+
+	if per.isComplete {
+		globalLogger.Error("ProcessElementsResult.Complete: already complete")
+		return
+	}
+
+	lastMessage := per.lastTextMessage()
+
+	if len(per.BottomButtons) > 0 {
+		lastMessage.BottomButtons = append(lastMessage.BottomButtons, per.BottomButtons...)
+	}
+
+	if lastMessage == nil {
+		globalLogger.Error("ProcessElementsResult.Complete: no text messages")
+		return
+	}
+
+	per.isComplete = true
 }
 
 func (per *ProcessElementsResult[A]) String() string {
@@ -141,7 +174,8 @@ func (per *ProcessElementsResult[A]) String() string {
 func ElementsToMessagesAndHandlers[A any](elements []Element) *ProcessElementsResult[A] {
 	messages := make([]OutcomingMessage, 0)
 	inputHandlers := make([]ElementInputHandler[A], 0)
-	callbackHandlers := make(map[string]func() A)
+	bottomButtons := make([]ElementBottomButton, 0)
+	// callbackHandlers := make(map[string]func() A)
 
 	var lastMessage *OutcomingTextMessage[A]
 
@@ -172,20 +206,35 @@ func ElementsToMessagesAndHandlers[A any](elements []Element) *ProcessElementsRe
 			messages = append(messages, outcoming)
 
 		case *ElementMessagePart:
-			getLastMessage().concatText(element.(*ElementMessagePart).Text)
+			_lastMessage := getLastMessage()
+			text := element.(*ElementMessagePart).Text
+
+			if _lastMessage.isComplete {
+				messages = append(messages, NewOutcomingTextMessage[A](text))
+			} else {
+				getLastMessage().ConcatText(text)
+
+			}
+
+		case *ElementCompleteMessage:
+			getLastMessage().SetComplete()
 
 		case *ElementButton[A]:
 			getLastMessage().AddButton(element.(*ElementButton[A]))
 
-			act := el.Action
-			if act == "" {
-				act = el.Text
-			}
+			// TODO create callback handler
 
-			callbackHandlers[act] = el.OnClick
+		case *ElementButtonsRow[A]:
+			getLastMessage().AddButtonsRow(element.(*ElementButtonsRow[A]))
 
 		case *ElementInputHandler[A]:
 			inputHandlers = append(inputHandlers, *el)
+
+		case *ElementBottomButton:
+			bottomButtons = append(bottomButtons, *el)
+
+		case *ElementUserMessage:
+			messages = append(messages, &OutcomingUserMessage{*el})
 		}
 	}
 
@@ -197,5 +246,6 @@ func ElementsToMessagesAndHandlers[A any](elements []Element) *ProcessElementsRe
 		InputHandlers:     inputHandlers,
 		CallbackMap:       callbackMap,
 		CallbackHandler:   callbackHandler,
+		BottomButtons:     bottomButtons,
 	}
 }

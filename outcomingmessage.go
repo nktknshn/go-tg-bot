@@ -101,13 +101,35 @@ func (t *OutcomingPhotoGroupMessage) Equal(other OutcomingMessage) bool {
 }
 
 type OutcomingTextMessage[A any] struct {
-	Text       string
-	Buttons    [][]*(ElementButton[A])
-	isComplete bool
+	Text          string
+	Buttons       [][]ElementButton[A]
+	BottomButtons []ElementBottomButton
+	isComplete    bool
+	// TODO RequestLocation
 }
 
 func (t *OutcomingTextMessage[T]) String() string {
 	return fmt.Sprintf("OutcomingTextMessage{text: %s, buttons: %v, isComplete: %v}", t.Text, t.Buttons, t.isComplete)
+}
+
+func EqualReplyKeyboardMarkup(a models.ReplyKeyboardMarkup, b models.ReplyKeyboardMarkup) bool {
+	if len(a.Keyboard) != len(b.Keyboard) {
+		return false
+	}
+
+	for i, row := range a.Keyboard {
+		if len(row) != len(b.Keyboard[i]) {
+			return false
+		}
+
+		for j, button := range row {
+			if button.Text != b.Keyboard[i][j].Text {
+				return false
+			}
+		}
+	}
+
+	return true
 }
 
 func EqualInlineKeyboardMarkup(a models.InlineKeyboardMarkup, b models.InlineKeyboardMarkup) bool {
@@ -135,8 +157,8 @@ func EqualInlineKeyboardMarkup(a models.InlineKeyboardMarkup, b models.InlineKey
 }
 
 func NewOutcomingTextMessage[A any](text string) *OutcomingTextMessage[A] {
-	buttons := make([][]*ElementButton[A], 0)
-	buttons = append(buttons, make([]*ElementButton[A], 0))
+	buttons := make([][]ElementButton[A], 0)
+	buttons = append(buttons, make([]ElementButton[A], 0))
 
 	return &OutcomingTextMessage[A]{
 		Text:       text,
@@ -156,18 +178,49 @@ func (t *OutcomingTextMessage[T]) Equal(other OutcomingMessage) bool {
 
 	oth := other.(*OutcomingTextMessage[T])
 
-	return t.Text == oth.Text && EqualInlineKeyboardMarkup(t.getExtra(), oth.getExtra())
+	return t.Text == oth.Text && EqualInlineKeyboardMarkup(t.InlineKeyboardMarkup(), oth.InlineKeyboardMarkup()) && EqualReplyKeyboardMarkup(t.ReplyKeyboardMarkup(), oth.ReplyKeyboardMarkup())
 }
 
-func (t *OutcomingTextMessage[T]) concatText(text string) {
+func (t *OutcomingTextMessage[T]) ConcatText(text string) {
 	t.Text += "\n" + text
 }
 
-// func (t *OutcomingTextMessage[T]) complete() {
-// 	t.isComplete = true
-// }
+func (t *OutcomingTextMessage[T]) SetComplete() {
+	t.isComplete = true
+}
 
-func (t *OutcomingTextMessage[T]) getExtra() models.InlineKeyboardMarkup {
+func (t *OutcomingTextMessage[T]) ReplyMarkup() models.ReplyMarkup {
+
+	if len(t.BottomButtons) > 0 {
+		return t.ReplyKeyboardMarkup()
+	}
+
+	return t.InlineKeyboardMarkup()
+}
+
+func (t *OutcomingTextMessage[T]) ReplyKeyboardMarkup() models.ReplyKeyboardMarkup {
+	res := models.ReplyKeyboardMarkup{}
+
+	if len(t.BottomButtons) > 0 {
+
+		for _, b := range t.BottomButtons {
+			if len(b.Texts) > 0 {
+				br := make([]models.KeyboardButton, 0)
+				for _, t := range b.Texts {
+					br = append(br, models.KeyboardButton{Text: t})
+				}
+				res.Keyboard = append(res.Keyboard, br)
+			} else {
+				res.Keyboard = append(res.Keyboard, []models.KeyboardButton{{Text: b.Text}})
+			}
+		}
+
+	}
+	return res
+}
+
+func (t *OutcomingTextMessage[T]) InlineKeyboardMarkup() models.InlineKeyboardMarkup {
+	// ReplyKeyboardRemove
 	res := models.InlineKeyboardMarkup{}
 
 	for _, row := range t.Buttons {
@@ -185,10 +238,14 @@ func (t *OutcomingTextMessage[T]) getExtra() models.InlineKeyboardMarkup {
 }
 
 func (t *OutcomingTextMessage[T]) AddButton(button *ElementButton[T]) {
-	t.Buttons[0] = append(t.Buttons[0], button)
+	t.Buttons[0] = append(t.Buttons[0], *button)
 }
 
-func EqualExtra(a *models.ReplyMarkup, b *models.ReplyMarkup) bool {
+func (t *OutcomingTextMessage[T]) AddButtonsRow(buttonsRow *ElementButtonsRow[T]) {
+	t.Buttons = append(t.Buttons, buttonsRow.Buttons())
+}
+
+func EqualReplyMarkup(a *models.ReplyMarkup, b *models.ReplyMarkup) bool {
 	logger := GetLogger()
 
 	if a == nil && b == nil {

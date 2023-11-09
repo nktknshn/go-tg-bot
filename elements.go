@@ -185,7 +185,7 @@ func (c *ElementCompleteMessage) elementKind() string {
 }
 
 func (c ElementCompleteMessage) String() string {
-	return fmt.Sprintf("ElementCompleteMessage{}")
+	return "ElementCompleteMessage{}"
 }
 
 type ElementMessagePart struct {
@@ -248,6 +248,25 @@ type ElementButtonsRow[A any] struct {
 	OnClick func(int, string) A
 }
 
+func (br *ElementButtonsRow[A]) Buttons() []ElementButton[A] {
+	result := make([]ElementButton[A], 0)
+
+	for idx, b := range br.Texts {
+		idx := idx
+		b := b
+		result = append(result, ElementButton[A]{
+			Text:    b,
+			Action:  b,
+			NextRow: false,
+			OnClick: func() A {
+				return br.OnClick(idx, b)
+			},
+		})
+	}
+
+	return result
+}
+
 func (c *ElementButtonsRow[A]) elementKind() string {
 	return KindElementButtonsRow
 }
@@ -257,7 +276,9 @@ func (c ElementButtonsRow[A]) String() string {
 }
 
 type ElementBottomButton struct {
-	Text string
+	Text  string
+	Texts []string
+	Hide  bool
 }
 
 func (c *ElementBottomButton) elementKind() string {
@@ -265,7 +286,7 @@ func (c *ElementBottomButton) elementKind() string {
 }
 
 func (c ElementBottomButton) String() string {
-	return fmt.Sprintf("ElementBottomButton{Text=%s}", c.Text)
+	return fmt.Sprintf("ElementBottomButton{Text=%s, Texts=%s}", c.Text, c.Texts)
 }
 
 type ElementUserMessage struct {

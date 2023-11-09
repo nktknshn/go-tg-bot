@@ -22,8 +22,8 @@ func (fb *FakeBot) AnswerCallbackQuery(ctx context.Context, params *bot.AnswerCa
 func (fb *FakeBot) SendMessage(ctx context.Context, params *bot.SendMessageParams) (*models.Message, error) {
 
 	m := fb.createMessage(&tgbot.ChatRendererMessageProps{
-		Text:  params.Text,
-		Extra: params.ReplyMarkup,
+		Text:        params.Text,
+		ReplyMarkup: params.ReplyMarkup,
 	})
 
 	fb.notify()
@@ -80,7 +80,7 @@ func (fs *FakeBot) createMessage(props *tgbot.ChatRendererMessageProps) *models.
 	botMessage := &models.Message{
 		ID:          fs.getNewID(),
 		Text:        props.Text,
-		ReplyMarkup: *tryInlineKeyboard(props.Extra),
+		ReplyMarkup: *tryInlineKeyboard(props.ReplyMarkup),
 	}
 
 	fs.Messages[botMessage.ID] = botMessage
