@@ -3,20 +3,21 @@ package tgbot
 import "fmt"
 
 const (
-	KindElementPhotoGroup   = "ElementPhotoGroup"
-	KindElementFile         = "ElementFile"
-	KindElementMessage      = "ElementMessage"
-	KindElementMessagePart  = "ElementMessagePart"
-	KindElementButton       = "ElementButton"
-	KindElementComponent    = "ElementComponent"
-	KindElementInputHandler = "ElementInputHandler"
-	KindElementUserMessage  = "ElementUserMessage"
+	KindElementPhotoGroup      = "ElementPhotoGroup"
+	KindElementFile            = "ElementFile"
+	KindElementMessage         = "ElementMessage"
+	KindElementMessagePart     = "ElementMessagePart"
+	KindElementButton          = "ElementButton"
+	KindElementBottomButton    = "KindElementBottomButton"
+	KindElementComponent       = "ElementComponent"
+	KindElementInputHandler    = "ElementInputHandler"
+	KindElementUserMessage     = "ElementUserMessage"
+	KindElementCompleteMessage = "ElementCompleteMessage"
+	KindElementButtonsRow      = "ElementButtonsRow"
 )
 
-func EndMessage() *ElementMessagePart {
-	return &ElementMessagePart{
-		Text: "",
-	}
+func MessageComplete() *ElementCompleteMessage {
+	return &ElementCompleteMessage{}
 }
 
 func MessagePart(text string) *ElementMessagePart {
@@ -31,10 +32,25 @@ func Message(text string) *ElementMessage {
 	}
 }
 
-func Button[A any](text string, onClick func() A) *ElementButton[A] {
+func Button[A any](text string, onClick func() A, action string, nextRow bool) *ElementButton[A] {
 	return &ElementButton[A]{
 		Text:    text,
+		Action:  action,
 		OnClick: onClick,
+		NextRow: nextRow,
+	}
+}
+
+func ButtonsRow[A any](texts []string, onClick func(int, string) A) *ElementButtonsRow[A] {
+	return &ElementButtonsRow[A]{
+		Texts:   texts,
+		OnClick: onClick,
+	}
+}
+
+func BottomButton(text string) *ElementBottomButton {
+	return &ElementBottomButton{
+		Text: text,
 	}
 }
 
@@ -162,6 +178,16 @@ func (c *ElementMessage) Equal(other BasicElement) bool {
 	return c.Text == otherMessage.Text
 }
 
+type ElementCompleteMessage struct{}
+
+func (c *ElementCompleteMessage) elementKind() string {
+	return KindElementCompleteMessage
+}
+
+func (c ElementCompleteMessage) String() string {
+	return fmt.Sprintf("ElementCompleteMessage{}")
+}
+
 type ElementMessagePart struct {
 	Text string
 }
@@ -187,6 +213,7 @@ func (c *ElementMessagePart) Equal(other BasicElement) bool {
 type ElementButton[A any] struct {
 	Text    string
 	Action  string
+	NextRow bool
 	OnClick func() A
 }
 
@@ -214,6 +241,31 @@ func (c *ElementButton[A]) Equal(other BasicElement) bool {
 	otherButton := other.(*ElementButton[A])
 
 	return c.Text == otherButton.Text && c.Action == otherButton.Action
+}
+
+type ElementButtonsRow[A any] struct {
+	Texts   []string
+	OnClick func(int, string) A
+}
+
+func (c *ElementButtonsRow[A]) elementKind() string {
+	return KindElementButtonsRow
+}
+
+func (c ElementButtonsRow[A]) String() string {
+	return fmt.Sprintf("ElementButtonsRow{Texts=%v}", c.Texts)
+}
+
+type ElementBottomButton struct {
+	Text string
+}
+
+func (c *ElementBottomButton) elementKind() string {
+	return KindElementBottomButton
+}
+
+func (c ElementBottomButton) String() string {
+	return fmt.Sprintf("ElementBottomButton{Text=%s}", c.Text)
 }
 
 type ElementUserMessage struct {

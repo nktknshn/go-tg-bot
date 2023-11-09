@@ -2,6 +2,8 @@ package tgbot
 
 import (
 	"fmt"
+
+	"go.uber.org/zap"
 )
 
 type O[A any] interface {
@@ -11,7 +13,9 @@ type O[A any] interface {
 	Messagef(string, ...interface{})
 	MessagePart(string)
 	Button(string, func() A)
-	EndMessage()
+	ButtonsRow([]string, func(int, string) A)
+	BottomButton(string)
+	MessageComplete()
 	InputHandler(func(string) A)
 }
 
@@ -35,7 +39,15 @@ func (o *outputImpl[A]) MessagePart(text string) {
 }
 
 func (o *outputImpl[A]) Button(text string, handler func() A) {
-	o.result = append(o.result, Button(text, handler))
+	o.result = append(o.result, Button(text, handler, text, false))
+}
+
+func (o *outputImpl[A]) ButtonsRow(texts []string, handler func(int, string) A) {
+	o.result = append(o.result, ButtonsRow(texts, handler))
+}
+
+func (o *outputImpl[A]) BottomButton(text string) {
+	o.result = append(o.result, MessagePart(text))
 }
 
 func (o *outputImpl[A]) Send(element Element) {
@@ -46,38 +58,65 @@ func (o *outputImpl[A]) Comp(comp Comp[A]) {
 	o.result = append(o.result, Component(comp))
 }
 
-func (o *outputImpl[A]) EndMessage() {
-	o.result = append(o.result, EndMessage())
+func (o *outputImpl[A]) MessageComplete() {
+	o.result = append(o.result, MessageComplete())
 }
 
 func (o *outputImpl[A]) InputHandler(handler func(string) A) {
 	o.result = append(o.result, AInputHandler(handler))
 }
 
-func ComponentToElements2[A any](comp Comp[A]) []Element {
-
+func ComponentToElements[A any](comp Comp[A]) []Element {
 	o := &outputImpl[A]{result: make([]Element, 0)}
-
 	comp(o)
-
 	return o.result
 }
 
-func ComponentToElements[T any, A any](compFunc ComponentCons[T, A], props *T) []Element {
+func getCallbackHandlersMap[A any](outcomingMessages []OutcomingMessage) map[string]func() *A {
 
-	c := compFunc(props)
+	callbackHandlers := make(map[string]func() *A)
 
-	o := &outputImpl[A]{result: make([]Element, 0)}
+	for _, m := range outcomingMessages {
+		switch el := m.(type) {
+		case *OutcomingTextMessage[A]:
+			for _, row := range el.Buttons {
+				for _, butt := range row {
 
-	c(o)
+					butt := butt
+					callbackHandlers[butt.CallbackData()] = func() *A {
+						v := butt.OnClick()
+						return &v
+					}
+				}
+			}
+		}
+	}
 
-	return o.result
+	return callbackHandlers
+}
+
+func callbackMapToHandler[A any](cbmap map[string]func() *A) ChatCallbackHandler[A] {
+	return func(callbackData string) *A {
+
+		logger.Info("Callback handler", zap.String("data", callbackData))
+
+		if handler, ok := cbmap[callbackData]; ok {
+			logger.Info("Calling handler", zap.String("data", callbackData))
+
+			return handler()
+		} else {
+			logger.Error("No handler for callback", zap.String("key", callbackData))
+			return nil
+		}
+
+	}
 }
 
 type ProcessElementsResult[A any] struct {
 	OutcomingMessages []OutcomingMessage
 	InputHandlers     []ElementInputHandler[A]
-	CallbackHandlers  map[string]ChatCallbackHandler[A]
+	CallbackHandler   ChatCallbackHandler[A]
+	CallbackMap       map[string]func() *A
 }
 
 func (per *ProcessElementsResult[A]) String() string {
@@ -89,7 +128,7 @@ func (per *ProcessElementsResult[A]) String() string {
 
 	cbhsStr := ""
 
-	for k := range per.CallbackHandlers {
+	for k := range per.CallbackMap {
 		cbhsStr += fmt.Sprintf("%v,", k)
 	}
 
@@ -150,8 +189,13 @@ func ElementsToMessagesAndHandlers[A any](elements []Element) *ProcessElementsRe
 		}
 	}
 
+	callbackMap := getCallbackHandlersMap[A](messages)
+	callbackHandler := callbackMapToHandler[A](callbackMap)
+
 	return &ProcessElementsResult[A]{
 		OutcomingMessages: messages,
 		InputHandlers:     inputHandlers,
+		CallbackMap:       callbackMap,
+		CallbackHandler:   callbackHandler,
 	}
 }

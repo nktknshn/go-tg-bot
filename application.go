@@ -144,8 +144,14 @@ func NewApplication[S any, A any](
 	handleAction HandleActionFunc[S, A],
 	// turns state into basic elements
 	stateToComp StateToCompFuncType[S, A],
-	props *NewApplicationProps[S, A],
+	propss ...*NewApplicationProps[S, A],
 ) *Application[S, A] {
+
+	props := &NewApplicationProps[S, A]{}
+
+	if len(propss) > 0 {
+		props = propss[0]
+	}
 
 	var (
 		handleMessage  = props.HandleMessage

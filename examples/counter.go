@@ -25,14 +25,15 @@ type Action struct {
 	Error     error
 }
 
-func App(props struct {
+type Props struct {
 	counter int
 	err     error
-}) tgbot.Comp[Action] {
+}
+
+func App(props Props) tgbot.Comp[Action] {
 	return func(o tgbot.O[Action]) {
 
 		o.InputHandler(func(s string) Action {
-
 			if s == "/start" {
 				return Action{}
 			}
@@ -47,6 +48,7 @@ func App(props struct {
 		})
 
 		o.Messagef("Counter value: %v", props.counter)
+
 		if props.err != nil {
 			o.Messagef("Error: %v", props.err)
 		}
@@ -63,23 +65,19 @@ func App(props struct {
 var counterApp = tgbot.NewApplication[State, Action](
 	func(tc *tgbot.TelegramContext) State {
 		tc.Logger.Info("CreateAppState")
-
 		return State{Counter: 0}
 	},
 	func(ac *tgbot.ApplicationContext[State, Action], tc *tgbot.TelegramContext, a Action) {
-		tc.Logger.Info("HandleAction", zap.Any("Increment", a.Increment))
+		tc.Logger.Info("HandleAction", zap.Any("action", a))
 		ac.State.AppState.Counter += a.Increment
+		ac.State.AppState.Error = a.Error
 	},
 	func(s State) tgbot.Comp[Action] {
-		return App(struct {
-			counter int
-			err     error
-		}{
+		return App(Props{
 			counter: s.Counter,
-			err:     nil,
+			err:     s.Error,
 		})
 	},
-	&tgbot.NewApplicationProps[State, Action]{},
 )
 
 func runEmulator(dispatcher *tgbot.ChatsDispatcher) {
