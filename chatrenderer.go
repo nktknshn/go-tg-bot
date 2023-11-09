@@ -10,19 +10,44 @@ import (
 
 var ErrMessageNotFound = fmt.Errorf("message not found")
 
+type MessageDeleter interface {
+	DeleteMessage(ctx context.Context, params *bot.DeleteMessageParams) (bool, error)
+}
+
+type MessageEditor interface {
+	EditMessageText(ctx context.Context, params *bot.EditMessageTextParams) (*models.Message, error)
+}
+
+type MessageSender interface {
+	SendMessage(ctx context.Context, params *bot.SendMessageParams) (*models.Message, error)
+}
+
 type ChatRenderer interface {
 	Message(context.Context, *ChatRendererMessageProps) (*models.Message, error)
 	Delete(messageId int) error
 }
 
+type ChatRendererBot interface {
+	MessageDeleter
+	MessageEditor
+	MessageSender
+}
+
 type TelegramChatRenderer struct {
-	Bot    *bot.Bot
+	Bot    ChatRendererBot
 	ChatID int64
+}
+
+func NewTelegramChatRenderer(bot TelegramContextBot, chatID int64) *TelegramChatRenderer {
+	return &TelegramChatRenderer{
+		Bot:    bot,
+		ChatID: chatID,
+	}
 }
 
 type ChatRendererMessageProps struct {
 	Text          string
-	Extra         models.InlineKeyboardMarkup
+	Extra         models.ReplyMarkup
 	TargetMessage *models.Message
 	RemoveTarget  bool
 }

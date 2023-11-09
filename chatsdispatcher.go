@@ -3,7 +3,6 @@ package tgbot
 import (
 	"context"
 
-	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 	"go.uber.org/zap"
 )
@@ -28,7 +27,7 @@ func NewChatsDispatcher(props *ChatsDispatcherProps) *ChatsDispatcher {
 	}
 }
 
-func (cd *ChatsDispatcher) HandleUpdate(ctx context.Context, bot *bot.Bot, update *models.Update) {
+func (cd *ChatsDispatcher) HandleUpdate(ctx context.Context, bot TelegramContextBot, update *models.Update) {
 
 	var logger = GetLogger().With(
 		zap.String("module", "ChatHandler"),

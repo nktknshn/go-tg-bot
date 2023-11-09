@@ -25,7 +25,7 @@ func InlineKeyboardToButtons(ik *models.InlineKeyboardMarkup) MessageButtons {
 	return mb
 }
 
-func FakeServerToInput(fakeServer *FakeServer) *DrawInput {
+func FakeServerToInput(fakeServer *FakeBot) *DrawInput {
 	result := &DrawInput{}
 
 	for _, m := range fakeServer.Messages {
@@ -43,7 +43,7 @@ func FakeServerToInput(fakeServer *FakeServer) *DrawInput {
 
 var logger = tgbot.GetLogger()
 
-func DrawFakeServer(fakeServer *FakeServer) {
+func DrawFakeServer(fakeServer *FakeBot) {
 	drawInput := FakeServerToInput(fakeServer)
 
 	EmulatorDraw(drawInput, &ActionsHandler{
@@ -55,61 +55,3 @@ func DrawFakeServer(fakeServer *FakeServer) {
 		},
 	})
 }
-
-// func EmulateApplication[S any, A any](app tgbot.Application[S, A]) {
-// 	// app.CreateAppState()
-// 	// EmulatorDraw(&DrawInput{})
-// }
-
-/*
-
-func main() {
-	a := app.New()
-	w := a.NewWindow("Emulator")
-
-	inp := emul.DrawInput{
-		Boxes: []emul.MessageBox{
-			{
-				Text: "Ты сдохнешь тупой гад!!!!",
-				Buttons: emul.MessageButtons{
-					Rows: []emul.ButtonsRow{
-						{
-							Butts: []emul.Butt{
-								{Title: "Ударить", CallbackString: "Ударить"},
-								{Title: "Убежать", CallbackString: "Убежать"},
-							}},
-					},
-				},
-			},
-			{
-				Text:    "Свин!!!",
-				Buttons: emul.MessageButtons{},
-			},
-		},
-	}
-
-	output := emul.EmulatorDraw(
-		inp, emul.ActionsHandler{
-			CallbackHandlers: func(s string) {
-				fmt.Printf("Button clicked: %s", s)
-			},
-			UserInputHandler: func(s string) {
-				fmt.Printf("User input: %s", s)
-			},
-		},
-	)
-
-	wc := container.NewGridWrap(
-		fyne.Size{Width: 300},
-		container.NewStack(
-			canvas.NewRectangle(color.Black),
-			output,
-		),
-	)
-
-	w.SetContent(container.NewCenter(wc))
-
-	w.ShowAndRun()
-}
-
-*/

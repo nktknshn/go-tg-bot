@@ -8,9 +8,18 @@ import (
 	"go.uber.org/zap"
 )
 
+type CallbackAnswerer interface {
+	AnswerCallbackQuery(context.Context, *bot.AnswerCallbackQueryParams) (bool, error)
+}
+
+type TelegramContextBot interface {
+	CallbackAnswerer
+	ChatRendererBot
+}
+
 type TelegramContext struct {
 	ChatID int64
-	Bot    *bot.Bot
+	Bot    TelegramContextBot
 	Ctx    context.Context
 	Update *models.Update
 	Logger *zap.Logger

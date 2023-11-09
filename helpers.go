@@ -1,6 +1,20 @@
 package tgbot
 
-import "github.com/go-telegram/bot/models"
+import (
+	"os"
+
+	"github.com/go-telegram/bot/models"
+)
+
+func TryReadBotTokenFile() (string, error) {
+	res, err := os.ReadFile("../bot.txt")
+
+	if err != nil {
+		return "", err
+	}
+
+	return string(res), nil
+}
 
 func GetUpdateChatId(update *models.Update) int64 {
 
