@@ -31,6 +31,17 @@ type RenderedUserMessage struct {
 	MessageId            int
 }
 
+func NewRenderedUserMessage(messageID int) *RenderedUserMessage {
+	return &RenderedUserMessage{
+		OutcomingUserMessage: &OutcomingUserMessage{
+			ElementUserMessage: ElementUserMessage{
+				MessageID: messageID,
+			},
+		},
+		MessageId: messageID,
+	}
+}
+
 func (r *RenderedUserMessage) renderedKind() string {
 	return KindRenderedUserMessage
 }

@@ -80,7 +80,7 @@ func areSame[A any](a RenderedElement, b OutcomingMessage) bool {
 		m := a.(*RenderedUserMessage)
 		om := b.(*OutcomingUserMessage)
 
-		return m.MessageId == om.ElementUserMessage.MessageId
+		return m.MessageId == om.ElementUserMessage.MessageID
 	} else if a.renderedKind() == KindRenderedBotMessage && b.OutcomingKind() == KindOutcomingTextMessage {
 		m := a.(*RenderedBotMessage[A])
 		om := b.(*OutcomingTextMessage[A])
@@ -221,7 +221,7 @@ func create[A any](ctx context.Context, renderer ChatRenderer, action *RenderAct
 
 	case *OutcomingUserMessage:
 		return &RenderedUserMessage{
-			MessageId:            a.ElementUserMessage.MessageId,
+			MessageId:            a.ElementUserMessage.MessageID,
 			OutcomingUserMessage: a,
 		}, nil
 	// TODO

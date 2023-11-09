@@ -73,31 +73,14 @@ type NewApplicationProps[S any, A any] struct {
 	CreateRenderer func(*TelegramContext) ChatRenderer
 }
 
-func DefaultHandleMessage[S any, A any](ac *ApplicationContext[S, A], tc *TelegramContext) {
-	tc.Logger.Info("HandleMessage", zap.Any("text", tc.Update.Message.Text))
-
-	if ac.State.InputHandler != nil {
-		action := ac.State.InputHandler(tc.Update.Message.Text)
-		ac.App.HandleAction(ac, tc, action)
-		err := ac.App.RenderFunc(ac)
-
-		if err != nil {
-			tc.Logger.Error("Error rendering state", zap.Error(err))
-		}
-
-	} else {
-		tc.Logger.Error("Missing InputHandler")
-	}
-}
-
 func DefaultRenderFunc[S any, A any](ac *ApplicationContext[S, A]) error {
-	logger.Info("RenderFunc")
+	ac.Logger.Info("RenderFunc")
 
 	res := ac.App.PreRender(ac)
 	rendered, err := res.ExecuteRender(ac.State.Renderer)
 
 	if err != nil {
-		logger.Error("Error in RenderFunc", zap.Error(err))
+		ac.Logger.Error("Error in RenderFunc", zap.Error(err))
 		return err
 	}
 
@@ -135,6 +118,28 @@ func DefaultHandlerCallback[S any, A any](ac *ApplicationContext[S, A], tc *Tele
 		tc.Logger.Error("Missing CallbackHandler")
 	}
 
+}
+
+func DefaultHandleMessage[S any, A any](ac *ApplicationContext[S, A], tc *TelegramContext) {
+	tc.Logger.Info("HandleMessage", zap.Any("text", tc.Update.Message.Text))
+
+	if ac.State.InputHandler != nil {
+
+		ac.State.RenderedElements = append(ac.State.RenderedElements, NewRenderedUserMessage(tc.Update.Message.ID))
+
+		action := ac.State.InputHandler(tc.Update.Message.Text)
+
+		ac.App.HandleAction(ac, tc, action)
+
+		err := ac.App.RenderFunc(ac)
+
+		if err != nil {
+			tc.Logger.Error("Error rendering state", zap.Error(err))
+		}
+
+	} else {
+		tc.Logger.Error("Missing InputHandler")
+	}
 }
 
 func NewApplication[S any, A any](

@@ -290,7 +290,7 @@ func (c ElementBottomButton) String() string {
 }
 
 type ElementUserMessage struct {
-	MessageId int
+	MessageID int
 }
 
 func (c *ElementUserMessage) elementKind() string {
@@ -298,7 +298,7 @@ func (c *ElementUserMessage) elementKind() string {
 }
 
 func (c ElementUserMessage) String() string {
-	return fmt.Sprintf("ElementUserMessage{MessageId=%d}", c.MessageId)
+	return fmt.Sprintf("ElementUserMessage{MessageId=%d}", c.MessageID)
 }
 
 func (c *ElementUserMessage) Equal(other BasicElement) bool {
@@ -309,5 +309,5 @@ func (c *ElementUserMessage) Equal(other BasicElement) bool {
 
 	otherUserMessage := other.(*ElementUserMessage)
 
-	return c.MessageId == otherUserMessage.MessageId
+	return c.MessageID == otherUserMessage.MessageID
 }

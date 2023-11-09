@@ -72,7 +72,7 @@ func (t *OutcomingUserMessage) Equal(other OutcomingMessage) bool {
 
 	otherUserMessage := other.(*OutcomingUserMessage)
 
-	return t.ElementUserMessage.MessageId == otherUserMessage.ElementUserMessage.MessageId
+	return t.ElementUserMessage.MessageID == otherUserMessage.ElementUserMessage.MessageID
 }
 
 type OutcomingPhotoGroupMessage struct {

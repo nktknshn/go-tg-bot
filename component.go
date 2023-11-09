@@ -6,6 +6,23 @@ import (
 	"go.uber.org/zap"
 )
 
+type LocalStateSetter interface {
+	SetLocalState(any)
+}
+
+type LocalStateGetter interface {
+	LocalState() any
+}
+
+type LocalState interface {
+	LocalStateSetter
+	LocalStateGetter
+}
+
+type LocalStateProvider interface {
+	GetLocalState() LocalState
+}
+
 type O[A any] interface {
 	Send(Element)
 	Comp(Comp[A])
