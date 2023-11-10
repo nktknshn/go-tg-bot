@@ -14,6 +14,57 @@ import (
 	"go.uber.org/zap"
 )
 
+type UpdateProps struct {
+	ChatID int64
+	UserID int64
+}
+
+type CallbackQueryUpdate struct {
+	Data string
+	UpdateProps
+}
+
+func NewCallbackQueryUpdate(props CallbackQueryUpdate) *models.Update {
+	return &models.Update{
+		ID: int64(rand.Int()),
+		CallbackQuery: &models.CallbackQuery{
+			Data: props.Data,
+			Message: &models.Message{
+				ID: rand.Int(),
+				Chat: models.Chat{
+					ID: props.ChatID,
+				},
+				From: &models.User{
+					ID:       int64(props.UserID),
+					Username: "username",
+				},
+			},
+		},
+	}
+}
+
+type TextMessageUpdate struct {
+	Text string
+	UpdateProps
+}
+
+func NewTextMessageUpdate(props TextMessageUpdate) *models.Update {
+	return &models.Update{
+		ID: int64(rand.Int()),
+		Message: &models.Message{
+			ID:   rand.Int(),
+			Text: props.Text,
+			Chat: models.Chat{
+				ID: props.ChatID,
+			},
+			From: &models.User{
+				ID:       int64(props.UserID),
+				Username: "username",
+			},
+		},
+	}
+}
+
 func EmulatorMain(
 	bot *FakeBot,
 	dispatcher *tgbot.ChatsDispatcher,
@@ -31,18 +82,12 @@ func EmulatorMain(
 			dispatcher.HandleUpdate(
 				context.Background(),
 				bot,
-				&models.Update{
-					ID: int64(rand.Int()),
-					CallbackQuery: &models.CallbackQuery{
-						Data: s,
-						Message: &models.Message{
-							ID: rand.Int(),
-							Chat: models.Chat{
-								ID: chatID,
-							},
-						},
+				NewCallbackQueryUpdate(CallbackQueryUpdate{
+					Data: s,
+					UpdateProps: UpdateProps{
+						ChatID: chatID,
 					},
-				})
+				}))
 
 		},
 		UserInputHandler: func(s string) {
@@ -51,16 +96,12 @@ func EmulatorMain(
 			dispatcher.HandleUpdate(
 				context.Background(),
 				bot,
-				&models.Update{
-					ID: int64(rand.Int()),
-					Message: &models.Message{
-						ID:   rand.Int(),
-						Text: s,
-						Chat: models.Chat{
-							ID: chatID,
-						},
+				NewTextMessageUpdate(TextMessageUpdate{
+					Text: s,
+					UpdateProps: UpdateProps{
+						ChatID: chatID,
 					},
-				})
+				}))
 		},
 	}
 

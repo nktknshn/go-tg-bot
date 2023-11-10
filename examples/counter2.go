@@ -37,7 +37,7 @@ func App2(props Props, z Z) {
 
 	// z.CompZ(A(WelcomZ, props.username))
 
-	z.Messagef("Counter value: %v", props.counter)
+	z.Messagef("Counter value: %v", props.Counter)
 
 	if props.err != nil {
 		z.Messagef("Error: %v", props.err)
@@ -92,7 +92,7 @@ func (a *App3) Render(z Z) {
 
 	z.C(&WelcomZ2{username: a.props.username})
 
-	z.Messagef("Counter value: %v", a.props.counter)
+	z.Messagef("Counter value: %v", a.props.Counter)
 
 	if a.props.err != nil {
 		z.Messagef("Error: %v", a.props.err)

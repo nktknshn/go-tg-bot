@@ -15,6 +15,7 @@ func (a *Application[S, A]) PreRender(ac *ApplicationContext[S, A]) *PreRenderDa
 
 	els := ComponentToElements(
 		ac.App.StateToComp(ac.State.AppState),
+		ac.Logger,
 	)
 
 	res := ElementsToMessagesAndHandlers[A](els)

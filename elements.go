@@ -1,6 +1,11 @@
 package tgbot
 
-import "fmt"
+import (
+	"fmt"
+
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+)
 
 const (
 	KindElementPhotoGroup      = "ElementPhotoGroup"
@@ -74,7 +79,7 @@ type BasicElement interface {
 
 // Element is BasicElement or another component etc...
 type Element interface {
-	String() string
+	// String() string
 	elementKind() string
 }
 
@@ -134,28 +139,6 @@ func (c *ElementPhotoGroup) Equal(other BasicElement) bool {
 	return true
 }
 
-type ElementFile struct {
-	FileId string
-}
-
-func (ef ElementFile) String() string {
-	return fmt.Sprintf("ElementFile{FileId=%s}", ef.FileId)
-}
-
-func (c ElementFile) elementKind() string {
-	return KindElementFile
-}
-
-func (c *ElementFile) Equal(other BasicElement) bool {
-	if other.elementKind() != KindElementFile {
-		return false
-	}
-
-	otherFile := other.(*ElementFile)
-
-	return c.FileId == otherFile.FileId
-}
-
 type ElementMessage struct {
 	Text string
 }
@@ -196,7 +179,7 @@ func (c *ElementMessagePart) elementKind() string {
 	return KindElementMessagePart
 }
 
-func (c *ElementMessagePart) String() string {
+func (c ElementMessagePart) String() string {
 	return fmt.Sprintf("ElementMessagePart{Text=%s}", c.Text)
 }
 
@@ -310,4 +293,42 @@ func (c *ElementUserMessage) Equal(other BasicElement) bool {
 	otherUserMessage := other.(*ElementUserMessage)
 
 	return c.MessageID == otherUserMessage.MessageID
+}
+
+type ElementFile struct {
+	FileId string
+}
+
+func (ef ElementFile) String() string {
+	return fmt.Sprintf("ElementFile{FileId=%s}", ef.FileId)
+}
+
+func (c ElementFile) elementKind() string {
+	return KindElementFile
+}
+
+func (c *ElementFile) Equal(other BasicElement) bool {
+	if other.elementKind() != KindElementFile {
+		return false
+	}
+
+	otherFile := other.(*ElementFile)
+
+	return c.FileId == otherFile.FileId
+}
+
+type Elements []Element
+
+func (es Elements) ZapField(key string) zap.Field {
+	return zap.Array(key, zapcore.ArrayMarshalerFunc(func(ae zapcore.ArrayEncoder) error {
+		for _, e := range es {
+			ae.AppendObject(
+				zapcore.ObjectMarshalerFunc(func(oe zapcore.ObjectEncoder) error {
+					oe.AddString("kind", e.elementKind())
+					return nil
+				}),
+			)
+		}
+		return nil
+	}))
 }

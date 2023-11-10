@@ -90,6 +90,11 @@ func DefaultRenderFunc[S any, A any](ac *ApplicationContext[S, A]) error {
 	return nil
 }
 
+func handleAction[S any, A any](ac *ApplicationContext[S, A], tc *TelegramContext, a A) {
+	tc.Logger.Debug("HandleAction", zap.Any("action", a))
+	ac.App.HandleAction(ac, tc, a)
+}
+
 func DefaultHandlerCallback[S any, A any](ac *ApplicationContext[S, A], tc *TelegramContext) {
 	tc.Logger.Info("HandleCallback", zap.Any("data", tc.Update.CallbackQuery.Data))
 
@@ -102,7 +107,7 @@ func DefaultHandlerCallback[S any, A any](ac *ApplicationContext[S, A], tc *Tele
 			return
 		}
 
-		ac.App.HandleAction(ac, tc, *action)
+		handleAction(ac, tc, *action)
 
 		tc.Bot.AnswerCallbackQuery(tc.Ctx, &bot.AnswerCallbackQueryParams{
 			CallbackQueryID: tc.Update.CallbackQuery.ID,
@@ -129,7 +134,7 @@ func DefaultHandleMessage[S any, A any](ac *ApplicationContext[S, A], tc *Telegr
 
 		action := ac.State.InputHandler(tc.Update.Message.Text)
 
-		ac.App.HandleAction(ac, tc, action)
+		handleAction(ac, tc, action)
 
 		err := ac.App.RenderFunc(ac)
 
@@ -202,55 +207,4 @@ func NewApplication[S any, A any](
 
 func (a *Application[S, A]) NewHandler(tc *TelegramContext) *Handler[S, A] {
 	return NewHandler[S, A](*a, tc)
-}
-
-type Handler[S any, A any] struct {
-	app        Application[S, A]
-	appContext *ApplicationContext[S, A]
-}
-
-func NewHandler[S any, A any](app Application[S, A], tc *TelegramContext) *Handler[S, A] {
-	// app.HandleInit(tc)
-
-	appState := app.CreateAppState(tc)
-
-	chatState := InternalChatState[S, A]{
-		ChatID:           tc.ChatID,
-		AppState:         appState,
-		RenderedElements: []RenderedElement{},
-		InputHandler:     nil,
-		CallbackHandler:  nil,
-		Renderer:         app.CreateChatRenderer(tc),
-	}
-
-	ac := &ApplicationContext[S, A]{
-		App:    &app,
-		State:  &chatState,
-		Logger: GetLogger().With(zap.Int("chat_id", int(tc.ChatID))),
-	}
-
-	res := app.PreRender(ac)
-
-	return &Handler[S, A]{
-		app: app,
-		appContext: &ApplicationContext[S, A]{
-			App:    &app,
-			State:  &res.InternalChatState,
-			Logger: ac.Logger,
-		},
-	}
-}
-
-func (h *Handler[S, A]) HandleUpdate(tc *TelegramContext) {
-	tc.Logger.Debug("HandleUpdate")
-
-	if tc.Update.Message != nil && tc.Update.Message.Text != "" {
-		h.app.HandleMessage(h.appContext, tc)
-	}
-
-	if tc.Update.CallbackQuery != nil {
-		h.app.HandleCallback(h.appContext, tc)
-	}
-
-	tc.Logger.Debug("Unkown update")
 }

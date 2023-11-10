@@ -23,40 +23,28 @@ type State struct {
 
 type ActionReload struct{}
 
-func (a ActionReload) Kind() string {
-	return "ActionReload"
-}
-
 type ActionCounter struct {
 	Increment int
 	Error     error
 }
 
-func (a ActionCounter) Kind() string {
-	return "ActionCounter"
-}
-
-type Action interface {
-	Kind() string
-}
-
 type Props struct {
-	counter  int
-	err      error
-	username string
+	Counter  int
+	Error    error
+	Username string
 }
 
 func AppInputHandler(o tgbot.OO) {
 
 	o.InputHandler(func(s string) any {
 		if s == "/start" {
-			return ActionReload{}
+			return &ActionReload{}
 		}
 		v, err := strconv.Atoi(s)
 		if err != nil {
-			return ActionCounter{Error: err}
+			return &ActionCounter{Error: err}
 		}
-		return ActionCounter{Increment: v}
+		return &ActionCounter{Increment: v}
 	})
 
 }
@@ -102,13 +90,13 @@ func (app *App) Render(o tgbot.OO) {
 	AppInputHandler(o)
 
 	o.Comp(&Welcom{
-		Username: app.username,
+		Username: app.Username,
 	})
 
-	o.Messagef("Counter value: %v", app.counter)
+	o.Messagef("Counter value: %v", app.Counter)
 
-	if app.err != nil {
-		o.Messagef("Error: %v", app.err)
+	if app.Error != nil {
+		o.Messagef("Error: %v", app.Error)
 	}
 
 	o.Button("Increment", func() any {
@@ -121,12 +109,13 @@ func (app *App) Render(o tgbot.OO) {
 
 var counterApp = tgbot.NewApplication[State, any](
 	func(tc *tgbot.TelegramContext) State {
-		tc.Logger.Info("CreateAppState")
+		// tc.Logger.Info("CreateAppState")
 		uname := fmt.Sprintf("%v (%v)", tc.Update.Message.From.Username, tc.Update.Message.From.ID)
+
 		return State{Counter: 0, Username: uname}
 	},
 	func(ac *tgbot.ApplicationContext[State, any], tc *tgbot.TelegramContext, a any) {
-		tc.Logger.Info("HandleAction", zap.Any("action", a))
+		// tc.Logger.Info("HandleAction", zap.Any("action", a))
 
 		switch a := a.(type) {
 		case ActionReload:
@@ -138,13 +127,7 @@ var counterApp = tgbot.NewApplication[State, any](
 
 	},
 	func(s State) tgbot.Comp[any] {
-		app := App{
-			Props{
-				counter:  s.Counter,
-				err:      s.Error,
-				username: s.Username,
-			},
-		}
+		app := App{Props(s)}
 
 		return &app
 	},
