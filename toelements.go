@@ -6,8 +6,6 @@ import (
 
 func ComponentToElements[A any](comp Comp[A], logger *zap.Logger) []Element {
 
-	// f :=
-
 	logger.Debug("ComponentToElements", zap.Any("comp", comp))
 
 	elements := make([]Element, 0)

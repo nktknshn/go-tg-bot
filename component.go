@@ -11,20 +11,20 @@ type LocalStateSetter[S any, A any] interface {
 }
 
 type LocalStateGetter[S any] interface {
-	Get() S
+	Get(S) S
 }
 
-type LocalStateIniter[S any] interface {
-	Init(S) GetSetLocalState[S, any]
-}
+// type LocalStateIniter[S any] interface {
+// 	Init(S) GetSetLocalState[S, any]
+// }
 
 type GetSetLocalState[S any, A any] interface {
 	LocalStateSetter[S, A]
 	LocalStateGetter[S]
 }
 
-type LocalStateProvider[S any, A any] interface {
-	LocalState(S) GetSetLocalState[S, A]
+type LocalStateProvider[S any] interface {
+	GetSetLocalState[S, any]
 }
 
 type Z interface {

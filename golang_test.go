@@ -5,6 +5,21 @@ import (
 	"testing"
 )
 
+func TestStructSlice(t *testing.T) {
+
+	type S struct {
+		ss []string
+	}
+
+	s := S{}
+	fmt.Println(s)
+
+	s.ss = append(s.ss, "a")
+
+	fmt.Println(s)
+
+}
+
 type A struct {
 	a string
 }

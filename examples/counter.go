@@ -55,30 +55,30 @@ type WelcomState struct {
 
 type Welcom struct {
 	Username string
-	state    tgbot.LocalStateIniter[WelcomState]
+	state    tgbot.LocalStateProvider[WelcomState]
 }
 
 func (w *Welcom) Render(o tgbot.OO) {
 
-	// ls := w.state.Init(WelcomState{})
+	ls := w.state.Get(WelcomState{})
 
-	// if ls.Get().hideName {
-	// 	o.Message("Welcome")
-	// } else {
-	o.MessagePartf("Welcome %v", w.Username)
-	o.MessagePart("/hide_name to hide your name")
-	o.MessageComplete()
-	// }
+	if ls.hideName {
+		o.Message("Welcome")
+	} else {
+		o.MessagePartf("Welcome %v", w.Username)
+		o.MessagePart("/hide_name to hide your name")
+		o.MessageComplete()
+	}
 
-	// o.InputHandler(func(s string) any {
-	// 	if s == "/hide_name" {
-	// 		return ls.Set(func(s WelcomState) {
-	// 			s.hideName = true
-	// 		})
-	// 	}
+	o.InputHandler(func(s string) any {
+		if s == "/hide_name" {
+			return w.state.Set(func(s WelcomState) {
+				s.hideName = true
+			})
+		}
 
-	// 	return nil
-	// })
+		return nil
+	})
 }
 
 type App struct {
@@ -106,6 +106,12 @@ func (app *App) Render(o tgbot.OO) {
 		return ActionCounter{Increment: -1}
 	})
 }
+
+// func G() {
+// 	props := Props{Counter: 0, Error: nil, Username: "test"}
+// 	a := App{props}
+// 	tgbot.RunComponent[any](&tgbot.RunContext{}, &a, props)
+// }
 
 var counterApp = tgbot.NewApplication[State, any](
 	func(tc *tgbot.TelegramContext) State {
