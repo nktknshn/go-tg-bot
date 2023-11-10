@@ -6,21 +6,30 @@ import (
 	"go.uber.org/zap"
 )
 
-type LocalStateSetter interface {
-	SetLocalState(any)
+type LocalStateSetter[S any, A any] interface {
+	Set(func(S)) A
 }
 
-type LocalStateGetter interface {
-	LocalState() any
+type LocalStateGetter[S any] interface {
+	Get() S
 }
 
-type LocalState interface {
-	LocalStateSetter
-	LocalStateGetter
+type LocalStateIniter[S any] interface {
+	Init(S) GetSetLocalState[S, any]
 }
 
-type LocalStateProvider interface {
-	GetLocalState() LocalState
+type GetSetLocalState[S any, A any] interface {
+	LocalStateSetter[S, A]
+	LocalStateGetter[S]
+}
+
+type LocalStateProvider[S any, A any] interface {
+	LocalState(S) GetSetLocalState[S, A]
+}
+
+type Z interface {
+	O[any]
+	CompZ(func(any, Z), any)
 }
 
 type O[A any] interface {
@@ -29,18 +38,31 @@ type O[A any] interface {
 	Message(string)
 	Messagef(string, ...interface{})
 	MessagePart(string)
+	MessagePartf(string, ...interface{})
 	Button(string, func() A)
 	ButtonsRow([]string, func(int, string) A)
 	BottomButton(string)
 	MessageComplete()
 	InputHandler(func(string) A)
+	// Dispatch(A)
+	// LocalStateProvider[any, A]
 }
 
-type Comp[A any] func(O[A])
-type ComponentCons[T any, A any] func(props *T) Comp[A]
+type OO = O[any]
+
+// type Comp[A any] func(O[A])
+// type ComponentCons[T any, A any] func(props *T) Comp[A]
+
+type Comp[A any] interface {
+	Render(O[A])
+}
 
 type outputImpl[A any] struct {
 	result []Element
+}
+
+func newOutput[A any]() *outputImpl[A] {
+	return &outputImpl[A]{result: make([]Element, 0)}
 }
 
 func (o *outputImpl[A]) Message(text string) {
@@ -53,6 +75,10 @@ func (o *outputImpl[A]) Messagef(format string, args ...interface{}) {
 
 func (o *outputImpl[A]) MessagePart(text string) {
 	o.result = append(o.result, MessagePart(text))
+}
+
+func (o *outputImpl[A]) MessagePartf(format string, args ...interface{}) {
+	o.result = append(o.result, MessagePart(fmt.Sprintf(format, args...)))
 }
 
 func (o *outputImpl[A]) Button(text string, handler func() A) {
@@ -81,12 +107,6 @@ func (o *outputImpl[A]) MessageComplete() {
 
 func (o *outputImpl[A]) InputHandler(handler func(string) A) {
 	o.result = append(o.result, AInputHandler(handler))
-}
-
-func ComponentToElements[A any](comp Comp[A]) []Element {
-	o := &outputImpl[A]{result: make([]Element, 0)}
-	comp(o)
-	return o.result
 }
 
 func getCallbackHandlersMap[A any](outcomingMessages []OutcomingMessage) map[string]func() *A {

@@ -242,7 +242,7 @@ func NewHandler[S any, A any](app Application[S, A], tc *TelegramContext) *Handl
 }
 
 func (h *Handler[S, A]) HandleUpdate(tc *TelegramContext) {
-	tc.Logger.Info("HandleUpdate")
+	tc.Logger.Debug("HandleUpdate")
 
 	if tc.Update.Message != nil && tc.Update.Message.Text != "" {
 		h.app.HandleMessage(h.appContext, tc)
@@ -251,4 +251,6 @@ func (h *Handler[S, A]) HandleUpdate(tc *TelegramContext) {
 	if tc.Update.CallbackQuery != nil {
 		h.app.HandleCallback(h.appContext, tc)
 	}
+
+	tc.Logger.Debug("Unkown update")
 }

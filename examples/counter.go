@@ -16,67 +16,137 @@ import (
 )
 
 type State struct {
-	Counter int
-	Error   error
+	Counter  int
+	Error    error
+	Username string
 }
 
-type Action struct {
+type ActionReload struct{}
+
+func (a ActionReload) Kind() string {
+	return "ActionReload"
+}
+
+type ActionCounter struct {
 	Increment int
 	Error     error
 }
 
+func (a ActionCounter) Kind() string {
+	return "ActionCounter"
+}
+
+type Action interface {
+	Kind() string
+}
+
 type Props struct {
-	counter int
-	err     error
+	counter  int
+	err      error
+	username string
 }
 
-func App(props Props) tgbot.Comp[Action] {
-	return func(o tgbot.O[Action]) {
+func AppInputHandler(o tgbot.OO) {
 
-		o.InputHandler(func(s string) Action {
-			if s == "/start" {
-				return Action{}
-			}
-
-			v, err := strconv.Atoi(s)
-
-			if err != nil {
-				return Action{Error: err}
-			}
-
-			return Action{Increment: v}
-		})
-
-		o.Messagef("Counter value: %v", props.counter)
-
-		if props.err != nil {
-			o.Messagef("Error: %v", props.err)
+	o.InputHandler(func(s string) any {
+		if s == "/start" {
+			return ActionReload{}
 		}
+		v, err := strconv.Atoi(s)
+		if err != nil {
+			return ActionCounter{Error: err}
+		}
+		return ActionCounter{Increment: v}
+	})
 
-		o.Button("Increment", func() Action {
-			return Action{Increment: 1}
-		})
-		o.Button("Decrement", func() Action {
-			return Action{Increment: -1}
-		})
-	}
 }
 
-var counterApp = tgbot.NewApplication[State, Action](
+type WelcomState struct {
+	hideName bool
+}
+
+type Welcom struct {
+	Username string
+	state    tgbot.LocalStateIniter[WelcomState]
+}
+
+func (w *Welcom) Render(o tgbot.OO) {
+
+	// ls := w.state.Init(WelcomState{})
+
+	// if ls.Get().hideName {
+	// 	o.Message("Welcome")
+	// } else {
+	o.MessagePartf("Welcome %v", w.Username)
+	o.MessagePart("/hide_name to hide your name")
+	o.MessageComplete()
+	// }
+
+	// o.InputHandler(func(s string) any {
+	// 	if s == "/hide_name" {
+	// 		return ls.Set(func(s WelcomState) {
+	// 			s.hideName = true
+	// 		})
+	// 	}
+
+	// 	return nil
+	// })
+}
+
+type App struct {
+	Props
+}
+
+func (app *App) Render(o tgbot.OO) {
+
+	AppInputHandler(o)
+
+	o.Comp(&Welcom{
+		Username: app.username,
+	})
+
+	o.Messagef("Counter value: %v", app.counter)
+
+	if app.err != nil {
+		o.Messagef("Error: %v", app.err)
+	}
+
+	o.Button("Increment", func() any {
+		return ActionCounter{Increment: 1}
+	})
+	o.Button("Decrement", func() any {
+		return ActionCounter{Increment: -1}
+	})
+}
+
+var counterApp = tgbot.NewApplication[State, any](
 	func(tc *tgbot.TelegramContext) State {
 		tc.Logger.Info("CreateAppState")
-		return State{Counter: 0}
+		uname := fmt.Sprintf("%v (%v)", tc.Update.Message.From.Username, tc.Update.Message.From.ID)
+		return State{Counter: 0, Username: uname}
 	},
-	func(ac *tgbot.ApplicationContext[State, Action], tc *tgbot.TelegramContext, a Action) {
+	func(ac *tgbot.ApplicationContext[State, any], tc *tgbot.TelegramContext, a any) {
 		tc.Logger.Info("HandleAction", zap.Any("action", a))
-		ac.State.AppState.Counter += a.Increment
-		ac.State.AppState.Error = a.Error
+
+		switch a := a.(type) {
+		case ActionReload:
+			ac.State.RenderedElements = make([]tgbot.RenderedElement, 0)
+		case ActionCounter:
+			ac.State.AppState.Counter += a.Increment
+			ac.State.AppState.Error = a.Error
+		}
+
 	},
-	func(s State) tgbot.Comp[Action] {
-		return App(Props{
-			counter: s.Counter,
-			err:     s.Error,
-		})
+	func(s State) tgbot.Comp[any] {
+		app := App{
+			Props{
+				counter:  s.Counter,
+				err:      s.Error,
+				username: s.Username,
+			},
+		}
+
+		return &app
 	},
 )
 

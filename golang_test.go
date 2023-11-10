@@ -5,6 +5,26 @@ import (
 	"testing"
 )
 
+func TestStructNested(t *testing.T) {
+
+	type S struct {
+		s string
+	}
+
+	type T struct {
+		S
+	}
+
+	tt := T{
+		S{
+			s: "test",
+		},
+	}
+
+	fmt.Println(tt.S.s)
+	fmt.Println(tt.s)
+}
+
 func TestClosureCopy(t *testing.T) {
 
 	type V struct{ v int }
