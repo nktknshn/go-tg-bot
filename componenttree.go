@@ -16,12 +16,47 @@ type RunResult interface {
 }
 
 type RunResultComponent[A any] struct {
-	element         ElementComponent[A]
+	// element         ElementComponent[A]
 	comp            Comp[A]
 	compID          string
 	inputProps      reflect.Value
 	inputLocalState LocalStateClosure[any]
 	output          []RunResult
+}
+
+func (c *RunResultComponent[A]) ExtractLocalStateTree() *LocalStateTree[any] {
+
+	children := make([]*LocalStateTree[any], len(c.output))
+
+	for idx, e := range c.output {
+		switch e := e.(type) {
+		case *RunResultComponent[A]:
+			s := e.ExtractLocalStateTree()
+			children[idx] = s
+		case *RunResultElement:
+			children[idx] = nil
+		}
+	}
+
+	return &LocalStateTree[any]{
+		localState: &c.inputLocalState,
+		children:   &children,
+	}
+}
+
+func (c *RunResultComponent[A]) ExtractElements() []Element {
+	result := make([]Element, 0)
+
+	for _, e := range c.output {
+		switch e := e.(type) {
+		case *RunResultComponent[A]:
+			result = append(result, e.ExtractElements()...)
+		case *RunResultElement:
+			result = append(result, e.element)
+		}
+	}
+
+	return result
 }
 
 func (c *RunResultComponent[A]) RunResultKind() string {
@@ -36,14 +71,51 @@ func (c *RunResultElement) RunResultKind() string {
 	return KindRunResultElement
 }
 
-type TreeState struct {
+type TreeState[A any] struct {
+	runResult      RunResultComponent[A]
+	localStateTree *LocalStateTree[any]
 }
 
-func CreateElements[A any](comp Comp[A], treeState *TreeState) {
-	if treeState == nil {
+type CreateElementsResult[A any] struct {
+	elements       []Element
+	newElements    []Element
+	removeElements []Element
+	treeState      TreeState[A]
+}
 
+func CreateElements[A any](comp Comp[A], stateTree *TreeState[A]) *CreateElementsResult[A] {
+	if stateTree == nil {
+		runResult := RunComponentTree[A](&RunContext[A]{
+			logger:         GetLogger(),
+			localStateTree: nil,
+			componentIndex: []int{0},
+			parents:        make([]ElementComponent[A], 0),
+		}, comp)
+
+		elements := runResult.ExtractElements()
+
+		return &CreateElementsResult[A]{
+			elements:       elements,
+			newElements:    elements,
+			removeElements: make([]Element, 0),
+			treeState: TreeState[A]{
+				runResult:      runResult,
+				localStateTree: runResult.ExtractLocalStateTree(),
+				// localStateTree: runResult.,
+			},
+		}
 	}
 
+	runResult := RerunComponentTree[A](
+		GetLogger(),
+		stateTree.runResult,
+		comp,
+		*stateTree.localStateTree,
+		[]int{0},
+		make([]ElementComponent[A], 0),
+	)
+
+	return nil
 }
 
 type RunContext[A any] struct {
@@ -87,7 +159,7 @@ func reflectCompLocalState[A any](comp Comp[A], ls GetSetLocalStateImpl[any]) {
 
 	f, ok := t.FieldByName("state")
 
-	if ok == false {
+	if !ok {
 		return
 	}
 
@@ -96,17 +168,6 @@ func reflectCompLocalState[A any](comp Comp[A], ls GetSetLocalStateImpl[any]) {
 }
 
 func RunComponentTree[A any](ctx *RunContext[A], comp Comp[A]) RunResultComponent[A] {
-
-	// assert if ctx.localStateTree == nil then len(ctx.componentIndex) == 0
-	// and vice versa
-
-	// if ctx.localStateTree == nil && len(ctx.componentIndex) != 0 {
-	// 	panic("invalid state")
-	// }
-
-	// if len(ctx.componentIndex) == 0 && ctx.localStateTree != nil {
-	// 	panic("invalid state")
-	// }
 
 	if len(ctx.componentIndex) == 0 {
 		// root component
@@ -125,7 +186,7 @@ func RunComponentTree[A any](ctx *RunContext[A], comp Comp[A]) RunResultComponen
 	elements := RunComponent[A](comp, localState.getset)
 
 	if ctx.localStateTree.children == nil || len(*ctx.localStateTree.children) != len(elements) {
-		childrenState := make([]LocalStateTree[any], len(elements))
+		childrenState := make([]*LocalStateTree[any], len(elements))
 		ctx.localStateTree.children = &childrenState
 	}
 
@@ -136,7 +197,7 @@ func RunComponentTree[A any](ctx *RunContext[A], comp Comp[A]) RunResultComponen
 		case *ElementComponent[A]:
 			subcompres := RunComponentTree(&RunContext[A]{
 				logger:         ctx.logger,
-				localStateTree: &(*ctx.localStateTree.children)[idx],
+				localStateTree: (*ctx.localStateTree.children)[idx],
 				componentIndex: append(ctx.componentIndex, idx),
 				parents:        append(ctx.parents, *e),
 			}, e.comp)
@@ -236,7 +297,7 @@ func RerunComponentTree[A any](
 		returnOutput := make([]RerunResult, 0)
 
 		if childrenState == nil || len(*childrenState) != len(prevRunResult.output) {
-			cs := make([]LocalStateTree[any], len(prevRunResult.output))
+			cs := make([]*LocalStateTree[any], len(prevRunResult.output))
 			childrenState = &cs
 		}
 
@@ -247,7 +308,7 @@ func RerunComponentTree[A any](
 					logger,
 					*e,
 					(*e).comp,
-					(*childrenState)[idx],
+					*(*childrenState)[idx],
 					append(index, idx),
 					append(parents, ElementComponent[A]{(*e).comp}),
 				)

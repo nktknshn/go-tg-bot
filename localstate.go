@@ -6,7 +6,7 @@ type LocalStateClosure[S any] struct {
 
 type LocalStateTree[S any] struct {
 	localState *LocalStateClosure[S]
-	children   *[]LocalStateTree[any]
+	children   *[]*LocalStateTree[any]
 }
 
 type LocalStateWithGetSet[S any] struct {
