@@ -24,7 +24,7 @@ type GetSetLocalState[S any, A any] interface {
 }
 
 type LocalStateProvider[S any] interface {
-	GetSetLocalState[S, any]
+	GetSetLocalState[S, ActionLocalState[S]]
 }
 
 type Z interface {

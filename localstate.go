@@ -1,19 +1,25 @@
 package tgbot
 
 type LocalStateClosure[S any] struct {
-	value *S
+	Initialized bool
+	Value       S
 }
 
+// tree of the local states of components
 type LocalStateTree[S any] struct {
-	localState *LocalStateClosure[S]
-	children   *[]*LocalStateTree[any]
+	// local state of the current component
+	localStateClosure *LocalStateClosure[S]
+	// local states of the children components
+	// if nil then the state has to be reinitialized
+	children *[]*LocalStateTree[any]
 }
 
 type LocalStateWithGetSet[S any] struct {
-	getset     GetSetLocalStateImpl[S]
-	localState *LocalStateClosure[S]
+	Getset     GetSetLocalStateImpl[S]
+	LocalState *LocalStateClosure[S]
 }
 
+// creates an empty closure for local state and get and set functions
 func NewLocalState[S any](index []int, localState *LocalStateClosure[S]) LocalStateWithGetSet[S] {
 
 	if localState == nil {
@@ -22,15 +28,15 @@ func NewLocalState[S any](index []int, localState *LocalStateClosure[S]) LocalSt
 	}
 
 	return LocalStateWithGetSet[S]{
-		getset:     createGetSet(index, localState),
-		localState: localState,
+		Getset:     NewGetSet(index, localState),
+		LocalState: localState,
 	}
 }
 
 func NewLocalStateTree[S any]() *LocalStateTree[S] {
 	return &LocalStateTree[S]{
-		localState: nil,
-		children:   nil,
+		localStateClosure: nil,
+		children:          nil,
 	}
 }
 
@@ -40,29 +46,30 @@ type ActionLocalState[S any] struct {
 }
 
 type GetSetLocalStateImpl[S any] struct {
-	localState *LocalStateClosure[S]
-	index      []int
+	LocalState LocalStateClosure[S]
+	Index      []int
 }
 
 func (g GetSetLocalStateImpl[S]) Get(initialValue S) S {
 
-	if g.localState.value == nil {
-		g.localState.value = &initialValue
+	if !g.LocalState.Initialized {
+		g.LocalState.Value = initialValue
+		g.LocalState.Initialized = true
 	}
 
-	return *g.localState.value
+	return g.LocalState.Value
 }
 
 func (g GetSetLocalStateImpl[S]) Set(f func(S)) ActionLocalState[S] {
 	return ActionLocalState[S]{
-		index: g.index,
+		index: g.Index,
 		f:     f,
 	}
 }
 
-func createGetSet[S any](index []int, localState *LocalStateClosure[S]) GetSetLocalStateImpl[S] {
+func NewGetSet[S any](index []int, localState *LocalStateClosure[S]) GetSetLocalStateImpl[S] {
 	return GetSetLocalStateImpl[S]{
-		index:      index,
-		localState: localState,
+		Index:      index,
+		LocalState: *localState,
 	}
 }

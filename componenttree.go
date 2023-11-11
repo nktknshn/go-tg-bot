@@ -1,29 +1,47 @@
 package tgbot
 
 import (
+	"fmt"
 	"reflect"
 
 	"go.uber.org/zap"
 )
 
 const (
+	// first run kinds
 	KindRunResultComponent = "RunResultComponent"
 	KindRunResultElement   = "RunResultElement"
+	// reruns
+	KindRerunResultElement   = "ReRunResultElement"
+	KindRerunResultUpdated   = "RerunResultUpdated"
+	KindRerunResultUnchanged = "RerunResultUnchanged"
 )
 
+// possible RunResults: RunResultComponent, RunResultElement
 type RunResult interface {
 	RunResultKind() string
 }
 
+// #region RunResultComponent
+// holds the inputs and outputs of the very first render of the root component
+// and all the subcomponents
 type RunResultComponent[A any] struct {
-	// element         ElementComponent[A]
-	comp            Comp[A]
-	compID          string
-	inputProps      reflect.Value
-	inputLocalState LocalStateClosure[any]
-	output          []RunResult
+	// the component that was rendered
+	comp   Comp[A]
+	compID string
+	// props the component was rendered with
+	inputProps reflect.Value
+	// localState the component was rendered with
+	inputLocalStateClosure LocalStateClosure[any]
+	// elements the component rendered
+	output []RunResult
 }
 
+func (c *RunResultComponent[A]) RunResultKind() string {
+	return KindRunResultComponent
+}
+
+// extract local state tree from the component
 func (c *RunResultComponent[A]) ExtractLocalStateTree() *LocalStateTree[any] {
 
 	children := make([]*LocalStateTree[any], len(c.output))
@@ -33,17 +51,20 @@ func (c *RunResultComponent[A]) ExtractLocalStateTree() *LocalStateTree[any] {
 		case *RunResultComponent[A]:
 			s := e.ExtractLocalStateTree()
 			children[idx] = s
+
 		case *RunResultElement:
+			// nil state for elements
 			children[idx] = nil
 		}
 	}
 
 	return &LocalStateTree[any]{
-		localState: &c.inputLocalState,
-		children:   &children,
+		localStateClosure: &c.inputLocalStateClosure,
+		children:          &children,
 	}
 }
 
+// recursively extract elements from the component
 func (c *RunResultComponent[A]) ExtractElements() []Element {
 	result := make([]Element, 0)
 
@@ -59,10 +80,6 @@ func (c *RunResultComponent[A]) ExtractElements() []Element {
 	return result
 }
 
-func (c *RunResultComponent[A]) RunResultKind() string {
-	return KindRunResultComponent
-}
-
 type RunResultElement struct {
 	element Element
 }
@@ -71,51 +88,110 @@ func (c *RunResultElement) RunResultKind() string {
 	return KindRunResultElement
 }
 
-type TreeState[A any] struct {
-	runResult      RunResultComponent[A]
-	localStateTree *LocalStateTree[any]
+// #endregion
+
+// possible ReRunResultElement, RerunResultUpdated, RerunResultUnchanged
+type RerunResult interface {
+	RerunResultKind() string
 }
 
-type CreateElementsResult[A any] struct {
-	elements       []Element
-	newElements    []Element
-	removeElements []Element
-	treeState      TreeState[A]
+type RerunResultUpdated[A any] struct {
+	RunResultComponent[A]
+	oldChildren []RunResult
 }
 
-func CreateElements[A any](comp Comp[A], stateTree *TreeState[A]) *CreateElementsResult[A] {
-	if stateTree == nil {
-		runResult := RunComponentTree[A](&RunContext[A]{
-			logger:         GetLogger(),
-			localStateTree: nil,
-			componentIndex: []int{0},
-			parents:        make([]ElementComponent[A], 0),
-		}, comp)
+type RerunResultUnchanged[A any] struct {
+	RunResultComponent[A]
+	rerunOutput []RerunResult
+}
 
-		elements := runResult.ExtractElements()
+func (c *RerunResultUpdated[A]) RerunResultKind() string {
+	return "RerunResultUpdated"
+}
 
-		return &CreateElementsResult[A]{
-			elements:       elements,
-			newElements:    elements,
-			removeElements: make([]Element, 0),
-			treeState: TreeState[A]{
-				runResult:      runResult,
-				localStateTree: runResult.ExtractLocalStateTree(),
-				// localStateTree: runResult.,
-			},
+func (c *RerunResultUnchanged[A]) RerunResultKind() string {
+	return "RerunResultUnchanged"
+}
+
+// just an element
+type ReRunResultElement struct {
+	element RunResultElement
+}
+
+func (c *ReRunResultElement) RerunResultKind() string {
+	return "ReRunResultElement"
+}
+
+func (rr *RerunResultUnchanged[A]) ExtractElements() []Element {
+	res := make([]Element, 0)
+
+	for _, r := range rr.rerunOutput {
+		res = append(res, ExtractElementsFromRerun(r).elements...)
+	}
+
+	return res
+}
+
+func (rr *RerunResultUnchanged[A]) ExtractNewElements() []Element {
+	res := make([]Element, 0)
+
+	for _, r := range rr.rerunOutput {
+		res = append(res, ExtractElementsFromRerun(r).newElements...)
+	}
+
+	return res
+}
+
+type RerunExtractedElements struct {
+	// elements that were rendered
+	elements        []Element
+	newElements     []Element
+	removedElements []Element
+}
+
+func ExtractElementsFromRerun(rerun RerunResult) *RerunExtractedElements {
+
+	switch r := rerun.(type) {
+	case *RerunResultUpdated[any]:
+		return &RerunExtractedElements{
+			elements:        r.ExtractElements(),
+			removedElements: ExtractFromRunResults(r.oldChildren),
+			newElements:     r.ExtractElements(),
+		}
+	case *RerunResultUnchanged[any]:
+		return &RerunExtractedElements{
+			elements:    r.ExtractElements(),
+			newElements: r.ExtractNewElements(),
+		}
+	case *ReRunResultElement:
+		return &RerunExtractedElements{
+			elements: []Element{r.element.element},
 		}
 	}
 
-	runResult := RerunComponentTree[A](
-		GetLogger(),
-		stateTree.runResult,
-		comp,
-		*stateTree.localStateTree,
-		[]int{0},
-		make([]ElementComponent[A], 0),
-	)
-
 	return nil
+}
+
+func ExtractFromRunResults(results []RunResult) []Element {
+	resultsElements := make([]Element, 0)
+
+	for _, r := range results {
+		switch r := r.(type) {
+		case *RunResultComponent[any]:
+			resultsElements = append(resultsElements, r.ExtractElements()...)
+		case *RunResultElement:
+			resultsElements = append(resultsElements, r.element)
+		}
+	}
+
+	return resultsElements
+}
+
+// holds the inputs and outputs of the previous render
+// and the extracted local states tree
+type ComponentsTreeState[A any] struct {
+	runResult      RunResultComponent[A]
+	localStateTree *LocalStateTree[any]
 }
 
 type RunContext[A any] struct {
@@ -128,76 +204,62 @@ type RunContext[A any] struct {
 	parents        []ElementComponent[A]
 }
 
-func reflectCompProps[A any](comp Comp[A]) reflect.Value {
-	t := reflect.TypeOf(comp)
+type RerunContext[A any] struct {
+	logger        *zap.Logger
+	prevRunResult RunResultComponent[A]
 
-	fs := make([]reflect.StructField, 0)
+	localStateTree LocalStateTree[any]
 
-	for i := 0; i < t.NumField(); i++ {
-		f := t.Field(i)
-
-		if f.Name == "state" {
-			continue
-		}
-
-		fs = append(fs, f)
-	}
-
-	props := reflect.New(reflect.StructOf(fs)).Elem()
-	props.Set(reflect.ValueOf(comp))
-
-	return props
-}
-
-func reflectCompId[A any](comp Comp[A]) string {
-	t := reflect.TypeOf(comp)
-	return t.Name()
-}
-
-func reflectCompLocalState[A any](comp Comp[A], ls GetSetLocalStateImpl[any]) {
-	t := reflect.TypeOf(comp)
-
-	f, ok := t.FieldByName("state")
-
-	if !ok {
-		return
-	}
-
-	reflect.ValueOf(comp).FieldByName(f.Name).Set(reflect.ValueOf(ls))
-
+	// position of the component in the tree
+	componentIndex []int
+	parents        []ElementComponent[A]
 }
 
 func RunComponentTree[A any](ctx *RunContext[A], comp Comp[A]) RunResultComponent[A] {
 
+	ctx.logger.Debug("RunComponentTree", zap.Any("comp", comp))
+
 	if len(ctx.componentIndex) == 0 {
 		// root component
-		ctx.componentIndex = []int{0}
 		ctx.logger.Debug("Root component")
+		ctx.componentIndex = []int{0}
 	}
 
 	if ctx.localStateTree == nil {
+		ctx.logger.Debug("Creating local state tree")
 		ctx.localStateTree = NewLocalStateTree[any]()
 	}
 
-	ctx.logger.Debug("firstRun", zap.Any("comp", comp))
+	ctx.logger.Debug("Creating local state")
+	localState := NewLocalState[any](ctx.componentIndex, ctx.localStateTree.localStateClosure)
 
-	localState := NewLocalState[any](ctx.componentIndex, ctx.localStateTree.localState)
+	ctx.logger.Debug("Running the component")
+	elements := RunComponent[A](comp, localState.Getset)
 
-	elements := RunComponent[A](comp, localState.getset)
+	ctx.logger.Debug("Elements was rendered",
+		zap.Int("len", len(elements)),
+		Elements(elements).ZapField("elements"),
+	)
 
-	if ctx.localStateTree.children == nil || len(*ctx.localStateTree.children) != len(elements) {
-		childrenState := make([]*LocalStateTree[any], len(elements))
-		ctx.localStateTree.children = &childrenState
+	childrenState := ctx.localStateTree.children
+
+	if childrenState == nil || len(*ctx.localStateTree.children) != len(elements) {
+		// initialize local states for the children
+		cs := make([]*LocalStateTree[any], len(elements))
+		childrenState = &cs
 	}
 
 	output := make([]RunResult, 0)
 
 	for idx, e := range elements {
+		ctx.logger.Debug("Running element", zap.Int("idx", idx), zap.Any("element", e))
+
 		switch e := e.(type) {
 		case *ElementComponent[A]:
+
 			subcompres := RunComponentTree(&RunContext[A]{
 				logger:         ctx.logger,
-				localStateTree: (*ctx.localStateTree.children)[idx],
+				localStateTree: (*childrenState)[idx],
 				componentIndex: append(ctx.componentIndex, idx),
 				parents:        append(ctx.parents, *e),
 			}, e.comp)
@@ -208,109 +270,76 @@ func RunComponentTree[A any](ctx *RunContext[A], comp Comp[A]) RunResultComponen
 	}
 
 	runResult := RunResultComponent[A]{
-		comp:            comp,
-		inputProps:      reflectCompProps[A](comp),
-		inputLocalState: *ctx.localStateTree.localState,
-		output:          output,
-		compID:          reflectCompId[A](comp),
+		comp:                   comp,
+		inputProps:             reflectCompProps[A](comp),
+		inputLocalStateClosure: *localState.LocalState,
+		output:                 output,
+		compID:                 reflectCompId[A](comp),
 	}
+
+	ctx.logger.Debug("RunComponentTree done", zap.Any("runResult", runResult))
 
 	return runResult
 
 }
 
-type RerunResult interface {
-	RerunResultKind() string
-}
-
-type ReRunResultElement struct {
-	element RunResultElement
-}
-
-func (c *ReRunResultElement) RerunResultKind() string {
-	return "ReRunResultElement"
-}
-
-type RerunResultUpdated[A any] struct {
-	oldChildren []RunResult
-	RunResultComponent[A]
-}
-
-func (c *RerunResultUpdated[A]) RerunResultKind() string {
-	return "RerunResultUpdated"
-}
-
-type RerunResultUnchanged[A any] struct {
-	RunResultComponent[A]
-	RerunOutput []RerunResult
-}
-
-func (c *RerunResultUnchanged[A]) RerunResultKind() string {
-	return "RerunResultUnchanged"
-}
-
 func RerunComponentTree[A any](
-	logger *zap.Logger,
-	prevRunResult RunResultComponent[A],
+	ctx *RerunContext[A],
 	comp Comp[A],
-	localStateTree LocalStateTree[any],
-	index []int,
-	parents []ElementComponent[A],
 ) RerunResult {
 
-	ls := localStateTree.localState
-	childrenState := localStateTree.children
+	localStateClosure := ctx.localStateTree.localStateClosure
+	childrenState := ctx.localStateTree.children
 
-	localState := createGetSet(index, ls)
+	// localState := NewGetSet(ctx.componentIndex, localStateclosure)
 
-	var rerender bool = false
+	// signals if the component has to be rerun
+	var rerun bool = false
 
-	if prevRunResult.compID != reflectCompId[A](comp) {
-		rerender = true
+	if ctx.prevRunResult.compID != reflectCompId[A](comp) {
+		rerun = true
+	} else if !reflect.DeepEqual(ctx.prevRunResult.inputProps, reflectCompProps[A](comp)) {
+		rerun = true
+	} else if !reflect.DeepEqual(ctx.prevRunResult.inputLocalStateClosure, localStateClosure) {
+		rerun = true
 	}
 
-	if !reflect.DeepEqual(prevRunResult.inputProps, reflectCompProps[A](comp)) {
-		rerender = true
-	}
-
-	if !reflect.DeepEqual(prevRunResult.inputLocalState, ls) {
-		rerender = true
-	}
-
-	if rerender {
+	if rerun {
 		runResult := RunComponentTree(&RunContext[A]{
-			logger: logger,
+			logger: ctx.logger,
 			localStateTree: &LocalStateTree[any]{
-				localState: localState.localState,
-				children:   nil,
+				localStateClosure: localStateClosure,
+				children:          nil,
 			},
-			componentIndex: index,
-			parents:        parents,
+			componentIndex: ctx.componentIndex,
+			parents:        ctx.parents,
 		}, comp)
 
 		return &RerunResultUpdated[A]{
-			oldChildren:        prevRunResult.output,
+			oldChildren:        ctx.prevRunResult.output,
 			RunResultComponent: runResult,
 		}
 
 	} else {
 		returnOutput := make([]RerunResult, 0)
 
-		if childrenState == nil || len(*childrenState) != len(prevRunResult.output) {
-			cs := make([]*LocalStateTree[any], len(prevRunResult.output))
+		if childrenState == nil || len(*childrenState) != len(ctx.prevRunResult.output) {
+			cs := make([]*LocalStateTree[any], len(ctx.prevRunResult.output))
 			childrenState = &cs
 		}
 
-		for idx, e := range prevRunResult.output {
+		for idx, e := range ctx.prevRunResult.output {
 			switch e := e.(type) {
 			case *RunResultComponent[A]:
 				rerunResult := RerunComponentTree[A](
-					logger,
-					*e,
+					&RerunContext[A]{
+						logger:         ctx.logger,
+						prevRunResult:  *e,
+						localStateTree: *(*childrenState)[idx],
+						componentIndex: append(ctx.componentIndex, idx),
+						parents:        append(ctx.parents, ElementComponent[A]{(*e).comp}),
+					},
 					(*e).comp,
-					*(*childrenState)[idx],
-					append(index, idx),
-					append(parents, ElementComponent[A]{(*e).comp}),
 				)
 
 				returnOutput = append(returnOutput, rerunResult)
@@ -321,20 +350,99 @@ func RerunComponentTree[A any](
 
 		return &RerunResultUnchanged[A]{
 			RunResultComponent: RunResultComponent[A]{
-				comp:            comp,
-				inputProps:      prevRunResult.inputProps,
-				inputLocalState: prevRunResult.inputLocalState,
-				output:          prevRunResult.output,
-				compID:          prevRunResult.compID,
+				comp:                   comp,
+				inputProps:             ctx.prevRunResult.inputProps,
+				inputLocalStateClosure: ctx.prevRunResult.inputLocalStateClosure,
+				output:                 ctx.prevRunResult.output,
+				compID:                 ctx.prevRunResult.compID,
 			},
-			RerunOutput: returnOutput,
+			rerunOutput: returnOutput,
 		}
 
 	}
 }
 
+// sets the local state of the component if it has one defined
+func ReflectCompLocalState[A any](comp Comp[A], ls GetSetLocalStateImpl[any]) Comp[A] {
+
+	t := reflect.TypeOf(comp)
+
+	fmt.Println("t: ", t)
+
+	if ls.LocalState.Value == nil {
+		// initialize local state
+		return comp
+	}
+
+	stateField, ok := t.FieldByName("State")
+
+	if !ok {
+		return comp
+	}
+
+	v := reflect.ValueOf(comp)
+	vp := reflect.ValueOf(&comp)
+
+	v.Interface()
+
+	fmt.Println("v: ", v)
+	fmt.Println("v.Type(): ", v.Type())
+	fmt.Println("vp: ", vp)
+	fmt.Println("vp.Type(): ", vp.Type())
+
+	fmt.Println("vp.Elem(): ", vp.Elem())
+	fmt.Println("vp.Elem().Type(): ", vp.Elem().Type())
+	fmt.Println("vp.Elem().Elem().Type(): ", vp.Elem().Elem().Type())
+
+	sf := vp.Elem().Elem().FieldByName(stateField.Name)
+
+	vls := reflect.ValueOf(ls)
+
+	fmt.Printf("sf: %v\n", sf.Type())
+	fmt.Printf("vls: %v\n", vls.Type())
+
+	for i := 0; i < vls.NumField(); i++ {
+		fmt.Printf("vls.Field(%v): %v\n", i, vls.Field(i).Type().Name())
+	}
+
+	vlsValue := vls.FieldByName("LocalState").FieldByName("Value")
+
+	// fmt.Println("vlsValue: ", reflect.TypeOf(vlsValue))
+	fmt.Println("vlsValue: ", reflect.TypeOf(vlsValue.Interface()))
+
+	fmt.Println("sf.CanSet(): ", sf.CanSet())
+
+	nt := reflect.New(t).Elem()
+
+	fmt.Println("nt.Type(): ", nt.Type())
+
+	// ntf := nt.Interface()
+	// nts := reflect.ValueOf(&ntf).Elem()
+
+	fmt.Println("nt.CanSet(): ", nt.CanSet())
+	// fmt.Println("nt.CanSet(): ", nts.CanAddr())
+
+	for i := 0; i < nt.NumField(); i++ {
+		nt.Field(i).Set(v.Field(i))
+		fmt.Printf("nt.Field(%v): %v\n", i, nt.Field(i))
+	}
+
+	fmt.Println("vls.Type()", vls.Type())
+	fmt.Println("nt.state", nt.FieldByName("State").Type())
+
+	nt.FieldByName("State").FieldByName("LocalState").FieldByName("Value").Set(
+		reflect.ValueOf(vlsValue.Interface()),
+	)
+
+	nt.FieldByName("State").FieldByName("Index").Set(
+		vls.FieldByName("Index"),
+	)
+
+	return nt.Interface().(Comp[A])
+}
+
 func RunComponent[A any](comp Comp[A], getset GetSetLocalStateImpl[any]) []Element {
-	reflectCompLocalState[A](comp, getset)
+	comp = ReflectCompLocalState[A](comp, getset)
 
 	o := newOutput[A]()
 	comp.Render(o)
