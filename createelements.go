@@ -1,12 +1,16 @@
 package tgbot
 
-import "go.uber.org/zap"
+import (
+	"fmt"
+
+	"go.uber.org/zap"
+)
 
 // holds the inputs and outputs of the previous render
 // and the extracted local states tree
 type RunResultWithStateTree[A any] struct {
-	runResult      RunResultComponent[A]
-	localStateTree *LocalStateTree[any]
+	RunResult      RunResultComponent[A]
+	LocalStateTree *LocalStateTree
 }
 
 type CreateElementsResult[A any] struct {
@@ -14,6 +18,15 @@ type CreateElementsResult[A any] struct {
 	NewElements    []Element
 	RemoveElements []Element
 	TreeState      RunResultWithStateTree[A]
+}
+
+func (r CreateElementsResult[any]) String() string {
+	result := ""
+
+	result += "CreateElementsResult"
+	result += fmt.Sprintf("Elements: %v", Elements(r.Elements))
+
+	return result
 }
 
 // given
@@ -35,14 +48,16 @@ func CreateElements[A any](comp Comp[A], stateTree *RunResultWithStateTree[A]) *
 
 		elements := runResult.ExtractElements()
 
+		logger.Debug("Extracting local state tree from the run")
+		localStateTree := runResult.ExtractLocalStateTree()
+
 		return &CreateElementsResult[A]{
 			Elements:       elements,
 			NewElements:    elements,
 			RemoveElements: make([]Element, 0),
 			TreeState: RunResultWithStateTree[A]{
-				runResult:      runResult,
-				localStateTree: runResult.ExtractLocalStateTree(),
-				// localStateTree: runResult.,
+				RunResult:      runResult,
+				LocalStateTree: localStateTree,
 			},
 		}
 	}
@@ -50,21 +65,18 @@ func CreateElements[A any](comp Comp[A], stateTree *RunResultWithStateTree[A]) *
 	rerunResult := RerunComponentTree[A](
 		&RerunContext[A]{
 			logger:         GetLogger().With(zap.String("rerun", "rerun")),
-			prevRunResult:  stateTree.runResult,
-			localStateTree: *stateTree.localStateTree,
+			prevRunResult:  stateTree.RunResult,
+			localStateTree: *stateTree.LocalStateTree,
 			componentIndex: []int{0},
 			parents:        make([]ElementComponent[A], 0),
 		},
 		comp,
-		// GetLogger(),
-		// stateTree.runResult,
-		// comp,
-		// *stateTree.localStateTree,
-		// []int{0},
-		// make([]ElementComponent[A], 0),
 	)
 
 	aa := ExtractElementsFromRerun(rerunResult)
+
+	logger.Debug("Extracting local state tree from rerun")
+	localStateTree := stateTree.RunResult.ExtractLocalStateTree()
 
 	if rr, ok := RunResultFromRerun[A](rerunResult).(*RunResultComponent[A]); ok {
 
@@ -73,8 +85,8 @@ func CreateElements[A any](comp Comp[A], stateTree *RunResultWithStateTree[A]) *
 			NewElements:    aa.newElements,
 			RemoveElements: aa.removedElements,
 			TreeState: RunResultWithStateTree[A]{
-				runResult:      *rr,
-				localStateTree: stateTree.runResult.ExtractLocalStateTree(),
+				RunResult:      *rr,
+				LocalStateTree: localStateTree,
 			},
 		}
 	}
@@ -82,17 +94,6 @@ func CreateElements[A any](comp Comp[A], stateTree *RunResultWithStateTree[A]) *
 	panic("not a run result")
 
 }
-
-// func RunResultFromRerunComp[A any](rerunResult RerunResult) RunResultComponent[A] {
-// 	switch r := rerunResult.(type) {
-// 	case *RerunResultUnchanged[A]:
-// 		return RunResultFromRerun[A](r).(*RunResultComponent[A])
-// 	case *RerunResultUpdated[A]:
-// 		return RunResultFromRerun[A](r).(*RunResultComponent[A])
-// 	case *ReRunResultElement:
-// 		panic("should be elemenet")
-// 	}
-// }
 
 func RunResultFromRerun[A any](rerunResult RerunResult) RunResult {
 	switch r := rerunResult.(type) {

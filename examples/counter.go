@@ -55,14 +55,14 @@ type WelcomState struct {
 
 type Welcom struct {
 	Username string
-	state    tgbot.LocalStateProvider[WelcomState]
+	state    tgbot.GetSetLocalStateImpl[WelcomState]
 }
 
 func (w *Welcom) Render(o tgbot.OO) {
 
-	ls := w.state.Get(WelcomState{})
+	ls := w.state.Init(WelcomState{})
 
-	if ls.hideName {
+	if ls.Get().hideName {
 		o.Message("Welcome")
 	} else {
 		o.MessagePartf("Welcome %v", w.Username)
@@ -72,8 +72,10 @@ func (w *Welcom) Render(o tgbot.OO) {
 
 	o.InputHandler(func(s string) any {
 		if s == "/hide_name" {
-			return w.state.Set(func(s WelcomState) {
-				s.hideName = true
+			return ls.Set(func(s WelcomState) WelcomState {
+				return WelcomState{
+					hideName: s.hideName,
+				}
 			})
 		}
 

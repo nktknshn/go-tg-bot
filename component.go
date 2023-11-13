@@ -6,25 +6,25 @@ import (
 	"go.uber.org/zap"
 )
 
-type LocalStateSetter[S any, A any] interface {
-	Set(func(S)) A
+type LocalStateSetter[S any] interface {
+	Set(func(S)) S
 }
 
 type LocalStateGetter[S any] interface {
-	Get(S) S
+	Get() S
 }
 
 // type LocalStateIniter[S any] interface {
 // 	Init(S) GetSetLocalState[S, any]
 // }
 
-type GetSetLocalState[S any, A any] interface {
-	LocalStateSetter[S, A]
+type GetSetLocalState[S any] interface {
+	LocalStateSetter[S]
 	LocalStateGetter[S]
 }
 
 type LocalStateProvider[S any] interface {
-	GetSetLocalState[S, ActionLocalState[S]]
+	GetSetLocalState[S]
 }
 
 type Z interface {

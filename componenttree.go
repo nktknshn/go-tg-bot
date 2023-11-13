@@ -42,9 +42,9 @@ func (c *RunResultComponent[A]) RunResultKind() string {
 }
 
 // extract local state tree from the component
-func (c *RunResultComponent[A]) ExtractLocalStateTree() *LocalStateTree[any] {
+func (c *RunResultComponent[A]) ExtractLocalStateTree() *LocalStateTree {
 
-	children := make([]*LocalStateTree[any], len(c.output))
+	children := make([]*LocalStateTree, len(c.output))
 
 	for idx, e := range c.output {
 		switch e := e.(type) {
@@ -58,9 +58,9 @@ func (c *RunResultComponent[A]) ExtractLocalStateTree() *LocalStateTree[any] {
 		}
 	}
 
-	return &LocalStateTree[any]{
-		localStateClosure: &c.inputLocalStateClosure,
-		children:          &children,
+	return &LocalStateTree{
+		LocalStateClosure: &c.inputLocalStateClosure,
+		Children:          &children,
 	}
 }
 
@@ -189,15 +189,15 @@ func ExtractFromRunResults(results []RunResult) []Element {
 
 // holds the inputs and outputs of the previous render
 // and the extracted local states tree
-type ComponentsTreeState[A any] struct {
-	runResult      RunResultComponent[A]
-	localStateTree *LocalStateTree[any]
-}
+// type ComponentsTreeState[A any] struct {
+// 	runResult      RunResultComponent[A]
+// 	localStateTree *LocalStateTree[any]
+// }
 
 type RunContext[A any] struct {
 	logger *zap.Logger
 
-	localStateTree *LocalStateTree[any]
+	localStateTree *LocalStateTree
 
 	// position of the component in the tree
 	componentIndex []int
@@ -208,7 +208,7 @@ type RerunContext[A any] struct {
 	logger        *zap.Logger
 	prevRunResult RunResultComponent[A]
 
-	localStateTree LocalStateTree[any]
+	localStateTree LocalStateTree
 
 	// position of the component in the tree
 	componentIndex []int
@@ -227,25 +227,35 @@ func RunComponentTree[A any](ctx *RunContext[A], comp Comp[A]) RunResultComponen
 
 	if ctx.localStateTree == nil {
 		ctx.logger.Debug("Creating local state tree")
-		ctx.localStateTree = NewLocalStateTree[any]()
+		ctx.localStateTree = NewLocalStateTree()
 	}
 
 	ctx.logger.Debug("Creating local state")
-	localState := NewLocalState[any](ctx.componentIndex, ctx.localStateTree.localStateClosure)
+
+	localState := NewLocalState[any](
+		ctx.componentIndex, ctx.localStateTree.LocalStateClosure,
+	)
 
 	ctx.logger.Debug("Running the component")
-	elements := RunComponent[A](comp, localState.Getset)
+
+	elements, closure := RunComponent[A](comp, localState.Getset)
+	localState.LocalState = &closure
+
+	ctx.logger.Debug("Local state status",
+		zap.Bool("initialzied", closure.Initialized),
+		zap.Any("value", closure.Value),
+	)
 
 	ctx.logger.Debug("Elements was rendered",
 		zap.Int("len", len(elements)),
 		Elements(elements).ZapField("elements"),
 	)
 
-	childrenState := ctx.localStateTree.children
+	childrenState := ctx.localStateTree.Children
 
-	if childrenState == nil || len(*ctx.localStateTree.children) != len(elements) {
+	if childrenState == nil || len(*ctx.localStateTree.Children) != len(elements) {
 		// initialize local states for the children
-		cs := make([]*LocalStateTree[any], len(elements))
+		cs := make([]*LocalStateTree, len(elements))
 		childrenState = &cs
 	}
 
@@ -288,8 +298,8 @@ func RerunComponentTree[A any](
 	comp Comp[A],
 ) RerunResult {
 
-	localStateClosure := ctx.localStateTree.localStateClosure
-	childrenState := ctx.localStateTree.children
+	localStateClosure := ctx.localStateTree.LocalStateClosure
+	childrenState := ctx.localStateTree.Children
 
 	// localState := NewGetSet(ctx.componentIndex, localStateclosure)
 
@@ -307,9 +317,8 @@ func RerunComponentTree[A any](
 	if rerun {
 		runResult := RunComponentTree(&RunContext[A]{
 			logger: ctx.logger,
-			localStateTree: &LocalStateTree[any]{
-				localStateClosure: localStateClosure,
-				children:          nil,
+			localStateTree: &LocalStateTree{LocalStateClosure: localStateClosure,
+				Children: nil,
 			},
 			componentIndex: ctx.componentIndex,
 			parents:        ctx.parents,
@@ -324,7 +333,7 @@ func RerunComponentTree[A any](
 		returnOutput := make([]RerunResult, 0)
 
 		if childrenState == nil || len(*childrenState) != len(ctx.prevRunResult.output) {
-			cs := make([]*LocalStateTree[any], len(ctx.prevRunResult.output))
+			cs := make([]*LocalStateTree, len(ctx.prevRunResult.output))
 			childrenState = &cs
 		}
 
@@ -365,23 +374,28 @@ func RerunComponentTree[A any](
 // sets the local state of the component if it has one defined
 func ReflectCompLocalState[A any](comp Comp[A], ls GetSetLocalStateImpl[any]) Comp[A] {
 
-	t := reflect.TypeOf(comp)
+	// isPointer := false
+	// TODO
+
+	t := reflect.TypeOf(comp).Elem()
 
 	fmt.Println("t: ", t)
 
 	if ls.LocalState.Value == nil {
 		// initialize local state
+		fmt.Println("No input state. Default will be used")
 		return comp
 	}
 
 	stateField, ok := t.FieldByName("State")
 
 	if !ok {
+		fmt.Println("Component doesn't use local state")
 		return comp
 	}
 
-	v := reflect.ValueOf(comp)
-	vp := reflect.ValueOf(&comp)
+	v := reflect.ValueOf(comp).Elem()
+	vp := reflect.ValueOf(&comp).Elem()
 
 	v.Interface()
 
@@ -433,20 +447,40 @@ func ReflectCompLocalState[A any](comp Comp[A], ls GetSetLocalStateImpl[any]) Co
 	nt.FieldByName("State").FieldByName("LocalState").FieldByName("Value").Set(
 		reflect.ValueOf(vlsValue.Interface()),
 	)
+	nt.FieldByName("State").FieldByName("LocalState").FieldByName("Initialized").SetBool(
+		true,
+	)
 
 	nt.FieldByName("State").FieldByName("Index").Set(
 		vls.FieldByName("Index"),
 	)
 
-	return nt.Interface().(Comp[A])
+	fmt.Println("nt.value", nt.FieldByName("State").FieldByName("LocalState").FieldByName("Value"))
+
+	fmt.Println("nt.init", nt.FieldByName("State").FieldByName("LocalState").FieldByName("Initialized"))
+
+	return nt.Addr().Interface().(Comp[A])
 }
 
-func RunComponent[A any](comp Comp[A], getset GetSetLocalStateImpl[any]) []Element {
+func RunComponent[A any](comp Comp[A], getset GetSetLocalStateImpl[any]) ([]Element, LocalStateClosure[any]) {
 	comp = ReflectCompLocalState[A](comp, getset)
 
 	o := newOutput[A]()
 	comp.Render(o)
 
-	return o.result
+	ls := reflect.ValueOf(comp).Elem().FieldByName("State").FieldByName("LocalState")
+
+	vi := ls.FieldByName("Initialized")
+	vv := ls.FieldByName("Value")
+
+	fmt.Println("vi", vi)
+	fmt.Println("vv", vv)
+
+	// globalLogger.Debug("v", zap.Any("v", vv), zap.Any("i", vi))
+
+	return o.result, LocalStateClosure[any]{
+		Initialized: vi.Bool(),
+		Value:       vv.Interface(),
+	}
 
 }

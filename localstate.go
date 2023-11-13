@@ -6,12 +6,41 @@ type LocalStateClosure[S any] struct {
 }
 
 // tree of the local states of components
-type LocalStateTree[S any] struct {
+type LocalStateTree struct {
 	// local state of the current component
-	localStateClosure *LocalStateClosure[S]
-	// local states of the children components
+	LocalStateClosure *LocalStateClosure[any]
+	// local states of the Children components
 	// if nil then the state has to be reinitialized
-	children *[]*LocalStateTree[any]
+	Children *[]*LocalStateTree
+}
+
+func (lst *LocalStateTree) Set(index []int, f func(any) any) {
+	closure := lst.Get(index)
+	closure.Value = f(closure.Value)
+}
+
+func (lst *LocalStateTree) Get(index []int) *LocalStateClosure[any] {
+	if len(index) == 0 {
+		return lst.LocalStateClosure
+	}
+
+	if lst.Children == nil {
+		panic("LocalStateTree.Get: Children is nil")
+	}
+
+	if len(*lst.Children) == 0 {
+		panic("LocalStateTree.Get: Children is empty")
+	}
+
+	idx := index[0]
+
+	if idx > len(*lst.Children)-1 {
+		panic("LocalStateTree.Get: index out of range")
+	}
+
+	cs := (*lst.Children)[idx].Get(index[1:])
+
+	return cs
 }
 
 type LocalStateWithGetSet[S any] struct {
@@ -33,16 +62,16 @@ func NewLocalState[S any](index []int, localState *LocalStateClosure[S]) LocalSt
 	}
 }
 
-func NewLocalStateTree[S any]() *LocalStateTree[S] {
-	return &LocalStateTree[S]{
-		localStateClosure: nil,
-		children:          nil,
+func NewLocalStateTree() *LocalStateTree {
+	return &LocalStateTree{
+		LocalStateClosure: nil,
+		Children:          nil,
 	}
 }
 
 type ActionLocalState[S any] struct {
 	index []int
-	f     func(S)
+	f     func(S) S
 }
 
 type GetSetLocalStateImpl[S any] struct {
@@ -50,20 +79,29 @@ type GetSetLocalStateImpl[S any] struct {
 	Index      []int
 }
 
-func (g GetSetLocalStateImpl[S]) Get(initialValue S) S {
+type GetSetStruct[S any, A any] struct {
+	Get func() S
+	Set func(func(S) S) A
+}
+
+func (g *GetSetLocalStateImpl[S]) Init(initialValue S) GetSetStruct[S, any] {
 
 	if !g.LocalState.Initialized {
+		globalLogger.Debug("Initializing")
 		g.LocalState.Value = initialValue
 		g.LocalState.Initialized = true
 	}
 
-	return g.LocalState.Value
-}
-
-func (g GetSetLocalStateImpl[S]) Set(f func(S)) ActionLocalState[S] {
-	return ActionLocalState[S]{
-		index: g.Index,
-		f:     f,
+	return GetSetStruct[S, any]{
+		Get: func() S {
+			return g.LocalState.Value
+		},
+		Set: func(f func(S) S) any {
+			return ActionLocalState[S]{
+				index: g.Index,
+				f:     f,
+			}
+		},
 	}
 }
 

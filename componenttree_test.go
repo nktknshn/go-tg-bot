@@ -1,14 +1,14 @@
 package tgbot_test
 
 import (
-	"reflect"
 	"testing"
 
 	tgbot "github.com/nktknshn/go-tg-bot"
 )
 
 type App1State struct {
-	boolean bool
+	night bool
+	hour  int
 }
 
 type App1 struct {
@@ -18,16 +18,29 @@ type App1 struct {
 	State tgbot.GetSetLocalStateImpl[App1State]
 }
 
-func (a App1) Render(o tgbot.OO) {
-	ls := a.State.Get(App1State{boolean: false})
+func (a *App1) Render(o tgbot.OO) {
+	// TODO make it INIT
+	lsgs := a.State.Init(App1State{
+		night: false,
+		hour:  3,
+	})
 
 	o.Message("Hello")
 
-	if ls.boolean {
-		o.Message("World")
+	if lsgs.Get().night {
+		tgbot.GetLogger().Debug("night")
+		o.Message("Night")
 	} else {
-		o.Message("World2")
+		tgbot.GetLogger().Debug("day")
+		o.Message("Day")
 	}
+
+	o.Button("Toggle Day/Ngiht", func() any {
+		return lsgs.Set(func(as App1State) App1State {
+			// as.boolean = !as.boolean
+			return App1State{night: !as.night}
+		})
+	})
 
 	o.Messagef("Counter: %v", a.Counter)
 }
@@ -35,18 +48,96 @@ func (a App1) Render(o tgbot.OO) {
 func TestRunComponent(t *testing.T) {
 	comp := App1{Counter: 1}
 
-	res := tgbot.CreateElements[any](comp, nil)
+	tgbot.RunComponent(&comp, tgbot.GetSetLocalStateImpl[any]{
+		LocalState: tgbot.LocalStateClosure[any]{
+			Initialized: true,
+			Value:       App1State{night: true, hour: 2},
+		},
+		Index: []int{0},
+	})
 
-	t.Logf("res: %v", res)
 }
 
-func TestReflect(t *testing.T) {
-	app := App1{Counter: 1}
+func TestRunCreateElements(t *testing.T) {
+	comp := App1{Counter: 1}
 
-	// getset := tgbot.NewGetSet[any]([]int{0}, nil)
-	// tgbot.ReflectCompLocalState[any](app, getset)
+	res := tgbot.CreateElements[any](&comp, nil)
 
-	stateField := reflect.ValueOf(app).FieldByName("state")
+	if len(res.Elements) != 4 {
+		t.Fatal("len(res.Elements) != 4")
+	}
 
-	t.Logf("stateField: %v", stateField.Type())
+	t.Logf("res: %s", res)
+	t.Logf("Local Value: %v", res.TreeState.LocalStateTree.LocalStateClosure)
+
+}
+
+func TestLocalStateTree(t *testing.T) {
+	type V struct {
+		v int
+	}
+	ls := tgbot.LocalStateTree{
+		LocalStateClosure: &tgbot.LocalStateClosure[any]{
+			Initialized: true,
+			Value:       1,
+		},
+		Children: &[]*tgbot.LocalStateTree{
+			nil,
+			{
+				LocalStateClosure: &tgbot.LocalStateClosure[any]{
+					Initialized: true,
+					Value:       2,
+				},
+				Children: &[]*tgbot.LocalStateTree{},
+			},
+			{
+				LocalStateClosure: &tgbot.LocalStateClosure[any]{
+					Initialized: true,
+					Value:       3,
+				},
+				Children: &[]*tgbot.LocalStateTree{},
+			},
+			{
+				LocalStateClosure: &tgbot.LocalStateClosure[any]{
+					Initialized: true,
+					Value:       4,
+				},
+				Children: &[]*tgbot.LocalStateTree{
+					{
+						LocalStateClosure: &tgbot.LocalStateClosure[any]{
+							Initialized: true,
+							Value:       V{v: 5},
+						},
+						Children: &[]*tgbot.LocalStateTree{},
+					},
+				},
+			},
+		}}
+
+	if ls.Get([]int{}).Value != 1 {
+		t.Errorf("ls.Get([]int{}).Value != 1")
+	}
+
+	if ls.Get([]int{1}).Value != 2 {
+		t.Errorf("ls.Get([]int{1}).Value != 2")
+	}
+
+	if ls.Get([]int{3}).Value != 4 {
+		t.Errorf("ls.Get([]int{3}).Value != 4")
+	}
+
+	if ls.Get([]int{3, 0}).Value.(V).v != 5 {
+		t.Errorf("ls.Get([]int{3, 0}).Value != 5")
+	}
+
+	ls.Set([]int{3, 0}, func(v any) any {
+		return V{v: v.(V).v + 1}
+	})
+
+	if ls.Get([]int{3, 0}).Value.(V).v != 6 {
+		t.Errorf("ls.Get([]int{3, 0}).Value != 6")
+	}
+
+	t.Logf("ls: %v", ls)
+
 }

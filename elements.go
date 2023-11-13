@@ -319,6 +319,21 @@ func (c *ElementFile) Equal(other BasicElement) bool {
 
 type Elements []Element
 
+func (es Elements) String() string {
+
+	if len(es) == 0 {
+		return "[]"
+	}
+
+	result := fmt.Sprintf("[%v", es[0])
+
+	for _, e := range es[1:] {
+		result = fmt.Sprintf("%v, %v", result, e)
+	}
+
+	return result + "]"
+}
+
 func (es Elements) ZapField(key string) zap.Field {
 	return zap.Array(key, zapcore.ArrayMarshalerFunc(func(ae zapcore.ArrayEncoder) error {
 		for _, e := range es {
