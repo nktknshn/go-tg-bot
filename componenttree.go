@@ -379,7 +379,7 @@ func ReflectCompLocalState[A any](comp Comp[A], ls GetSetLocalStateImpl[any]) Co
 
 	t := reflect.TypeOf(comp).Elem()
 
-	fmt.Println("t: ", t)
+	// fmt.Println("t: ", t)
 
 	if ls.LocalState.Value == nil {
 		// initialize local state
@@ -387,7 +387,7 @@ func ReflectCompLocalState[A any](comp Comp[A], ls GetSetLocalStateImpl[any]) Co
 		return comp
 	}
 
-	stateField, ok := t.FieldByName("State")
+	_, ok := t.FieldByName("State")
 
 	if !ok {
 		fmt.Println("Component doesn't use local state")
@@ -395,54 +395,52 @@ func ReflectCompLocalState[A any](comp Comp[A], ls GetSetLocalStateImpl[any]) Co
 	}
 
 	v := reflect.ValueOf(comp).Elem()
-	vp := reflect.ValueOf(&comp).Elem()
+	// vp := reflect.ValueOf(&comp).Elem()
 
-	v.Interface()
+	// fmt.Println("v: ", v)
+	// fmt.Println("v.Type(): ", v.Type())
+	// fmt.Println("vp: ", vp)
+	// fmt.Println("vp.Type(): ", vp.Type())
 
-	fmt.Println("v: ", v)
-	fmt.Println("v.Type(): ", v.Type())
-	fmt.Println("vp: ", vp)
-	fmt.Println("vp.Type(): ", vp.Type())
+	// fmt.Println("vp.Elem(): ", vp.Elem())
+	// fmt.Println("vp.Elem().Type(): ", vp.Elem().Type())
+	// fmt.Println("vp.Elem().Elem().Type(): ", vp.Elem().Elem().Type())
 
-	fmt.Println("vp.Elem(): ", vp.Elem())
-	fmt.Println("vp.Elem().Type(): ", vp.Elem().Type())
-	fmt.Println("vp.Elem().Elem().Type(): ", vp.Elem().Elem().Type())
-
-	sf := vp.Elem().Elem().FieldByName(stateField.Name)
+	// sf := vp.Elem().Elem().FieldByName(stateField.Name)
 
 	vls := reflect.ValueOf(ls)
 
-	fmt.Printf("sf: %v\n", sf.Type())
-	fmt.Printf("vls: %v\n", vls.Type())
+	// fmt.Printf("sf: %v\n", sf.Type())
+	// fmt.Printf("vls: %v\n", vls.Type())
 
-	for i := 0; i < vls.NumField(); i++ {
-		fmt.Printf("vls.Field(%v): %v\n", i, vls.Field(i).Type().Name())
-	}
+	// for i := 0; i < vls.NumField(); i++ {
+	// 	fmt.Printf("vls.Field(%v): %v\n", i, vls.Field(i).Type().Name())
+	// }
 
 	vlsValue := vls.FieldByName("LocalState").FieldByName("Value")
 
 	// fmt.Println("vlsValue: ", reflect.TypeOf(vlsValue))
-	fmt.Println("vlsValue: ", reflect.TypeOf(vlsValue.Interface()))
+	// fmt.Println("vlsValue: ", reflect.TypeOf(vlsValue.Interface()))
 
-	fmt.Println("sf.CanSet(): ", sf.CanSet())
+	// fmt.Println("sf.CanSet(): ", sf.CanSet())
 
 	nt := reflect.New(t).Elem()
 
-	fmt.Println("nt.Type(): ", nt.Type())
+	// fmt.Println("nt.Type(): ", nt.Type())
 
 	// ntf := nt.Interface()
 	// nts := reflect.ValueOf(&ntf).Elem()
 
-	fmt.Println("nt.CanSet(): ", nt.CanSet())
+	// fmt.Println("nt.CanSet(): ", nt.CanSet())
 	// fmt.Println("nt.CanSet(): ", nts.CanAddr())
 
 	for i := 0; i < nt.NumField(); i++ {
 		nt.Field(i).Set(v.Field(i))
-		fmt.Printf("nt.Field(%v): %v\n", i, nt.Field(i))
+		// fmt.Printf("nt.Field(%v): %v\n", i, nt.Field(i))
 	}
 
-	fmt.Println("vls.Type()", vls.Type())
-	fmt.Println("nt.state", nt.FieldByName("State").Type())
+	// fmt.Println("vls.Type()", vls.Type())
+	// fmt.Println("nt.state", nt.FieldByName("State").Type())
 
 	nt.FieldByName("State").FieldByName("LocalState").FieldByName("Value").Set(
 		reflect.ValueOf(vlsValue.Interface()),
@@ -455,9 +453,9 @@ func ReflectCompLocalState[A any](comp Comp[A], ls GetSetLocalStateImpl[any]) Co
 		vls.FieldByName("Index"),
 	)
 
-	fmt.Println("nt.value", nt.FieldByName("State").FieldByName("LocalState").FieldByName("Value"))
+	// fmt.Println("nt.value", nt.FieldByName("State").FieldByName("LocalState").FieldByName("Value"))
 
-	fmt.Println("nt.init", nt.FieldByName("State").FieldByName("LocalState").FieldByName("Initialized"))
+	// fmt.Println("nt.init", nt.FieldByName("State").FieldByName("LocalState").FieldByName("Initialized"))
 
 	return nt.Addr().Interface().(Comp[A])
 }
@@ -473,10 +471,8 @@ func RunComponent[A any](comp Comp[A], getset GetSetLocalStateImpl[any]) ([]Elem
 	vi := ls.FieldByName("Initialized")
 	vv := ls.FieldByName("Value")
 
-	fmt.Println("vi", vi)
-	fmt.Println("vv", vv)
-
-	// globalLogger.Debug("v", zap.Any("v", vv), zap.Any("i", vi))
+	// fmt.Println("vi", vi)
+	// fmt.Println("vv", vv)
 
 	return o.result, LocalStateClosure[any]{
 		Initialized: vi.Bool(),

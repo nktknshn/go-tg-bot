@@ -29,7 +29,7 @@ func (a *App1) Render(o tgbot.OO) {
 
 	if lsgs.Get().night {
 		tgbot.GetLogger().Debug("night")
-		o.Message("Night")
+		o.Messagef("Night: %v", lsgs.Get().hour)
 	} else {
 		tgbot.GetLogger().Debug("day")
 		o.Message("Day")
@@ -67,8 +67,21 @@ func TestRunCreateElements(t *testing.T) {
 		t.Fatal("len(res.Elements) != 4")
 	}
 
-	t.Logf("res: %s", res)
-	t.Logf("Local Value: %v", res.TreeState.LocalStateTree.LocalStateClosure)
+	// t.Logf("res: %s", res)
+	// t.Logf("Local Value: %v", res.TreeState.LocalStateTree.LocalStateClosure)
+
+	res.TreeState.LocalStateTree.Set([]int{}, func(a any) any {
+		return App1State{
+			night: !a.(App1State).night,
+			hour:  a.(App1State).hour + 5,
+		}
+	})
+
+	res = tgbot.CreateElements[any](&comp, &res.TreeState)
+
+	if len(res.Elements) != 4 {
+		t.Fatal("len(res.Elements) != 4")
+	}
 
 }
 

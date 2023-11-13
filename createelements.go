@@ -76,21 +76,27 @@ func CreateElements[A any](comp Comp[A], stateTree *RunResultWithStateTree[A]) *
 	aa := ExtractElementsFromRerun(rerunResult)
 
 	logger.Debug("Extracting local state tree from rerun")
+
 	localStateTree := stateTree.RunResult.ExtractLocalStateTree()
 
-	if rr, ok := RunResultFromRerun[A](rerunResult).(*RunResultComponent[A]); ok {
+	logger.Debug("Forming RunResult from rerun")
+
+	rr := RunResultFromRerun[A](rerunResult)
+
+	if rrr, ok := rr.(*RunResultComponent[A]); ok {
 
 		return &CreateElementsResult[A]{
 			Elements:       aa.elements,
 			NewElements:    aa.newElements,
 			RemoveElements: aa.removedElements,
 			TreeState: RunResultWithStateTree[A]{
-				RunResult:      *rr,
+				RunResult:      *rrr,
 				LocalStateTree: localStateTree,
 			},
 		}
 	}
 
+	// fmt.Print(rr)
 	panic("not a run result")
 
 }
@@ -113,7 +119,7 @@ func RunResultFromRerun[A any](rerunResult RerunResult) RunResult {
 		}
 
 	case *RerunResultUpdated[A]:
-		return r
+		return &r.RunResultComponent
 	case *ReRunResultElement:
 		return &r.element
 	}
