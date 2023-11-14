@@ -1,7 +1,6 @@
 package tgbot
 
 import (
-	"fmt"
 	"reflect"
 
 	"go.uber.org/zap"
@@ -250,7 +249,7 @@ func RunComponentTree[A any](ctx *RunContext[A], comp Comp[A]) RunResultComponen
 
 	ctx.logger.Debug("Running the component")
 
-	elements, closure := RunComponent[A](comp, ctx.globalContext, localState.Getset)
+	elements, closure, contextQueryResult := RunComponent[A](comp, ctx.globalContext, localState.Getset)
 
 	ctx.logger.Debug("Local state status after the run",
 		zap.Bool("initialzied", closure.Initialized),
@@ -296,7 +295,7 @@ func RunComponentTree[A any](ctx *RunContext[A], comp Comp[A]) RunResultComponen
 	runResult := RunResultComponent[A]{
 		comp:         comp,
 		inputProps:   reflectCompProps[A](comp),
-		inputContext: ctx.globalContext,
+		inputContext: contextQueryResult,
 		// TODO FIX
 		inputLocalStateClosure: *localState.LocalState,
 		output:                 output,
@@ -320,12 +319,20 @@ func RerunComponentTree[A any](
 	localStateClosure := ctx.localStateTree.LocalStateClosure
 	childrenState := ctx.localStateTree.Children
 
+	actualContextQuery := ReflectContextQueryResultGet[A](comp, ctx.globalContext)
 	// localState := NewGetSet(ctx.componentIndex, localStateclosure)
 
 	// signals if the component has to be rerun
 	var rerun bool = false
 
-	if ctx.prevRunResult.compID != reflectCompId[A](comp) {
+	if !reflect.DeepEqual(ctx.prevRunResult.inputContext, actualContextQuery) {
+		ctx.logger.Debug("The context has changed",
+			zap.Any("before", ctx.prevRunResult.inputContext),
+			zap.Any("now", actualContextQuery),
+		)
+
+		rerun = true
+	} else if ctx.prevRunResult.compID != reflectCompId[A](comp) {
 		ctx.logger.Debug("Component is different now",
 			zap.String("compID", ctx.prevRunResult.compID),
 			zap.String("newCompID", reflectCompId[A](comp)),
@@ -502,26 +509,30 @@ func ReflectCompLocalState[A any](comp Comp[A], ls GetSetLocalStateImpl[any]) Co
 	return nt.Addr().Interface().(Comp[A])
 }
 
-func RunComponent[A any](comp Comp[A], globalContext CreateElementsContext, getset GetSetLocalStateImpl[any]) ([]Element, LocalStateClosure[any]) {
+func RunComponent[A any](comp Comp[A], globalContext CreateElementsContext, getset GetSetLocalStateImpl[any]) ([]Element, LocalStateClosure[any], *ContextQueryResult) {
 
-	var contextQueryResult *ContextQueryResult = nil
-	contextQuery := ReflectCompCtxReqsTags[A](comp)
+	contextQueryResult := ReflectContextQueryResultGet(comp, globalContext)
 
-	if !contextQuery.IsEmpty() {
-		fmt.Println("contextQuery", contextQuery)
-		fmt.Println("globalContext", globalContext)
+	// contextQuery := ReflectCompCtxReqsTags[A](comp)
 
-		res, err := globalContext.Query(contextQuery)
+	// if !contextQuery.IsEmpty() {
+	// 	fmt.Println("contextQuery", contextQuery)
+	// 	fmt.Println("globalContext", globalContext)
 
-		if err != nil {
-			fmt.Println(err)
-		}
+	// 	res, err := globalContext.Query(contextQuery)
 
-		contextQueryResult = res
-	}
+	// 	if err != nil {
+	// 		fmt.Println(err)
+	// 	}
+
+	// 	contextQueryResult = res
+	// }
 
 	comp = ReflectCompLocalState[A](comp, getset)
-	comp = ReflectSetContextQueryResult[A](comp, contextQueryResult)
+
+	if contextQueryResult != nil {
+		comp = ReflectContextQueryResultSet[A](comp, contextQueryResult)
+	}
 
 	o := newOutput[A]()
 	comp.Render(o)
@@ -529,7 +540,7 @@ func RunComponent[A any](comp Comp[A], globalContext CreateElementsContext, gets
 	_, ok := reflect.TypeOf(comp).Elem().FieldByName("State")
 
 	if !ok {
-		return o.result, getset.LocalState
+		return o.result, getset.LocalState, contextQueryResult
 	}
 
 	// s, ok := reflect.ValueOf(comp).Elem().FieldByName("State")
@@ -545,6 +556,6 @@ func RunComponent[A any](comp Comp[A], globalContext CreateElementsContext, gets
 	return o.result, LocalStateClosure[any]{
 		Initialized: vi.Bool(),
 		Value:       vv.Interface(),
-	}
+	}, contextQueryResult
 
 }

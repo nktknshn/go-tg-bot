@@ -146,11 +146,14 @@ func (c *TestNestedComp3) Render(o tgbot.OO) {
 func TestNestedComp(t *testing.T) {
 	globalContext := tgbot.NewCreateElementsContext()
 
-	globalContext.Add("Flag1", true)
+	globalContext.Add("Flag1", false)
 
 	t.Log("globalContext", globalContext)
 
 	res := tgbot.CreateElements(&TestNestedCompApp{}, globalContext, nil)
+
+	globalContext.Add("Flag1", true)
+
 	res = tgbot.CreateElements(&TestNestedCompApp{}, globalContext, &res.TreeState)
 
 	t.Log(res.Elements)

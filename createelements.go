@@ -74,6 +74,7 @@ func CreateElements[A any](comp Comp[A], context CreateElementsContext, stateTre
 		&RerunContext[A]{
 			logger: GetLogger(),
 			// .With(zap.String("rerun", "rerun")),
+			globalContext:  context,
 			prevRunResult:  stateTree.RunResult,
 			localStateTree: *stateTree.LocalStateTree,
 			componentIndex: []int{0},

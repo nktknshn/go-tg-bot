@@ -160,7 +160,23 @@ func ReflectCompCtxReqsTags[A any](comp Comp[A]) ContextQuery {
 	return ContextQuery{reqStructType}
 }
 
-func ReflectSetContextQueryResult[A any](comp Comp[A], cqr *ContextQueryResult) Comp[A] {
+func ReflectContextQueryResultGet[A any](comp Comp[A], globalContext CreateElementsContext) *ContextQueryResult {
+	q := ReflectCompCtxReqsTags[A](comp)
+
+	if q.IsEmpty() {
+		return nil
+	}
+
+	res, err := globalContext.Query(q)
+
+	if err != nil {
+		panic(fmt.Errorf("ReflectContextQueryResultGet: %w", err))
+	}
+
+	return res
+}
+
+func ReflectContextQueryResultSet[A any](comp Comp[A], cqr *ContextQueryResult) Comp[A] {
 
 	var wasapointer = false
 
