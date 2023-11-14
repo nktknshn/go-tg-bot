@@ -30,7 +30,7 @@ func (r CreateElementsResult[any]) String() string {
 }
 
 // given
-func CreateElements[A any](comp Comp[A], stateTree *RunResultWithStateTree[A]) *CreateElementsResult[A] {
+func CreateElements[A any](comp Comp[A], context CreateElementsContext, stateTree *RunResultWithStateTree[A]) *CreateElementsResult[A] {
 	logger := GetLogger()
 
 	logger.Debug("CreateElements",
@@ -46,6 +46,7 @@ func CreateElements[A any](comp Comp[A], stateTree *RunResultWithStateTree[A]) *
 		// this is the first render
 		runResult := RunComponentTree[A](&RunContext[A]{
 			logger:         GetLogger(),
+			globalContext:  context,
 			localStateTree: nil,
 			componentIndex: []int{0},
 			parents:        make([]ElementComponent[A], 0),

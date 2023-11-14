@@ -47,21 +47,28 @@ func (a *App1) Render(o tgbot.OO) {
 
 func TestRunComponent(t *testing.T) {
 	comp := App1{Counter: 1}
+	globalContext := tgbot.NewCreateElementsContext()
 
-	tgbot.RunComponent(&comp, tgbot.GetSetLocalStateImpl[any]{
-		LocalState: tgbot.LocalStateClosure[any]{
-			Initialized: true,
-			Value:       App1State{night: true, hour: 2},
-		},
-		Index: []int{0},
-	})
+	tgbot.RunComponent(
+		&comp,
+		globalContext,
+		tgbot.GetSetLocalStateImpl[any]{
+			LocalState: tgbot.LocalStateClosure[any]{
+				Initialized: true,
+				Value:       App1State{night: true, hour: 2},
+			},
+			Index: []int{0},
+		})
 
 }
 
 func TestRunCreateElements1(t *testing.T) {
+
+	globalContext := tgbot.NewCreateElementsContext()
+
 	comp := App1{Counter: 1}
 
-	res := tgbot.CreateElements[any](&comp, nil)
+	res := tgbot.CreateElements[any](&comp, globalContext, nil)
 
 	if len(res.Elements) != 4 {
 		t.Fatal("len(res.Elements) != 4")
@@ -81,7 +88,7 @@ func TestRunCreateElements1(t *testing.T) {
 		}
 	})
 
-	res = tgbot.CreateElements[any](&comp, &res.TreeState)
+	res = tgbot.CreateElements[any](&comp, globalContext, &res.TreeState)
 
 	if len(res.Elements) != 4 {
 		t.Fatal("len(res.Elements) != 4")
@@ -110,11 +117,7 @@ type TestNestedComp1Context struct {
 }
 
 type TestNestedComp1 struct {
-	// props
-	Flag1 bool
-	// requests data from the global state
-	// ctx      Context[TestNestedComp1Context]
-	CtxFlag1 bool
+	Flag1 bool `tgbot:"ctx"`
 }
 
 func (c *TestNestedComp1) Render(o tgbot.OO) {
@@ -141,8 +144,14 @@ func (c *TestNestedComp3) Render(o tgbot.OO) {
 }
 
 func TestNestedComp(t *testing.T) {
-	res := tgbot.CreateElements(&TestNestedCompApp{}, nil)
-	res = tgbot.CreateElements(&TestNestedCompApp{}, &res.TreeState)
+	globalContext := tgbot.NewCreateElementsContext()
+
+	globalContext.Add("Flag1", true)
+
+	t.Log("globalContext", globalContext)
+
+	res := tgbot.CreateElements(&TestNestedCompApp{}, globalContext, nil)
+	res = tgbot.CreateElements(&TestNestedCompApp{}, globalContext, &res.TreeState)
 
 	t.Log(res.Elements)
 }

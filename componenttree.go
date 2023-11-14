@@ -1,6 +1,7 @@
 package tgbot
 
 import (
+	"fmt"
 	"reflect"
 
 	"go.uber.org/zap"
@@ -28,6 +29,9 @@ type RunResultComponent[A any] struct {
 	// the component that was rendered
 	comp   Comp[A]
 	compID string
+
+	// context
+	inputContext any
 	// props the component was rendered with
 	inputProps any
 	// localState the component was rendered with
@@ -198,6 +202,8 @@ type RunContext[A any] struct {
 
 	localStateTree *LocalStateTree
 
+	globalContext CreateElementsContext
+
 	// position of the component in the tree
 	componentIndex []int
 	parents        []ElementComponent[A]
@@ -208,6 +214,8 @@ type RerunContext[A any] struct {
 	prevRunResult RunResultComponent[A]
 
 	localStateTree LocalStateTree
+
+	globalContext CreateElementsContext
 
 	// position of the component in the tree
 	componentIndex []int
@@ -242,13 +250,14 @@ func RunComponentTree[A any](ctx *RunContext[A], comp Comp[A]) RunResultComponen
 
 	ctx.logger.Debug("Running the component")
 
-	elements, closure := RunComponent[A](comp, localState.Getset)
-	localState.LocalState = &closure
+	elements, closure := RunComponent[A](comp, ctx.globalContext, localState.Getset)
 
 	ctx.logger.Debug("Local state status after the run",
 		zap.Bool("initialzied", closure.Initialized),
 		zap.Any("value", closure.Value),
 	)
+
+	localState.LocalState = &closure
 
 	ctx.logger.Debug("Elements was rendered",
 		zap.Int("len", len(elements)),
@@ -274,6 +283,7 @@ func RunComponentTree[A any](ctx *RunContext[A], comp Comp[A]) RunResultComponen
 			subcompres := RunComponentTree(&RunContext[A]{
 				logger:         ctx.logger,
 				localStateTree: (*childrenState)[idx],
+				globalContext:  ctx.globalContext,
 				componentIndex: append(ctx.componentIndex, idx),
 				parents:        append(ctx.parents, *e),
 			}, e.comp)
@@ -284,8 +294,10 @@ func RunComponentTree[A any](ctx *RunContext[A], comp Comp[A]) RunResultComponen
 	}
 
 	runResult := RunResultComponent[A]{
-		comp:                   comp,
-		inputProps:             reflectCompProps[A](comp),
+		comp:         comp,
+		inputProps:   reflectCompProps[A](comp),
+		inputContext: ctx.globalContext,
+		// TODO FIX
 		inputLocalStateClosure: *localState.LocalState,
 		output:                 output,
 		compID:                 reflectCompId[A](comp),
@@ -344,6 +356,7 @@ func RerunComponentTree[A any](
 			localStateTree: &LocalStateTree{LocalStateClosure: localStateClosure,
 				Children: nil,
 			},
+			globalContext:  ctx.globalContext,
 			componentIndex: ctx.componentIndex,
 			parents:        ctx.parents,
 		}, comp)
@@ -372,6 +385,7 @@ func RerunComponentTree[A any](
 						logger:         ctx.logger,
 						prevRunResult:  *e,
 						localStateTree: *(*childrenState)[idx],
+						globalContext:  ctx.globalContext,
 						componentIndex: append(ctx.componentIndex, idx),
 						parents:        append(ctx.parents, ElementComponent[A]{(*e).comp}),
 					},
@@ -387,6 +401,7 @@ func RerunComponentTree[A any](
 		return &RerunResultUnchanged[A]{
 			RunResultComponent: RunResultComponent[A]{
 				comp:                   comp,
+				inputContext:           ctx.prevRunResult.inputContext,
 				inputProps:             ctx.prevRunResult.inputProps,
 				inputLocalStateClosure: ctx.prevRunResult.inputLocalStateClosure,
 				output:                 ctx.prevRunResult.output,
@@ -487,8 +502,26 @@ func ReflectCompLocalState[A any](comp Comp[A], ls GetSetLocalStateImpl[any]) Co
 	return nt.Addr().Interface().(Comp[A])
 }
 
-func RunComponent[A any](comp Comp[A], getset GetSetLocalStateImpl[any]) ([]Element, LocalStateClosure[any]) {
+func RunComponent[A any](comp Comp[A], globalContext CreateElementsContext, getset GetSetLocalStateImpl[any]) ([]Element, LocalStateClosure[any]) {
+
+	var contextQueryResult *ContextQueryResult = nil
+	contextQuery := ReflectCompCtxReqsTags[A](comp)
+
+	if !contextQuery.IsEmpty() {
+		fmt.Println("contextQuery", contextQuery)
+		fmt.Println("globalContext", globalContext)
+
+		res, err := globalContext.Query(contextQuery)
+
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		contextQueryResult = res
+	}
+
 	comp = ReflectCompLocalState[A](comp, getset)
+	comp = ReflectSetContextQueryResult[A](comp, contextQueryResult)
 
 	o := newOutput[A]()
 	comp.Render(o)
