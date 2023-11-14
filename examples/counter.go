@@ -55,12 +55,12 @@ type WelcomState struct {
 
 type Welcom struct {
 	Username string
-	state    tgbot.GetSetLocalStateImpl[WelcomState]
+	State    tgbot.GetSetLocalStateImpl[WelcomState]
 }
 
 func (w *Welcom) Render(o tgbot.OO) {
 
-	ls := w.state.Init(WelcomState{})
+	ls := w.State.Init(WelcomState{})
 
 	if ls.Get().hideName {
 		o.Message("Welcome")

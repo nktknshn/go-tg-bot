@@ -33,7 +33,12 @@ func (r CreateElementsResult[any]) String() string {
 func CreateElements[A any](comp Comp[A], stateTree *RunResultWithStateTree[A]) *CreateElementsResult[A] {
 	logger := GetLogger()
 
-	logger.Debug("CreateElements", zap.Any("comp", comp), zap.Any("stateTree", stateTree))
+	logger.Debug("CreateElements",
+		zap.String("compId", reflectCompId[A](comp)),
+		zap.Any("props", reflectCompProps[A](comp)),
+	)
+
+	logger.Debug("StateTree", zap.Any("stateTree", stateTree))
 
 	if stateTree == nil {
 		logger.Debug("Running first time (stateTree == nil)")
@@ -62,9 +67,12 @@ func CreateElements[A any](comp Comp[A], stateTree *RunResultWithStateTree[A]) *
 		}
 	}
 
+	logger.Debug("This is not the first render (stateTree != nil)")
+
 	rerunResult := RerunComponentTree[A](
 		&RerunContext[A]{
-			logger:         GetLogger().With(zap.String("rerun", "rerun")),
+			logger: GetLogger(),
+			// .With(zap.String("rerun", "rerun")),
 			prevRunResult:  stateTree.RunResult,
 			localStateTree: *stateTree.LocalStateTree,
 			componentIndex: []int{0},

@@ -1,7 +1,6 @@
 package tgbot
 
 import (
-	"fmt"
 	"reflect"
 
 	"go.uber.org/zap"
@@ -30,7 +29,7 @@ type RunResultComponent[A any] struct {
 	comp   Comp[A]
 	compID string
 	// props the component was rendered with
-	inputProps reflect.Value
+	inputProps any
 	// localState the component was rendered with
 	inputLocalStateClosure LocalStateClosure[any]
 	// elements the component rendered
@@ -217,7 +216,10 @@ type RerunContext[A any] struct {
 
 func RunComponentTree[A any](ctx *RunContext[A], comp Comp[A]) RunResultComponent[A] {
 
-	ctx.logger.Debug("RunComponentTree", zap.Any("comp", comp))
+	ctx.logger.Debug("RunComponentTree",
+		zap.String("compId", reflectCompId[A](comp)),
+		zap.Any("props", comp),
+	)
 
 	if len(ctx.componentIndex) == 0 {
 		// root component
@@ -226,11 +228,13 @@ func RunComponentTree[A any](ctx *RunContext[A], comp Comp[A]) RunResultComponen
 	}
 
 	if ctx.localStateTree == nil {
-		ctx.logger.Debug("Creating local state tree")
+		ctx.logger.Debug("This is the first run. Creating local state tree.")
 		ctx.localStateTree = NewLocalStateTree()
+	} else {
+		ctx.logger.Debug("Existing local state tree will be used")
 	}
 
-	ctx.logger.Debug("Creating local state")
+	// ctx.logger.Debug("Creating local state")
 
 	localState := NewLocalState[any](
 		ctx.componentIndex, ctx.localStateTree.LocalStateClosure,
@@ -241,7 +245,7 @@ func RunComponentTree[A any](ctx *RunContext[A], comp Comp[A]) RunResultComponen
 	elements, closure := RunComponent[A](comp, localState.Getset)
 	localState.LocalState = &closure
 
-	ctx.logger.Debug("Local state status",
+	ctx.logger.Debug("Local state status after the run",
 		zap.Bool("initialzied", closure.Initialized),
 		zap.Any("value", closure.Value),
 	)
@@ -287,7 +291,8 @@ func RunComponentTree[A any](ctx *RunContext[A], comp Comp[A]) RunResultComponen
 		compID:                 reflectCompId[A](comp),
 	}
 
-	ctx.logger.Debug("RunComponentTree done", zap.Any("runResult", runResult))
+	ctx.logger.Debug("RunComponentTree done")
+	// , zap.Any("runResult", runResult)
 
 	return runResult
 
@@ -298,6 +303,8 @@ func RerunComponentTree[A any](
 	comp Comp[A],
 ) RerunResult {
 
+	ctx.logger.Debug("Rerunning component", zap.Any("comp", reflectCompId[A](comp)))
+
 	localStateClosure := ctx.localStateTree.LocalStateClosure
 	childrenState := ctx.localStateTree.Children
 
@@ -307,14 +314,31 @@ func RerunComponentTree[A any](
 	var rerun bool = false
 
 	if ctx.prevRunResult.compID != reflectCompId[A](comp) {
+		ctx.logger.Debug("Component is different now",
+			zap.String("compID", ctx.prevRunResult.compID),
+			zap.String("newCompID", reflectCompId[A](comp)),
+		)
+
 		rerun = true
 	} else if !reflect.DeepEqual(ctx.prevRunResult.inputProps, reflectCompProps[A](comp)) {
+		ctx.logger.Debug("The Props has changed",
+			zap.Any("before", ctx.prevRunResult.inputProps),
+			zap.Any("now", reflectCompProps[A](comp)),
+		)
+
 		rerun = true
-	} else if !reflect.DeepEqual(ctx.prevRunResult.inputLocalStateClosure, localStateClosure) {
+
+	} else if !reflect.DeepEqual(ctx.prevRunResult.inputLocalStateClosure.Value, localStateClosure.Value) {
+		ctx.logger.Debug("The LocalState has changed",
+			zap.Any("before", ctx.prevRunResult.inputLocalStateClosure),
+			zap.Any("now", localStateClosure),
+		)
 		rerun = true
 	}
 
 	if rerun {
+		ctx.logger.Debug("Rerunning component")
+
 		runResult := RunComponentTree(&RunContext[A]{
 			logger: ctx.logger,
 			localStateTree: &LocalStateTree{LocalStateClosure: localStateClosure,
@@ -330,6 +354,8 @@ func RerunComponentTree[A any](
 		}
 
 	} else {
+		ctx.logger.Debug("Component hasn't changed. Rerunning children")
+
 		returnOutput := make([]RerunResult, 0)
 
 		if childrenState == nil || len(*childrenState) != len(ctx.prevRunResult.output) {
@@ -340,6 +366,7 @@ func RerunComponentTree[A any](
 		for idx, e := range ctx.prevRunResult.output {
 			switch e := e.(type) {
 			case *RunResultComponent[A]:
+
 				rerunResult := RerunComponentTree[A](
 					&RerunContext[A]{
 						logger:         ctx.logger,
@@ -383,14 +410,14 @@ func ReflectCompLocalState[A any](comp Comp[A], ls GetSetLocalStateImpl[any]) Co
 
 	if ls.LocalState.Value == nil {
 		// initialize local state
-		fmt.Println("No input state. Default will be used")
+		// fmt.Println("No input state. Default will be used")
 		return comp
 	}
 
 	_, ok := t.FieldByName("State")
 
 	if !ok {
-		fmt.Println("Component doesn't use local state")
+		// fmt.Println("Component doesn't use local state")
 		return comp
 	}
 
@@ -465,6 +492,14 @@ func RunComponent[A any](comp Comp[A], getset GetSetLocalStateImpl[any]) ([]Elem
 
 	o := newOutput[A]()
 	comp.Render(o)
+
+	_, ok := reflect.TypeOf(comp).Elem().FieldByName("State")
+
+	if !ok {
+		return o.result, getset.LocalState
+	}
+
+	// s, ok := reflect.ValueOf(comp).Elem().FieldByName("State")
 
 	ls := reflect.ValueOf(comp).Elem().FieldByName("State").FieldByName("LocalState")
 

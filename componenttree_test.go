@@ -32,7 +32,7 @@ func (a *App1) Render(o tgbot.OO) {
 		o.Messagef("Night: %v", lsgs.Get().hour)
 	} else {
 		tgbot.GetLogger().Debug("day")
-		o.Message("Day")
+		o.Messagef("Day: %v", lsgs.Get().hour)
 	}
 
 	o.Button("Toggle Day/Ngiht", func() any {
@@ -58,13 +58,17 @@ func TestRunComponent(t *testing.T) {
 
 }
 
-func TestRunCreateElements(t *testing.T) {
+func TestRunCreateElements1(t *testing.T) {
 	comp := App1{Counter: 1}
 
 	res := tgbot.CreateElements[any](&comp, nil)
 
 	if len(res.Elements) != 4 {
 		t.Fatal("len(res.Elements) != 4")
+	}
+
+	if res.Elements[1].(*tgbot.ElementMessage).Text != "Day: 3" {
+		t.Fatal("Day: 3 was expected")
 	}
 
 	// t.Logf("res: %s", res)
@@ -83,74 +87,62 @@ func TestRunCreateElements(t *testing.T) {
 		t.Fatal("len(res.Elements) != 4")
 	}
 
+	if res.Elements[1].(*tgbot.ElementMessage).Text != "Night: 8" {
+		t.Fatal("Night: 8 was expected")
+	}
+
 }
 
-func TestLocalStateTree(t *testing.T) {
-	type V struct {
-		v int
+type TestNestedCompApp struct{}
+
+func (c *TestNestedCompApp) Render(o tgbot.OO) {
+	o.Message("App1")
+
+	o.Comp(&TestNestedComp1{})
+}
+
+type Context[S any] interface {
+	Get() S
+}
+
+type TestNestedComp1Context struct {
+	Flag1 bool
+}
+
+type TestNestedComp1 struct {
+	// props
+	Flag1 bool
+	// requests data from the global state
+	// ctx      Context[TestNestedComp1Context]
+	CtxFlag1 bool
+}
+
+func (c *TestNestedComp1) Render(o tgbot.OO) {
+	o.Message("Comp1")
+
+	if c.Flag1 {
+		o.Comp(&TestNestedComp2{})
+	} else {
+		o.Comp(&TestNestedComp3{})
 	}
-	ls := tgbot.LocalStateTree{
-		LocalStateClosure: &tgbot.LocalStateClosure[any]{
-			Initialized: true,
-			Value:       1,
-		},
-		Children: &[]*tgbot.LocalStateTree{
-			nil,
-			{
-				LocalStateClosure: &tgbot.LocalStateClosure[any]{
-					Initialized: true,
-					Value:       2,
-				},
-				Children: &[]*tgbot.LocalStateTree{},
-			},
-			{
-				LocalStateClosure: &tgbot.LocalStateClosure[any]{
-					Initialized: true,
-					Value:       3,
-				},
-				Children: &[]*tgbot.LocalStateTree{},
-			},
-			{
-				LocalStateClosure: &tgbot.LocalStateClosure[any]{
-					Initialized: true,
-					Value:       4,
-				},
-				Children: &[]*tgbot.LocalStateTree{
-					{
-						LocalStateClosure: &tgbot.LocalStateClosure[any]{
-							Initialized: true,
-							Value:       V{v: 5},
-						},
-						Children: &[]*tgbot.LocalStateTree{},
-					},
-				},
-			},
-		}}
+}
 
-	if ls.Get([]int{}).Value != 1 {
-		t.Errorf("ls.Get([]int{}).Value != 1")
-	}
+type TestNestedComp2 struct{}
 
-	if ls.Get([]int{1}).Value != 2 {
-		t.Errorf("ls.Get([]int{1}).Value != 2")
-	}
+func (c *TestNestedComp2) Render(o tgbot.OO) {
+	o.Message("Comp2")
 
-	if ls.Get([]int{3}).Value != 4 {
-		t.Errorf("ls.Get([]int{3}).Value != 4")
-	}
+}
 
-	if ls.Get([]int{3, 0}).Value.(V).v != 5 {
-		t.Errorf("ls.Get([]int{3, 0}).Value != 5")
-	}
+type TestNestedComp3 struct{}
 
-	ls.Set([]int{3, 0}, func(v any) any {
-		return V{v: v.(V).v + 1}
-	})
+func (c *TestNestedComp3) Render(o tgbot.OO) {
+	o.Message("Comp3")
+}
 
-	if ls.Get([]int{3, 0}).Value.(V).v != 6 {
-		t.Errorf("ls.Get([]int{3, 0}).Value != 6")
-	}
+func TestNestedComp(t *testing.T) {
+	res := tgbot.CreateElements(&TestNestedCompApp{}, nil)
+	res = tgbot.CreateElements(&TestNestedCompApp{}, &res.TreeState)
 
-	t.Logf("ls: %v", ls)
-
+	t.Log(res.Elements)
 }
