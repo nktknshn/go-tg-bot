@@ -54,7 +54,7 @@ type WelcomState struct {
 }
 
 type Welcom struct {
-	Username string
+	Username string `tgbot:"ctx"`
 	State    tgbot.GetSetLocalStateImpl[WelcomState]
 }
 
@@ -91,9 +91,7 @@ func (app *App) Render(o tgbot.OO) {
 
 	AppInputHandler(o)
 
-	o.Comp(&Welcom{
-		Username: app.Username,
-	})
+	o.Comp(&Welcom{})
 
 	o.Messagef("Counter value: %v", app.Counter)
 

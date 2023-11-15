@@ -8,7 +8,7 @@ import (
 )
 
 func TestCreateElementsContext(t *testing.T) {
-	ctx := tgbot.NewCreateElementsContext()
+	ctx := tgbot.NewGlobalContext()
 
 	ctx.Add("A", 1)
 	ctx.Add("B", "2")

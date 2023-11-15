@@ -11,8 +11,12 @@ type ChatCallbackHandler[A any] func(string) *A
 
 type InternalChatState[S any, A any] struct {
 	ChatID int64
+
 	// state of the application
 	AppState S
+
+	// state of the application
+	TreeState RunResultWithStateTree[A]
 
 	// elements visible to the user
 	RenderedElements []RenderedElement
@@ -52,7 +56,7 @@ type Application[S any, A any] struct {
 
 	HandleCallback HandleCallbackFunc[S, A]
 
-	// HandleEvent
+	CreateGlobalContext func(state *InternalChatState[S, A]) GlobalContext
 
 	HandleInit HandleInitFunc[S]
 
@@ -66,11 +70,17 @@ type Application[S any, A any] struct {
 type NewApplicationProps[S any, A any] struct {
 	// CreateAppState func(*TelegramContext) S
 	// HandleAction  HandleActionFunc[S, A]
-	HandleMessage  HandleMessageFunc[S, A]
-	HandleCallback HandleCallbackFunc[S, A]
-	HandleInit     HandleInitFunc[S]
-	RenderFunc     RenderFuncType[S, A]
-	CreateRenderer func(*TelegramContext) ChatRenderer
+	HandleMessage       HandleMessageFunc[S, A]
+	HandleCallback      HandleCallbackFunc[S, A]
+	HandleInit          HandleInitFunc[S]
+	RenderFunc          RenderFuncType[S, A]
+	CreateRenderer      func(*TelegramContext) ChatRenderer
+	CreateGlobalContext func(*InternalChatState[S, A]) GlobalContext
+}
+
+func DefaultCreateContext[S any, A any](state *InternalChatState[S, A]) GlobalContext {
+	// create empty context
+	return NewGlobalContext()
 }
 
 func DefaultRenderFunc[S any, A any](ac *ApplicationContext[S, A]) error {
@@ -92,6 +102,12 @@ func DefaultRenderFunc[S any, A any](ac *ApplicationContext[S, A]) error {
 
 func handleAction[S any, A any](ac *ApplicationContext[S, A], tc *TelegramContext, a A) {
 	tc.Logger.Debug("HandleAction", zap.Any("action", a))
+
+	// switch a := a.(type) {
+	// case ActionLocalState[any]:
+	// 	ac.State.TreeState.LocalStateTree.Set(a.index, a.f)
+	// }
+
 	ac.App.HandleAction(ac, tc, a)
 }
 
@@ -169,6 +185,7 @@ func NewApplication[S any, A any](
 		handleInit     = props.HandleInit
 		renderFunc     = props.RenderFunc
 		createRenderer = props.CreateRenderer
+		createContext  = props.CreateGlobalContext
 	)
 
 	if handleMessage == nil {
@@ -193,15 +210,20 @@ func NewApplication[S any, A any](
 		}
 	}
 
+	if createContext == nil {
+		createContext = DefaultCreateContext[S, A]
+	}
+
 	return &Application[S, A]{
-		CreateAppState:     createAppState,
-		StateToComp:        stateToComp,
-		HandleAction:       handleAction,
-		HandleMessage:      handleMessage,
-		HandleCallback:     handleCallback,
-		HandleInit:         handleInit,
-		RenderFunc:         renderFunc,
-		CreateChatRenderer: createRenderer,
+		CreateAppState:      createAppState,
+		StateToComp:         stateToComp,
+		HandleAction:        handleAction,
+		HandleMessage:       handleMessage,
+		HandleCallback:      handleCallback,
+		HandleInit:          handleInit,
+		RenderFunc:          renderFunc,
+		CreateChatRenderer:  createRenderer,
+		CreateGlobalContext: createContext,
 	}
 }
 

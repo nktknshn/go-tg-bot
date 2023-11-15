@@ -38,7 +38,7 @@ func NewContextQueryFromMap(m map[string]reflect.Type) ContextQuery {
 	return ContextQuery{t}
 }
 
-type CreateElementsContext interface {
+type GlobalContext interface {
 	Query(ContextQuery) (*ContextQueryResult, error)
 }
 
@@ -46,7 +46,7 @@ type CreateElementsContextImpl struct {
 	ProvidedValues ProvidedValues
 }
 
-func NewCreateElementsContext() *CreateElementsContextImpl {
+func NewGlobalContext() *CreateElementsContextImpl {
 	return &CreateElementsContextImpl{
 		ProvidedValues: make(ProvidedValues),
 	}

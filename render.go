@@ -13,10 +13,20 @@ type PreRenderData[S any, A any] struct {
 
 func (a *Application[S, A]) PreRender(ac *ApplicationContext[S, A]) *PreRenderData[S, A] {
 
-	els := ComponentToElements(
-		ac.App.StateToComp(ac.State.AppState),
-		ac.Logger,
+	comp := ac.App.StateToComp(ac.State.AppState)
+
+	createElementsResult := CreateElements[A](
+		comp,
+		ac.App.CreateGlobalContext(ac.State),
+		&ac.State.TreeState,
 	)
+
+	els := createElementsResult.Elements
+
+	// els := ComponentToElements(
+	// 	ac.App.StateToComp(ac.State.AppState),
+	// 	ac.Logger,
+	// )
 
 	res := ElementsToMessagesAndHandlers[A](els)
 
@@ -37,6 +47,7 @@ func (a *Application[S, A]) PreRender(ac *ApplicationContext[S, A]) *PreRenderDa
 		InputHandler:     inputHandler,
 		CallbackHandler:  res.CallbackHandler,
 		Renderer:         ac.State.Renderer,
+		TreeState:        createElementsResult.TreeState,
 	}
 
 	return &PreRenderData[S, A]{

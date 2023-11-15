@@ -47,7 +47,7 @@ func (a *App1) Render(o tgbot.OO) {
 
 func TestRunComponent(t *testing.T) {
 	comp := App1{Counter: 1}
-	globalContext := tgbot.NewCreateElementsContext()
+	globalContext := tgbot.NewGlobalContext()
 
 	tgbot.RunComponent(
 		&comp,
@@ -64,7 +64,7 @@ func TestRunComponent(t *testing.T) {
 
 func TestRunCreateElements1(t *testing.T) {
 
-	globalContext := tgbot.NewCreateElementsContext()
+	globalContext := tgbot.NewGlobalContext()
 
 	comp := App1{Counter: 1}
 
@@ -144,7 +144,7 @@ func (c *TestNestedComp3) Render(o tgbot.OO) {
 }
 
 func TestNestedComp(t *testing.T) {
-	globalContext := tgbot.NewCreateElementsContext()
+	globalContext := tgbot.NewGlobalContext()
 
 	globalContext.Add("Flag1", false)
 

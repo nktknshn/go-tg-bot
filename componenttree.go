@@ -201,7 +201,7 @@ type RunContext[A any] struct {
 
 	localStateTree *LocalStateTree
 
-	globalContext CreateElementsContext
+	globalContext GlobalContext
 
 	// position of the component in the tree
 	componentIndex []int
@@ -214,7 +214,7 @@ type RerunContext[A any] struct {
 
 	localStateTree LocalStateTree
 
-	globalContext CreateElementsContext
+	globalContext GlobalContext
 
 	// position of the component in the tree
 	componentIndex []int
@@ -509,7 +509,7 @@ func ReflectCompLocalState[A any](comp Comp[A], ls GetSetLocalStateImpl[any]) Co
 	return nt.Addr().Interface().(Comp[A])
 }
 
-func RunComponent[A any](comp Comp[A], globalContext CreateElementsContext, getset GetSetLocalStateImpl[any]) ([]Element, LocalStateClosure[any], *ContextQueryResult) {
+func RunComponent[A any](comp Comp[A], globalContext GlobalContext, getset GetSetLocalStateImpl[any]) ([]Element, LocalStateClosure[any], *ContextQueryResult) {
 
 	contextQueryResult := ReflectContextQueryResultGet(comp, globalContext)
 

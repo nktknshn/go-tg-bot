@@ -30,7 +30,7 @@ func (r CreateElementsResult[any]) String() string {
 }
 
 // given
-func CreateElements[A any](comp Comp[A], context CreateElementsContext, stateTree *RunResultWithStateTree[A]) *CreateElementsResult[A] {
+func CreateElements[A any](comp Comp[A], context GlobalContext, stateTree *RunResultWithStateTree[A]) *CreateElementsResult[A] {
 	logger := GetLogger()
 
 	logger.Debug("CreateElements",

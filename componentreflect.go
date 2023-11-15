@@ -160,7 +160,7 @@ func ReflectCompCtxReqsTags[A any](comp Comp[A]) ContextQuery {
 	return ContextQuery{reqStructType}
 }
 
-func ReflectContextQueryResultGet[A any](comp Comp[A], globalContext CreateElementsContext) *ContextQueryResult {
+func ReflectContextQueryResultGet[A any](comp Comp[A], globalContext GlobalContext) *ContextQueryResult {
 	q := ReflectCompCtxReqsTags[A](comp)
 
 	if q.IsEmpty() {
