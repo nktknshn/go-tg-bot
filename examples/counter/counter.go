@@ -120,6 +120,11 @@ var counterApp = tgbot.NewApplication[State, any](
 
 		return State{Counter: 0, Username: uname}
 	},
+	func(s State) tgbot.Comp[any] {
+		app := App{Props(s)}
+
+		return &app
+	},
 	func(ac *tgbot.ApplicationContext[State, any], tc *tgbot.TelegramContext, a any) {
 		// tc.Logger.Info("HandleAction", zap.Any("action", a))
 
@@ -130,12 +135,6 @@ var counterApp = tgbot.NewApplication[State, any](
 			ac.State.AppState.Counter += a.Increment
 			ac.State.AppState.Error = a.Error
 		}
-
-	},
-	func(s State) tgbot.Comp[any] {
-		app := App{Props(s)}
-
-		return &app
 	},
 )
 

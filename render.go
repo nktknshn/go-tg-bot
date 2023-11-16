@@ -18,7 +18,7 @@ func (a *Application[S, A]) PreRender(ac *ApplicationContext[S, A]) *PreRenderDa
 	createElementsResult := CreateElements[A](
 		comp,
 		ac.App.CreateGlobalContext(ac.State),
-		&ac.State.TreeState,
+		ac.State.TreeState,
 	)
 
 	els := createElementsResult.Elements
@@ -47,7 +47,7 @@ func (a *Application[S, A]) PreRender(ac *ApplicationContext[S, A]) *PreRenderDa
 		InputHandler:     inputHandler,
 		CallbackHandler:  res.CallbackHandler,
 		Renderer:         ac.State.Renderer,
-		TreeState:        createElementsResult.TreeState,
+		TreeState:        &createElementsResult.TreeState,
 	}
 
 	return &PreRenderData[S, A]{

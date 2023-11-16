@@ -16,7 +16,7 @@ type InternalChatState[S any, A any] struct {
 	AppState S
 
 	// state of the application
-	TreeState RunResultWithStateTree[A]
+	TreeState *RunResultWithStateTree[A]
 
 	// elements visible to the user
 	RenderedElements []RenderedElement
@@ -103,10 +103,12 @@ func DefaultRenderFunc[S any, A any](ac *ApplicationContext[S, A]) error {
 func handleAction[S any, A any](ac *ApplicationContext[S, A], tc *TelegramContext, a A) {
 	tc.Logger.Debug("HandleAction", zap.Any("action", a))
 
-	// switch a := a.(type) {
-	// case ActionLocalState[any]:
-	// 	ac.State.TreeState.LocalStateTree.Set(a.index, a.f)
-	// }
+	switch a := (any)(a).(type) {
+	case ActionLocalState[any]:
+		tc.Logger.Debug("ActionLocalState was caught. Applying it to the local state tree.", zap.Any("index", a.index))
+		ac.State.TreeState.LocalStateTree.Set(a.index, a.f)
+		return
+	}
 
 	ac.App.HandleAction(ac, tc, a)
 }
@@ -166,10 +168,10 @@ func DefaultHandleMessage[S any, A any](ac *ApplicationContext[S, A], tc *Telegr
 func NewApplication[S any, A any](
 	// Creates state
 	createAppState func(*TelegramContext) S,
-	// handles action
-	handleAction HandleActionFunc[S, A],
 	// turns state into basic elements
 	stateToComp StateToCompFuncType[S, A],
+	// handles action
+	handleAction HandleActionFunc[S, A],
 	propss ...*NewApplicationProps[S, A],
 ) *Application[S, A] {
 

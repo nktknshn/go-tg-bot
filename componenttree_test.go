@@ -144,6 +144,7 @@ func (c *TestNestedComp3) Render(o tgbot.OO) {
 }
 
 func TestNestedComp(t *testing.T) {
+
 	globalContext := tgbot.NewGlobalContext()
 
 	globalContext.Add("Flag1", false)

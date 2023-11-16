@@ -47,6 +47,7 @@ func NewHandler[S any, A any](app Application[S, A], tc *TelegramContext) *Handl
 		InputHandler:     nil,
 		CallbackHandler:  nil,
 		Renderer:         app.CreateChatRenderer(tc),
+		TreeState:        nil,
 	}
 
 	ac := &ApplicationContext[S, A]{
@@ -57,6 +58,8 @@ func NewHandler[S any, A any](app Application[S, A], tc *TelegramContext) *Handl
 
 	tc.Logger.Debug("PreRender")
 	res := app.PreRender(ac)
+
+	tc.Logger.Debug("New handler has been created.")
 
 	return &Handler[S, A]{
 		app: app,

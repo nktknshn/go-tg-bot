@@ -38,6 +38,10 @@ func NewContextQueryFromMap(m map[string]reflect.Type) ContextQuery {
 	return ContextQuery{t}
 }
 
+type GlobalContextTyped[A any] interface {
+	Query(ContextQuery) (*ContextQueryResult, error)
+}
+
 type GlobalContext interface {
 	Query(ContextQuery) (*ContextQueryResult, error)
 }
@@ -106,7 +110,13 @@ func (ctx *CreateElementsContextImpl) Query(query ContextQuery) (*ContextQueryRe
 	result := reflect.New(reflect.StructOf(fs)).Elem()
 
 	for i := 0; i < result.NumField(); i++ {
-		result.Field(i).Set(provided.Field(i))
+		f := result.Field(i)
+		fn := result.Type().Field(i).Name
+		v := provided.FieldByName(fn)
+
+		// fmt.Println("setting ", fn, " to ", v)
+
+		f.Set(v)
 	}
 
 	return (*ContextQueryResult)(&result), nil

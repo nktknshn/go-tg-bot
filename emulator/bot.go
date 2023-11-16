@@ -2,6 +2,7 @@ package emulator
 
 import (
 	"context"
+	"math/rand"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
@@ -91,5 +92,56 @@ func (fs *FakeBot) createMessage(props *tgbot.ChatRendererMessageProps) *models.
 func NewFakeBot() *FakeBot {
 	return &FakeBot{
 		Messages: make(map[int]*models.Message),
+	}
+}
+
+type UpdateProps struct {
+	ChatID int64
+	UserID int64
+}
+
+type CallbackQueryUpdate struct {
+	Data string
+	UpdateProps
+}
+
+func NewCallbackQueryUpdate(props CallbackQueryUpdate) *models.Update {
+	return &models.Update{
+		ID: int64(rand.Int()),
+		CallbackQuery: &models.CallbackQuery{
+			Data: props.Data,
+			Message: &models.Message{
+				ID: rand.Int(),
+				Chat: models.Chat{
+					ID: props.ChatID,
+				},
+				From: &models.User{
+					ID:       int64(props.UserID),
+					Username: "username",
+				},
+			},
+		},
+	}
+}
+
+type TextMessageUpdate struct {
+	Text string
+	UpdateProps
+}
+
+func NewTextMessageUpdate(props TextMessageUpdate) *models.Update {
+	return &models.Update{
+		ID: int64(rand.Int()),
+		Message: &models.Message{
+			ID:   rand.Int(),
+			Text: props.Text,
+			Chat: models.Chat{
+				ID: props.ChatID,
+			},
+			From: &models.User{
+				ID:       int64(props.UserID),
+				Username: "username",
+			},
+		},
 	}
 }
