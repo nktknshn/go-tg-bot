@@ -154,12 +154,12 @@ func ElementsToMessagesAndHandlers[A any](elements []Element) *ProcessElementsRe
 			}
 
 		case *ElementCompleteMessage:
-			getLastMessage().SetComplete()
+			if lastMessage != nil {
+				getLastMessage().SetComplete()
+			}
 
 		case *ElementButton[A]:
 			getLastMessage().AddButton(element.(*ElementButton[A]))
-
-			// TODO create callback handler
 
 		case *ElementButtonsRow[A]:
 			getLastMessage().AddButtonsRow(element.(*ElementButtonsRow[A]))

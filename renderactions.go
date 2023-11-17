@@ -241,14 +241,32 @@ func create[A any](ctx context.Context, renderer ChatRenderer, action *RenderAct
 func ExecuteRenderActions[A any](ctx context.Context, renderer ChatRenderer, actions []RenderActionType) ([]RenderedElement, error) {
 	result := make([]RenderedElement, 0)
 	actionsRemove := make([]RenderActionRemove, 0)
+	actionsRemoveBot := make([]RenderActionRemove, 0)
+	actionsRemoveUser := make([]RenderActionRemove, 0)
+
 	actionsOther := make([]RenderActionType, 0)
 
 	for _, action := range actions {
 		switch a := action.(type) {
 		case *RenderActionRemove:
+			if a.RenderedElement.renderedKind() == KindRenderedBotMessage {
+				actionsRemoveBot = append(actionsRemoveBot, *a)
+			} else if a.RenderedElement.renderedKind() == KindRenderedUserMessage {
+				actionsRemoveUser = append(actionsRemoveUser, *a)
+			}
 			actionsRemove = append(actionsRemove, *a)
 		default:
 			actionsOther = append(actionsOther, a)
+		}
+	}
+
+	for _, a := range actionsRemoveUser {
+		globalLogger.Debug("ExecuteRenderActions: removing rendered element", zap.Any("a", a))
+
+		err := renderer.Delete(a.RenderedElement.ID())
+
+		if err != nil {
+			globalLogger.Error("Error removing rendered element", zap.Error(err))
 		}
 	}
 
@@ -309,14 +327,24 @@ func ExecuteRenderActions[A any](ctx context.Context, renderer ChatRenderer, act
 		}
 	}
 
-	for _, action := range actionsRemove {
-		globalLogger.Debug("ExecuteRenderActions: removing rendered element", zap.Any("a", action))
-		err := renderer.Delete(action.RenderedElement.ID())
+	for _, a := range actionsRemoveBot {
+		globalLogger.Debug("ExecuteRenderActions: removing rendered element", zap.Any("a", a))
+
+		err := renderer.Delete(a.RenderedElement.ID())
 
 		if err != nil {
 			globalLogger.Error("Error removing rendered element", zap.Error(err))
 		}
 	}
+
+	// for _, action := range actionsRemove {
+	// 	globalLogger.Debug("ExecuteRenderActions: removing rendered element", zap.Any("a", action))
+	// 	err := renderer.Delete(action.RenderedElement.ID())
+
+	// 	if err != nil {
+	// 		globalLogger.Error("Error removing rendered element", zap.Error(err))
+	// 	}
+	// }
 
 	return result, nil
 }

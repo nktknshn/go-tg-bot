@@ -81,7 +81,6 @@ func (a *PageTodoList) Render(o tgbot.OO) {
 			}
 		}
 
-		o.MessageComplete()
 	}
 
 	if isItemSelected {
@@ -104,6 +103,8 @@ func (a *PageTodoList) Render(o tgbot.OO) {
 		})
 
 	}
+
+	o.MessageComplete()
 
 	if hasCandidateItem {
 		o.Messagef("Add %v?", candidateItem)
