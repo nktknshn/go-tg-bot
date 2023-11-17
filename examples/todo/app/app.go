@@ -19,8 +19,11 @@ type ApplicationContext = tgbot.ApplicationContext[TodoState, any, AppGlobalCont
 var TodoApp = tgbot.NewApplication[TodoState, any](
 	// initial state
 	func(tc *tgbot.TelegramContext) TodoState {
+
+		username := tgbot.GetUsername(tc.Update)
+
 		return TodoState{
-			Username:    tc.Update.Message.From.Username,
+			Username:    username,
 			CurrentPage: ValuePageWelcome,
 			List:        TodoList{},
 		}

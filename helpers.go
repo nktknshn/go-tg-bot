@@ -16,6 +16,16 @@ func TryReadBotTokenFile() (string, error) {
 	return string(res), nil
 }
 
+func GetUsername(update *models.Update) string {
+	username := ""
+
+	if update.Message != nil {
+		username = update.Message.From.Username
+	}
+
+	return username
+}
+
 func GetUpdateChatId(update *models.Update) int64 {
 
 	if update.Message != nil {

@@ -67,7 +67,10 @@ func (a *PageTodoList) Render(o tgbot.OO) {
 		})
 	})
 
-	o.MessagePart("Todo list:")
+	if tdl.IsEmpty() && !hasCandidateItem {
+		o.Message("Send first todo item:")
+		return
+	}
 
 	for idx, item := range tdl.Items {
 		if item.Done {
@@ -101,7 +104,6 @@ func (a *PageTodoList) Render(o tgbot.OO) {
 	}
 
 	if hasCandidateItem {
-
 		o.Messagef("Add %v?", candidateItem)
 		o.Button("Yes", func() any {
 			return []any{

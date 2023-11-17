@@ -11,6 +11,8 @@ import (
 )
 
 func RunReal(logger *zap.Logger, dispatcher *ChatsDispatcher) {
+	logger.Debug("Starting real telegram bot")
+
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 

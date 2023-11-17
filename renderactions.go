@@ -255,6 +255,8 @@ func ExecuteRenderActions[A any](ctx context.Context, renderer ChatRenderer, act
 	for _, action := range actionsOther {
 		switch a := action.(type) {
 		case *RenderActionCreate:
+			globalLogger.Debug("ExecuteRenderActions: creating new element", zap.Any("a", a))
+
 			rendereredMessage, err := create[A](ctx, renderer, a)
 
 			if err != nil {
@@ -263,6 +265,8 @@ func ExecuteRenderActions[A any](ctx context.Context, renderer ChatRenderer, act
 
 			result = append(result, rendereredMessage)
 		case *RenderActionKeep:
+			globalLogger.Debug("ExecuteRenderActions: keeping rendered element", zap.Any("a", a))
+
 			if a.RenderedElement.renderedKind() == KindRenderedBotMessage && a.NewElement.OutcomingKind() == KindOutcomingTextMessage {
 				rendereredMessage := &RenderedBotMessage[A]{
 					OutcomingTextMessage: a.NewElement.(*OutcomingTextMessage[A]),
@@ -302,11 +306,11 @@ func ExecuteRenderActions[A any](ctx context.Context, renderer ChatRenderer, act
 
 				result = append(result, rendereredMessage)
 			}
-			// renderer.ReplaceElement(a.RenderedElement, a.NewElement)
 		}
 	}
 
 	for _, action := range actionsRemove {
+		globalLogger.Debug("ExecuteRenderActions: removing rendered element", zap.Any("a", action))
 		err := renderer.Delete(action.RenderedElement.ID())
 
 		if err != nil {

@@ -9,3 +9,12 @@ type TodoItem struct {
 type TodoList struct {
 	Items []TodoItem
 }
+
+func (tdl TodoList) Count() int {
+	return len(tdl.Items)
+}
+
+// is empty
+func (tdl TodoList) IsEmpty() bool {
+	return tdl.Count() == 0
+}

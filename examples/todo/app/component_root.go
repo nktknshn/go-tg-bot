@@ -9,11 +9,15 @@ const (
 )
 
 type PageWelcome struct {
-	Username string
+	Context AppGlobalContext
+}
+
+func (a *PageWelcome) Selector() string {
+	return a.Context.Username
 }
 
 func (a *PageWelcome) Render(o tgbot.OO) {
-	o.Messagef("Welcome %v", a.Username)
+	o.Messagef("Welcome %v", a.Selector())
 	o.Button("Go to main", func() any {
 		return ActionGoPage{Page: ValuePageMain}
 	})
