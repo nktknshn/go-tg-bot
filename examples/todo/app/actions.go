@@ -10,6 +10,14 @@ type ActionAddTodoItem struct {
 	Text string
 }
 
+type ActionMarkDone struct {
+	ItemIndex int
+}
+
+type ActionItemDelete struct {
+	ItemIndex int
+}
+
 var actionsReducer = func(ac *ApplicationContext, tc *tgbot.TelegramContext, a any) {
 	appState := &ac.State.AppState
 
@@ -20,6 +28,13 @@ var actionsReducer = func(ac *ApplicationContext, tc *tgbot.TelegramContext, a a
 		appState.List.Items = append(
 			appState.List.Items,
 			TodoItem{Text: a.Text},
+		)
+	case ActionMarkDone:
+		appState.List.Items[a.ItemIndex].Done = true
+	case ActionItemDelete:
+		appState.List.Items = append(
+			appState.List.Items[:a.ItemIndex],
+			appState.List.Items[a.ItemIndex+1:]...,
 		)
 	}
 
