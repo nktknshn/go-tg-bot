@@ -19,7 +19,7 @@ type PageTodoListState struct {
 type S = PageTodoListState
 
 type PageTodoList struct {
-	Context AppGlobalContext
+	Context TodoGlobalContext
 	State   tgbot.State[PageTodoListState]
 }
 

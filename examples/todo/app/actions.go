@@ -1,6 +1,9 @@
 package todo
 
-import tgbot "github.com/nktknshn/go-tg-bot"
+import (
+	tgbot "github.com/nktknshn/go-tg-bot"
+	"go.uber.org/zap"
+)
 
 type ActionGoPage struct {
 	Page string
@@ -24,7 +27,13 @@ var actionsReducer = func(ac *ApplicationContext, tc *tgbot.TelegramContext, a a
 	switch a := a.(type) {
 	case ActionGoPage:
 		appState.CurrentPage = a.Page
+
 	case ActionAddTodoItem:
+		ac.Logger.Info("adding item",
+			zap.String("text", a.Text),
+			zap.Int("len", len(appState.List.Items)),
+		)
+
 		appState.List.Items = append(
 			appState.List.Items,
 			TodoItem{Text: a.Text},

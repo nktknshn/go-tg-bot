@@ -30,7 +30,7 @@ type RunResultComponent[A any] struct {
 	compID string
 
 	// context
-	inputContext any
+	inputContext *UsedContextValue
 	// props the component was rendered with
 	inputProps any
 	// localState the component was rendered with
@@ -55,7 +55,6 @@ func (c *RunResultComponent[A]) ExtractLocalStateTree() *LocalStateTree {
 		switch e := e.(type) {
 		case *RunResultComponent[A]:
 			s := e.ExtractLocalStateTree()
-
 			children[idx] = s
 
 		case *RunResultElement:
@@ -64,9 +63,17 @@ func (c *RunResultComponent[A]) ExtractLocalStateTree() *LocalStateTree {
 		}
 	}
 
+	// this is what getset is linked
+	closureCopy := (any)(c.inputLocalStateClosure).(LocalStateClosure[any])
+
+	// c.inputLocalStateClosure = LocalStateClosure[any]{
+	// 	Initialized: closurePtr.Initialized,
+	// 	Value:       closurePtr.Value,
+	// }
+
 	return &LocalStateTree{
 		CompId:            c.compID,
-		LocalStateClosure: &c.inputLocalStateClosure,
+		LocalStateClosure: &closureCopy,
 		Children:          &children,
 	}
 }
@@ -249,6 +256,7 @@ func RunComponentTree[A any](ctx *RunContext[A], comp Comp[A]) RunResultComponen
 			zap.Any("localStateTree", ctx.localStateTree))
 	}
 
+	// creates new GetSet reusing ctx.localStateTree.LocalStateClosure
 	localState := NewLocalState[any](
 		ctx.componentIndex, ctx.localStateTree.LocalStateClosure,
 	)
@@ -339,6 +347,12 @@ func RerunComponentTree[A any](
 	)
 
 	localStateClosure := ctx.localStateTree.LocalStateClosure
+
+	ctx.logger.Debug("Local state",
+		zap.Any("before", ctx.prevRunResult.inputLocalStateClosure.Value),
+		zap.Any("now", localStateClosure.Value),
+	)
+
 	childrenState := ctx.localStateTree.Children
 
 	currentUsedContext := ReflectTypedContextSelect[A](comp, ctx.globalContext.Get())
@@ -348,14 +362,29 @@ func RerunComponentTree[A any](
 	// signals if the component has to be rerun
 	var rerun bool = false
 
-	if !reflect.DeepEqual(ctx.prevRunResult.inputContext, currentUsedContext) {
+	bothContextsNil := ctx.prevRunResult.inputContext == nil && currentUsedContext == nil
+	onlyOneContextNil1 := ctx.prevRunResult.inputContext == nil && currentUsedContext != nil
+	onlyOneContextNil2 := ctx.prevRunResult.inputContext != nil && currentUsedContext == nil
+
+	if bothContextsNil {
+		ctx.logger.Debug("Both contexts are nil")
+	} else if onlyOneContextNil1 || onlyOneContextNil2 {
+		ctx.logger.Debug("One of the contexts is nil",
+			zap.Any("before", ctx.prevRunResult.inputContext),
+			zap.Any("now", currentUsedContext),
+		)
+
+		rerun = true
+	} else if !ctx.prevRunResult.inputContext.Equal(*currentUsedContext) {
 		ctx.logger.Debug("The global context has changed",
 			zap.Any("before", ctx.prevRunResult.inputContext),
 			zap.Any("now", currentUsedContext),
 		)
 
 		rerun = true
-	} else if ctx.prevRunResult.compID != reflectCompId[A](comp) {
+	}
+
+	if ctx.prevRunResult.compID != reflectCompId[A](comp) {
 		ctx.logger.Debug("Component is different now",
 			zap.String("compID", ctx.prevRunResult.compID),
 			zap.String("newCompID", reflectCompId[A](comp)),

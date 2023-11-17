@@ -9,7 +9,7 @@ const (
 )
 
 type PageWelcome struct {
-	Context AppGlobalContext
+	Context TodoGlobalContext
 }
 
 func (a *PageWelcome) Selector() string {

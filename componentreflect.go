@@ -336,6 +336,20 @@ func ReflectContextQueryResultSet[A any](comp Comp[A], cqr *ContextQueryResult) 
 
 type UsedContextValue []reflect.Value
 
+func (ucv UsedContextValue) Interface() []any {
+	result := make([]any, 0)
+
+	for _, v := range ucv {
+		result = append(result, v.Interface())
+	}
+
+	return result
+}
+
+func (ucv UsedContextValue) Equal(other UsedContextValue) bool {
+	return reflect.DeepEqual(ucv.Interface(), other.Interface())
+}
+
 // Try to find `Context` field.
 // If found fill it with the global context values returning a new component.
 // Returns the new component and a pointer to the used context value (if any).

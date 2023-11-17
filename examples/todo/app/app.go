@@ -8,13 +8,13 @@ type TodoState struct {
 	CurrentPage string
 }
 
-type AppGlobalContext struct {
+type TodoGlobalContext struct {
 	Username string
 	Settings map[string]string
 	TodoList TodoList
 }
 
-type ApplicationContext = tgbot.ApplicationContext[TodoState, any, AppGlobalContext]
+type ApplicationContext = tgbot.ApplicationContext[TodoState, any, TodoGlobalContext]
 
 var TodoApp = tgbot.NewApplication[TodoState, any](
 	// initial state
@@ -37,10 +37,10 @@ var TodoApp = tgbot.NewApplication[TodoState, any](
 	// handle actions
 	actionsReducer,
 	// create global context
-	&tgbot.NewApplicationProps[TodoState, any, AppGlobalContext]{
-		CreateGlobalContext: func(ics *tgbot.InternalChatState[TodoState, any, AppGlobalContext]) tgbot.GlobalContextTyped[AppGlobalContext] {
+	&tgbot.NewApplicationProps[TodoState, any, TodoGlobalContext]{
+		CreateGlobalContext: func(ics *tgbot.InternalChatState[TodoState, any, TodoGlobalContext]) tgbot.GlobalContextTyped[TodoGlobalContext] {
 
-			return tgbot.NewGlobalContextTyped(AppGlobalContext{
+			return tgbot.NewGlobalContextTyped(TodoGlobalContext{
 				TodoList: ics.AppState.List,
 				Username: ics.AppState.Username,
 				Settings: make(map[string]string),

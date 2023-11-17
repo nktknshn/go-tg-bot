@@ -79,8 +79,6 @@ type NewApplicationProps[S any, A any, C any] struct {
 }
 
 func DefaultCreateContext[S any, A any, C any](state *InternalChatState[S, A, C]) GlobalContextTyped[C] {
-	// create empty context
-	// return NewGlobalContextTyped[C](struct{}{})
 	return nil
 }
 

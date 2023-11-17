@@ -22,6 +22,7 @@ func internalHandleAction[S any, A any, C any](ac *ApplicationContext[S, A, C], 
 	switch a := a.(type) {
 	case ActionReload:
 		ac.State.RenderedElements = make([]RenderedElement, 0)
+		return
 	case ActionLocalState[any]:
 		tc.Logger.Debug("ActionLocalState was caught. Applying it to the local state tree.",
 			zap.Any("index", a.Index),
@@ -34,12 +35,13 @@ func internalHandleAction[S any, A any, C any](ac *ApplicationContext[S, A, C], 
 			zap.Any("LocalStateTree", ac.State.TreeState.LocalStateTree),
 		)
 		return
-	case []A:
+	case []any:
 		tc.Logger.Debug("A list of actions was caught")
 
 		for _, a := range a {
 			internalHandleAction(ac, tc, a)
 		}
+		return
 	}
 
 	ac.App.HandleAction(ac, tc, a)
