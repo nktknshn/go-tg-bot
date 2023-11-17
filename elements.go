@@ -92,7 +92,7 @@ func (c *ElementComponent[A]) elementKind() string {
 }
 
 func (c ElementComponent[A]) String() string {
-	return "ElementComponent{...}"
+	return fmt.Sprintf("ElementComponent{comp=%v}", reflectCompId(c.comp))
 }
 
 type ElementInputHandler[A any] struct {

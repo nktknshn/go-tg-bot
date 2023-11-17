@@ -11,7 +11,7 @@ type ActionAddTodoItem struct {
 }
 
 var actionsReducer = func(ac *ApplicationContext, tc *tgbot.TelegramContext, a any) {
-	appState := ac.State.AppState
+	appState := &ac.State.AppState
 
 	switch a := a.(type) {
 	case ActionGoPage:

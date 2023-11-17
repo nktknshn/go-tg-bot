@@ -72,8 +72,7 @@ func CreateElements[A any](comp Comp[A], globalContext GlobalContextTyped[any], 
 
 	rerunResult := RerunComponentTree[A](
 		&RerunContext[A]{
-			logger: GetLogger(),
-			// .With(zap.String("rerun", "rerun")),
+			logger:         GetLogger(),
 			globalContext:  globalContext,
 			prevRunResult:  stateTree.RunResult,
 			localStateTree: *stateTree.LocalStateTree,
@@ -87,7 +86,16 @@ func CreateElements[A any](comp Comp[A], globalContext GlobalContextTyped[any], 
 
 	logger.Debug("Extracting local state tree from rerun")
 
-	localStateTree := stateTree.RunResult.ExtractLocalStateTree()
+	var localStateTree *LocalStateTree
+
+	switch r := rerunResult.(type) {
+	case *RerunResultUnchanged[A]:
+		localStateTree = r.ExtractLocalStateTree()
+	case *RerunResultUpdated[A]:
+		localStateTree = r.ExtractLocalStateTree()
+	}
+
+	logger.Debug("localStateTree", zap.String("localStateTree", localStateTree.String()))
 
 	logger.Debug("Forming RunResult from rerun")
 

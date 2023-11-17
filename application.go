@@ -103,6 +103,7 @@ func DefaultRenderFunc[S any, A any, C any](ac *ApplicationContext[S, A, C]) err
 
 func DefaultHandlerCallback[S any, A any, C any](ac *ApplicationContext[S, A, C], tc *TelegramContext) {
 	tc.Logger.Info("HandleCallback", zap.Any("data", tc.Update.CallbackQuery.Data))
+	tc.Logger.Debug("LocalStateTree", zap.String("tree", ac.State.TreeState.LocalStateTree.String()))
 
 	if ac.State.CallbackHandler != nil {
 		action := ac.State.CallbackHandler(tc.Update.CallbackQuery.Data)
@@ -133,6 +134,7 @@ func DefaultHandlerCallback[S any, A any, C any](ac *ApplicationContext[S, A, C]
 
 func DefaultHandleMessage[S any, A any, C any](ac *ApplicationContext[S, A, C], tc *TelegramContext) {
 	tc.Logger.Info("HandleMessage", zap.Any("text", tc.Update.Message.Text))
+	tc.Logger.Debug("LocalStateTree", zap.String("tree", ac.State.TreeState.LocalStateTree.String()))
 
 	if ac.State.InputHandler != nil {
 

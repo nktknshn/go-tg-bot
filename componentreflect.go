@@ -19,6 +19,10 @@ func reflectCompProps[A any](comp Comp[A]) any {
 			continue
 		}
 
+		if f.Name == "Context" {
+			continue
+		}
+
 		fs = append(fs, f)
 	}
 
@@ -28,6 +32,10 @@ func reflectCompProps[A any](comp Comp[A]) any {
 		f := t.Field(i)
 
 		if f.Name == "State" {
+			continue
+		}
+
+		if f.Name == "Context" {
 			continue
 		}
 
@@ -51,18 +59,13 @@ func reflectCompId[A any](comp Comp[A]) string {
 // sets the local state of the component if it has one defined
 func ReflectCompLocalState[A any](comp Comp[A], ls State[any]) Comp[A] {
 
+	// fmt.Println("ReflectCompLocalState")
 	// isPointer := false
 	// TODO
 
 	t := reflect.TypeOf(comp).Elem()
 
 	// fmt.Println("t: ", t)
-
-	if ls.LocalState.Value == nil {
-		// initialize local state
-		// fmt.Println("No input state. Default will be used")
-		return comp
-	}
 
 	_, ok := t.FieldByName("State")
 
@@ -112,12 +115,32 @@ func ReflectCompLocalState[A any](comp Comp[A], ls State[any]) Comp[A] {
 	// fmt.Println("nt.CanSet(): ", nts.CanAddr())
 
 	for i := 0; i < nt.NumField(); i++ {
+		// copy props
 		nt.Field(i).Set(v.Field(i))
 		// fmt.Printf("nt.Field(%v): %v\n", i, nt.Field(i))
 	}
 
 	// fmt.Println("vls.Type()", vls.Type())
 	// fmt.Println("nt.state", nt.FieldByName("State").Type())
+
+	// fmt.Println(ls.Index)
+
+	// set state index
+
+	// stateType, _ := t.FieldByName("State")
+	// newState := reflect.New(stateType.Type).Elem()
+
+	nt.FieldByName("State").FieldByName("Index").Set(
+		vls.FieldByName("Index"),
+	)
+
+	if !ls.LocalState.Initialized {
+		// initialize local state
+		// fmt.Println("No input state. Default will be used")
+		// fmt.Println(nt.FieldByName("State"))
+
+		return nt.Addr().Interface().(Comp[A])
+	}
 
 	nt.FieldByName("State").FieldByName("LocalState").FieldByName("Value").Set(
 		reflect.ValueOf(vlsValue.Interface()),
@@ -126,12 +149,7 @@ func ReflectCompLocalState[A any](comp Comp[A], ls State[any]) Comp[A] {
 		true,
 	)
 
-	nt.FieldByName("State").FieldByName("Index").Set(
-		vls.FieldByName("Index"),
-	)
-
 	// fmt.Println("nt.value", nt.FieldByName("State").FieldByName("LocalState").FieldByName("Value"))
-
 	// fmt.Println("nt.init", nt.FieldByName("State").FieldByName("LocalState").FieldByName("Initialized"))
 
 	return nt.Addr().Interface().(Comp[A])
@@ -194,7 +212,7 @@ func (r ContextQuery) IsEmpty() bool {
 func (r ContextQuery) Get(key string) reflect.Type {
 	t, ok := r.FieldByName(key)
 
-	if ok != true {
+	if !ok {
 		panic(ok)
 	}
 
@@ -340,6 +358,10 @@ func ReflectTypedContext[A any, C any](comp Comp[A], globalContext C) (Comp[A], 
 	}
 
 	compCopy := reflect.New(t).Elem()
+
+	for i := 0; i < t.NumField(); i++ {
+		compCopy.Field(i).Set(reflect.ValueOf(comp).Elem().Field(i))
+	}
 
 	compCopyCtx := compCopy.FieldByName("Context")
 

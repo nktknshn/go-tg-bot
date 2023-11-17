@@ -133,6 +133,10 @@ type TextMessageUpdate struct {
 	UpdateProps
 }
 
+// func NewTextMessageUpdateHelper(text string) *models.Update {
+
+// }
+
 func NewTextMessageUpdate(props TextMessageUpdate) *models.Update {
 	return &models.Update{
 		ID: int64(rand.Int()),
