@@ -30,7 +30,7 @@ func (r CreateElementsResult[any]) String() string {
 }
 
 // given
-func CreateElements[A any](comp Comp[A], context GlobalContext, stateTree *RunResultWithStateTree[A]) *CreateElementsResult[A] {
+func CreateElements[A any](comp Comp[A], globalContext GlobalContextTyped[any], stateTree *RunResultWithStateTree[A]) *CreateElementsResult[A] {
 	logger := GetLogger()
 
 	logger.Debug("CreateElements",
@@ -46,7 +46,7 @@ func CreateElements[A any](comp Comp[A], context GlobalContext, stateTree *RunRe
 		// this is the first render
 		runResult := RunComponentTree[A](&RunContext[A]{
 			logger:         GetLogger(),
-			globalContext:  context,
+			globalContext:  globalContext,
 			localStateTree: nil,
 			componentIndex: []int{0},
 			parents:        make([]ElementComponent[A], 0),
@@ -74,7 +74,7 @@ func CreateElements[A any](comp Comp[A], context GlobalContext, stateTree *RunRe
 		&RerunContext[A]{
 			logger: GetLogger(),
 			// .With(zap.String("rerun", "rerun")),
-			globalContext:  context,
+			globalContext:  globalContext,
 			prevRunResult:  stateTree.RunResult,
 			localStateTree: *stateTree.LocalStateTree,
 			componentIndex: []int{0},

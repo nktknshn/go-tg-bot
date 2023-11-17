@@ -1,15 +1,11 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"os"
-	"os/signal"
 	"strconv"
 
-	"github.com/go-telegram/bot"
-	"github.com/go-telegram/bot/models"
 	tgbot "github.com/nktknshn/go-tg-bot"
 	"github.com/nktknshn/go-tg-bot/emulator"
 	"go.uber.org/zap"
@@ -55,7 +51,7 @@ type WelcomState struct {
 
 type Welcom struct {
 	Username string `tgbot:"ctx"`
-	State    tgbot.GetSetLocalStateImpl[WelcomState]
+	State    tgbot.State[WelcomState]
 }
 
 func (w *Welcom) Render(o tgbot.OO) {
@@ -107,12 +103,6 @@ func (app *App) Render(o tgbot.OO) {
 	})
 }
 
-// func G() {
-// 	props := Props{Counter: 0, Error: nil, Username: "test"}
-// 	a := App{props}
-// 	tgbot.RunComponent[any](&tgbot.RunContext{}, &a, props)
-// }
-
 var counterApp = tgbot.NewApplication[State, any](
 	func(tc *tgbot.TelegramContext) State {
 		// tc.Logger.Info("CreateAppState")
@@ -125,7 +115,7 @@ var counterApp = tgbot.NewApplication[State, any](
 
 		return &app
 	},
-	func(ac *tgbot.ApplicationContext[State, any], tc *tgbot.TelegramContext, a any) {
+	func(ac *tgbot.ApplicationContext[State, any, any], tc *tgbot.TelegramContext, a any) {
 		// tc.Logger.Info("HandleAction", zap.Any("action", a))
 
 		switch a := a.(type) {
@@ -138,35 +128,6 @@ var counterApp = tgbot.NewApplication[State, any](
 	},
 )
 
-func runEmulator(dispatcher *tgbot.ChatsDispatcher) {
-	bot := emulator.NewFakeBot()
-	emulator.EmulatorMain(bot, dispatcher)
-}
-
-func runReal(dispatcher *tgbot.ChatsDispatcher) {
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
-	defer cancel()
-
-	token := os.Getenv("BOT_TOKEN")
-
-	if token == "" {
-		logger.Fatal("BOT_TOKEN env variable is not set")
-		os.Exit(1)
-	}
-
-	bot, err := bot.New(token, bot.WithDefaultHandler(func(ctx context.Context, bot *bot.Bot, update *models.Update) {
-		dispatcher.HandleUpdate(ctx, bot, update)
-	}))
-
-	if err != nil {
-		logger.Fatal("Error creating bot", zap.Error(err))
-		os.Exit(1)
-	}
-
-	bot.Start(ctx)
-
-}
-
 var logger = tgbot.GetLogger()
 
 func main() {
@@ -175,16 +136,12 @@ func main() {
 
 	logger.Debug("Starting bot", zap.Any("args", flag.Args()))
 
-	dispatcher := tgbot.NewChatsDispatcher(&tgbot.ChatsDispatcherProps{
-		ChatFactory: func(tc *tgbot.TelegramContext) tgbot.ChatHandler {
-			return counterApp.NewHandler(tc)
-		},
-	})
+	dispatcher := counterApp.ChatsDispatcher()
 
 	if len(flag.Args()) > 0 && flag.Args()[0] == "emulator" {
-		runEmulator(dispatcher)
+		emulator.RunEmulator(logger, dispatcher)
 	} else if len(flag.Args()) > 0 && flag.Args()[0] == "real" {
-		runReal(dispatcher)
+		tgbot.RunReal(logger, dispatcher)
 	} else {
 		logger.Fatal("Unknown argument", zap.Any("args", flag.Args()))
 		fmt.Println("emulator or real")

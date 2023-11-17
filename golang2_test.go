@@ -6,16 +6,12 @@ import (
 	"testing"
 )
 
-func TestReflectState(t *testing.T) {
-
-}
-
 type S struct {
 	s string
 	a int
 }
 
-type Comp interface {
+type TestReflect1C interface {
 	Print()
 }
 
@@ -23,7 +19,7 @@ func (s S) Print() {
 	fmt.Println(s)
 }
 
-func printProps(c Comp) {
+func printProps(c TestReflect1C) {
 	name := reflect.TypeOf(c).Name()
 	fmt.Println(name)
 
@@ -43,7 +39,7 @@ func TestReflect1(t *testing.T) {
 
 	s := S{s: "s", a: 1}
 
-	var c Comp = s
+	var c TestReflect1C = s
 
 	printProps(c)
 

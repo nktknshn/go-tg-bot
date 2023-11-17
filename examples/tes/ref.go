@@ -14,7 +14,7 @@ type App1 struct {
 	// props
 	Counter int
 	// local state
-	State tgbot.GetSetLocalStateImpl[App1State]
+	State tgbot.State[App1State]
 }
 
 func (app App1) Render(o tgbot.OO) {

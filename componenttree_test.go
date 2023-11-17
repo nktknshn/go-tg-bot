@@ -15,7 +15,7 @@ type App1 struct {
 	// props
 	Counter int
 	// local state
-	State tgbot.GetSetLocalStateImpl[App1State]
+	State tgbot.State[App1State]
 }
 
 func (a *App1) Render(o tgbot.OO) {
@@ -45,14 +45,17 @@ func (a *App1) Render(o tgbot.OO) {
 	o.Messagef("Counter: %v", a.Counter)
 }
 
+type EmptyContext struct{}
+
 func TestRunComponent(t *testing.T) {
 	comp := App1{Counter: 1}
-	globalContext := tgbot.NewGlobalContext()
+	globalContext := tgbot.NewGlobalContextTyped[any](EmptyContext{})
 
 	tgbot.RunComponent(
+		tgbot.GetLogger(),
 		&comp,
 		globalContext,
-		tgbot.GetSetLocalStateImpl[any]{
+		tgbot.State[any]{
 			LocalState: tgbot.LocalStateClosure[any]{
 				Initialized: true,
 				Value:       App1State{night: true, hour: 2},
@@ -64,7 +67,7 @@ func TestRunComponent(t *testing.T) {
 
 func TestRunCreateElements1(t *testing.T) {
 
-	globalContext := tgbot.NewGlobalContext()
+	globalContext := tgbot.NewGlobalContextTyped[any](EmptyContext{})
 
 	comp := App1{Counter: 1}
 
@@ -100,6 +103,10 @@ func TestRunCreateElements1(t *testing.T) {
 
 }
 
+type TestNestedCompContext struct {
+	Flag1 bool
+}
+
 type TestNestedCompApp struct{}
 
 func (c *TestNestedCompApp) Render(o tgbot.OO) {
@@ -112,18 +119,14 @@ type Context[S any] interface {
 	Get() S
 }
 
-type TestNestedComp1Context struct {
-	Flag1 bool
-}
-
 type TestNestedComp1 struct {
-	Flag1 bool `tgbot:"ctx"`
+	Context TestNestedCompContext
 }
 
 func (c *TestNestedComp1) Render(o tgbot.OO) {
 	o.Message("Comp1")
 
-	if c.Flag1 {
+	if c.Context.Flag1 {
 		o.Comp(&TestNestedComp2{})
 	} else {
 		o.Comp(&TestNestedComp3{})
@@ -145,15 +148,17 @@ func (c *TestNestedComp3) Render(o tgbot.OO) {
 
 func TestNestedComp(t *testing.T) {
 
-	globalContext := tgbot.NewGlobalContext()
-
-	globalContext.Add("Flag1", false)
+	globalContext := tgbot.NewGlobalContextTyped[any](TestNestedCompContext{
+		Flag1: false,
+	})
 
 	t.Log("globalContext", globalContext)
 
 	res := tgbot.CreateElements(&TestNestedCompApp{}, globalContext, nil)
 
-	globalContext.Add("Flag1", true)
+	globalContext = tgbot.NewGlobalContextTyped[any](TestNestedCompContext{
+		Flag1: true,
+	})
 
 	res = tgbot.CreateElements(&TestNestedCompApp{}, globalContext, &res.TreeState)
 

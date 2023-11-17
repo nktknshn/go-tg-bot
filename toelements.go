@@ -10,11 +10,11 @@ func ComponentToElements[A any](comp Comp[A], logger *zap.Logger) []Element {
 
 	elements := make([]Element, 0)
 
-	o := newOutput[A]()
+	o := NewOutput[A]()
 
 	comp.Render(o)
 
-	for _, e := range o.result {
+	for _, e := range o.Result {
 		switch e := e.(type) {
 		case *ElementComponent[A]:
 			logger.Debug("Going into ElementComponent", zap.Any("comp", e.comp))

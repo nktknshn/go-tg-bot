@@ -43,7 +43,7 @@ type O[A any] interface {
 	ButtonsRow([]string, func(int, string) A)
 	BottomButton(string)
 	MessageComplete()
-	InputHandler(func(string) A)
+	InputHandler(func(string) any)
 	// Dispatch(A)
 	// LocalStateProvider[any, A]
 }
@@ -58,55 +58,55 @@ type Comp[A any] interface {
 }
 
 type outputImpl[A any] struct {
-	result []Element
+	Result []Element
 }
 
-func newOutput[A any]() *outputImpl[A] {
-	return &outputImpl[A]{result: make([]Element, 0)}
+func NewOutput[A any]() *outputImpl[A] {
+	return &outputImpl[A]{Result: make([]Element, 0)}
 }
 
 func (o *outputImpl[A]) Message(text string) {
-	o.result = append(o.result, Message(text))
+	o.Result = append(o.Result, Message(text))
 }
 
 func (o *outputImpl[A]) Messagef(format string, args ...interface{}) {
-	o.result = append(o.result, Message(fmt.Sprintf(format, args...)))
+	o.Result = append(o.Result, Message(fmt.Sprintf(format, args...)))
 }
 
 func (o *outputImpl[A]) MessagePart(text string) {
-	o.result = append(o.result, MessagePart(text))
+	o.Result = append(o.Result, MessagePart(text))
 }
 
 func (o *outputImpl[A]) MessagePartf(format string, args ...interface{}) {
-	o.result = append(o.result, MessagePart(fmt.Sprintf(format, args...)))
+	o.Result = append(o.Result, MessagePart(fmt.Sprintf(format, args...)))
 }
 
 func (o *outputImpl[A]) Button(text string, handler func() A) {
-	o.result = append(o.result, Button(text, handler, text, false))
+	o.Result = append(o.Result, Button(text, handler, text, false))
 }
 
 func (o *outputImpl[A]) ButtonsRow(texts []string, handler func(int, string) A) {
-	o.result = append(o.result, ButtonsRow(texts, handler))
+	o.Result = append(o.Result, ButtonsRow(texts, handler))
 }
 
 func (o *outputImpl[A]) BottomButton(text string) {
-	o.result = append(o.result, MessagePart(text))
+	o.Result = append(o.Result, MessagePart(text))
 }
 
 func (o *outputImpl[A]) Send(element Element) {
-	o.result = append(o.result, element)
+	o.Result = append(o.Result, element)
 }
 
 func (o *outputImpl[A]) Comp(comp Comp[A]) {
-	o.result = append(o.result, Component(comp))
+	o.Result = append(o.Result, Component(comp))
 }
 
 func (o *outputImpl[A]) MessageComplete() {
-	o.result = append(o.result, MessageComplete())
+	o.Result = append(o.Result, MessageComplete())
 }
 
-func (o *outputImpl[A]) InputHandler(handler func(string) A) {
-	o.result = append(o.result, AInputHandler(handler))
+func (o *outputImpl[A]) InputHandler(handler func(string) any) {
+	o.Result = append(o.Result, AInputHandler[A](handler))
 }
 
 func getCallbackHandlersMap[A any](outcomingMessages []OutcomingMessage) map[string]func() *A {

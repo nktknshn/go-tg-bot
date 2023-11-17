@@ -15,6 +15,10 @@ type FakeBot struct {
 	updateCallback func()
 }
 
+func (fb *FakeBot) AddUserMessage(update *models.Update) {
+	fb.Messages[update.Message.ID] = update.Message
+}
+
 // implement TelegramContextBot
 func (fb *FakeBot) AnswerCallbackQuery(ctx context.Context, params *bot.AnswerCallbackQueryParams) (bool, error) {
 	return true, nil

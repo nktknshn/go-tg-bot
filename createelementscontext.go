@@ -38,8 +38,22 @@ func NewContextQueryFromMap(m map[string]reflect.Type) ContextQuery {
 	return ContextQuery{t}
 }
 
-type GlobalContextTyped[A any] interface {
-	Query(ContextQuery) (*ContextQueryResult, error)
+type GlobalContextTyped[C any] interface {
+	Get() any
+}
+
+type GlobalContextTypedImpl[C any] struct {
+	Values C
+}
+
+func NewGlobalContextTyped[C any](values C) GlobalContextTypedImpl[C] {
+	return GlobalContextTypedImpl[C]{
+		Values: values,
+	}
+}
+
+func (c GlobalContextTypedImpl[C]) Get() any {
+	return c.Values
 }
 
 type GlobalContext interface {
@@ -120,4 +134,37 @@ func (ctx *CreateElementsContextImpl) Query(query ContextQuery) (*ContextQueryRe
 	}
 
 	return (*ContextQueryResult)(&result), nil
+}
+
+func ReflectCopyStruct(v reflect.Value) reflect.Value {
+
+	t := v.Type()
+
+	tc := reflect.New(t).Elem()
+
+	for i := 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+
+		tc.FieldByName(f.Name).Set(v.FieldByName(f.Name))
+	}
+
+	return tc
+}
+
+func ReflectCopyStructType(t reflect.Type) reflect.Type {
+
+	fs := make([]reflect.StructField, 0)
+
+	for i := 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+
+		fs = append(fs, f)
+	}
+
+	fs = append(fs, reflect.StructField{
+		Name: "Method1",
+		Type: reflect.TypeOf(func() any { return "abcde" }),
+	})
+
+	return reflect.StructOf(fs)
 }

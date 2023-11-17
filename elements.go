@@ -65,7 +65,7 @@ func Component[A any](comp Comp[A]) *ElementComponent[A] {
 	}
 }
 
-func AInputHandler[A any](handler func(string) A) *ElementInputHandler[A] {
+func AInputHandler[A any](handler func(string) any) *ElementInputHandler[A] {
 	return &ElementInputHandler[A]{
 		Handler: handler,
 	}
@@ -96,7 +96,7 @@ func (c ElementComponent[A]) String() string {
 }
 
 type ElementInputHandler[A any] struct {
-	Handler func(string) A
+	Handler func(string) any
 }
 
 func (c *ElementInputHandler[A]) elementKind() string {

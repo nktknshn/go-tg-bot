@@ -6,41 +6,60 @@ import (
 	"go.uber.org/zap"
 )
 
-type PreRenderData[S any, A any] struct {
-	InternalChatState InternalChatState[S, A]
+type PreRenderData[S any, A any, C any] struct {
+	InternalChatState InternalChatState[S, A, C]
 	ExecuteRender     func(renderer ChatRenderer) ([]RenderedElement, error)
 }
 
-func (a *Application[S, A]) PreRender(ac *ApplicationContext[S, A]) *PreRenderData[S, A] {
+func (a *Application[S, A, C]) PreRender(ac *ApplicationContext[S, A, C]) *PreRenderData[S, A, C] {
 
 	comp := ac.App.StateToComp(ac.State.AppState)
 
+	globalContext := ac.App.CreateGlobalContext(ac.State)
+
 	createElementsResult := CreateElements[A](
 		comp,
-		ac.App.CreateGlobalContext(ac.State),
+		globalContext.(GlobalContextTyped[any]),
 		ac.State.TreeState,
 	)
 
 	els := createElementsResult.Elements
 
-	// els := ComponentToElements(
-	// 	ac.App.StateToComp(ac.State.AppState),
-	// 	ac.Logger,
-	// )
-
 	res := ElementsToMessagesAndHandlers[A](els)
 
 	ac.Logger.Debug("PreRender", zap.Any("elements", res))
 
-	var inputHandler ChatInputHandler[A]
+	var inputHandler ChatInputHandler[any]
 
 	if len(res.InputHandlers) > 0 {
-		inputHandler = func(text string) A {
-			return res.InputHandlers[0].Handler(text)
+		handlers := res.InputHandlers
+
+		inputHandler = func(text string) any {
+
+			ac.Logger.Debug("InputHandler",
+				zap.Any("text", text),
+				zap.Any("handlers_count", len(handlers)))
+
+			for idx, h := range handlers {
+				res := h.Handler(text)
+
+				ac.Logger.Debug("InputHandler",
+					zap.Any("idx", idx),
+					zap.Any("res", ReflectStructName(res)),
+				)
+
+				_, goNext := res.(Next)
+
+				if !goNext {
+					return res
+				}
+
+			}
+			return Next{}
 		}
 	}
 
-	nextState := InternalChatState[S, A]{
+	nextState := InternalChatState[S, A, C]{
 		ChatID:           ac.State.ChatID,
 		AppState:         ac.State.AppState,
 		RenderedElements: ac.State.RenderedElements,
@@ -50,7 +69,7 @@ func (a *Application[S, A]) PreRender(ac *ApplicationContext[S, A]) *PreRenderDa
 		TreeState:        &createElementsResult.TreeState,
 	}
 
-	return &PreRenderData[S, A]{
+	return &PreRenderData[S, A, C]{
 		InternalChatState: nextState,
 		ExecuteRender: func(renderer ChatRenderer) ([]RenderedElement, error) {
 			ac.Logger.Info("ExecuteRender")

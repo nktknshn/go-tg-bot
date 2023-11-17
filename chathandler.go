@@ -29,18 +29,18 @@ type ChatHandler interface {
 	HandleUpdate(*TelegramContext)
 }
 
-type Handler[S any, A any] struct {
-	app        Application[S, A]
-	appContext *ApplicationContext[S, A]
+type Handler[S any, A any, C any] struct {
+	app        Application[S, A, C]
+	appContext *ApplicationContext[S, A, C]
 }
 
-func NewHandler[S any, A any](app Application[S, A], tc *TelegramContext) *Handler[S, A] {
+func NewHandler[S any, A any, C any](app Application[S, A, C], tc *TelegramContext) *Handler[S, A, C] {
 	tc.Logger.Debug("NewHandler")
 
 	tc.Logger.Debug("CreateAppState")
 	appState := app.CreateAppState(tc)
 
-	chatState := InternalChatState[S, A]{
+	chatState := InternalChatState[S, A, C]{
 		ChatID:           tc.ChatID,
 		AppState:         appState,
 		RenderedElements: []RenderedElement{},
@@ -50,7 +50,7 @@ func NewHandler[S any, A any](app Application[S, A], tc *TelegramContext) *Handl
 		TreeState:        nil,
 	}
 
-	ac := &ApplicationContext[S, A]{
+	ac := &ApplicationContext[S, A, C]{
 		App:    &app,
 		State:  &chatState,
 		Logger: GetLogger().With(zap.Int("ChatID", int(tc.ChatID))),
@@ -61,9 +61,9 @@ func NewHandler[S any, A any](app Application[S, A], tc *TelegramContext) *Handl
 
 	tc.Logger.Debug("New handler has been created.")
 
-	return &Handler[S, A]{
+	return &Handler[S, A, C]{
 		app: app,
-		appContext: &ApplicationContext[S, A]{
+		appContext: &ApplicationContext[S, A, C]{
 			App:    &app,
 			State:  &res.InternalChatState,
 			Logger: ac.Logger,
@@ -71,7 +71,7 @@ func NewHandler[S any, A any](app Application[S, A], tc *TelegramContext) *Handl
 	}
 }
 
-func (h *Handler[S, A]) HandleUpdate(tc *TelegramContext) {
+func (h *Handler[S, A, C]) HandleUpdate(tc *TelegramContext) {
 	tc.Logger.Debug("HandleUpdate")
 
 	if tc.Update.Message != nil && tc.Update.Message.Text != "" {

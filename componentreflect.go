@@ -48,6 +48,95 @@ func reflectCompId[A any](comp Comp[A]) string {
 	return fmt.Sprintf("%v", t)
 }
 
+// sets the local state of the component if it has one defined
+func ReflectCompLocalState[A any](comp Comp[A], ls State[any]) Comp[A] {
+
+	// isPointer := false
+	// TODO
+
+	t := reflect.TypeOf(comp).Elem()
+
+	// fmt.Println("t: ", t)
+
+	if ls.LocalState.Value == nil {
+		// initialize local state
+		// fmt.Println("No input state. Default will be used")
+		return comp
+	}
+
+	_, ok := t.FieldByName("State")
+
+	if !ok {
+		// fmt.Println("Component doesn't use local state")
+		return comp
+	}
+
+	v := reflect.ValueOf(comp).Elem()
+	// vp := reflect.ValueOf(&comp).Elem()
+
+	// fmt.Println("v: ", v)
+	// fmt.Println("v.Type(): ", v.Type())
+	// fmt.Println("vp: ", vp)
+	// fmt.Println("vp.Type(): ", vp.Type())
+
+	// fmt.Println("vp.Elem(): ", vp.Elem())
+	// fmt.Println("vp.Elem().Type(): ", vp.Elem().Type())
+	// fmt.Println("vp.Elem().Elem().Type(): ", vp.Elem().Elem().Type())
+
+	// sf := vp.Elem().Elem().FieldByName(stateField.Name)
+
+	vls := reflect.ValueOf(ls)
+
+	// fmt.Printf("sf: %v\n", sf.Type())
+	// fmt.Printf("vls: %v\n", vls.Type())
+
+	// for i := 0; i < vls.NumField(); i++ {
+	// 	fmt.Printf("vls.Field(%v): %v\n", i, vls.Field(i).Type().Name())
+	// }
+
+	vlsValue := vls.FieldByName("LocalState").FieldByName("Value")
+
+	// fmt.Println("vlsValue: ", reflect.TypeOf(vlsValue))
+	// fmt.Println("vlsValue: ", reflect.TypeOf(vlsValue.Interface()))
+
+	// fmt.Println("sf.CanSet(): ", sf.CanSet())
+
+	nt := reflect.New(t).Elem()
+
+	// fmt.Println("nt.Type(): ", nt.Type())
+
+	// ntf := nt.Interface()
+	// nts := reflect.ValueOf(&ntf).Elem()
+
+	// fmt.Println("nt.CanSet(): ", nt.CanSet())
+	// fmt.Println("nt.CanSet(): ", nts.CanAddr())
+
+	for i := 0; i < nt.NumField(); i++ {
+		nt.Field(i).Set(v.Field(i))
+		// fmt.Printf("nt.Field(%v): %v\n", i, nt.Field(i))
+	}
+
+	// fmt.Println("vls.Type()", vls.Type())
+	// fmt.Println("nt.state", nt.FieldByName("State").Type())
+
+	nt.FieldByName("State").FieldByName("LocalState").FieldByName("Value").Set(
+		reflect.ValueOf(vlsValue.Interface()),
+	)
+	nt.FieldByName("State").FieldByName("LocalState").FieldByName("Initialized").SetBool(
+		true,
+	)
+
+	nt.FieldByName("State").FieldByName("Index").Set(
+		vls.FieldByName("Index"),
+	)
+
+	// fmt.Println("nt.value", nt.FieldByName("State").FieldByName("LocalState").FieldByName("Value"))
+
+	// fmt.Println("nt.init", nt.FieldByName("State").FieldByName("LocalState").FieldByName("Initialized"))
+
+	return nt.Addr().Interface().(Comp[A])
+}
+
 // Returns a struct that will be used to request the global context
 // Field that starts with Ctx will be queried
 // comp is a pointer
@@ -225,4 +314,82 @@ func ReflectContextQueryResultSet[A any](comp Comp[A], cqr *ContextQueryResult) 
 	}
 
 	return nt.Interface().(Comp[A])
+}
+
+type UsedContextValue []reflect.Value
+
+// Try to find `Context` field.
+// If found fill it with the global context values returning a new component.
+// Returns the new component and a pointer to the used context value (if any).
+// If the component has a `Selector` method, it will be called to get the context value.
+func ReflectTypedContext[A any, C any](comp Comp[A], globalContext C) (Comp[A], *UsedContextValue) {
+	var wasapointer = false
+
+	t := reflect.TypeOf(comp)
+
+	// dereference pointer
+	if t.Kind() == reflect.Pointer {
+		t = t.Elem()
+		wasapointer = true
+	}
+
+	_, hasContext := t.FieldByName("Context")
+
+	if !hasContext {
+		return comp, nil
+	}
+
+	compCopy := reflect.New(t).Elem()
+
+	compCopyCtx := compCopy.FieldByName("Context")
+
+	compCopyCtx.Set(reflect.ValueOf(globalContext))
+
+	var usedContextValue *UsedContextValue = ReflectTypedContextSelect[A, C](comp, globalContext)
+
+	if wasapointer {
+		return compCopy.Addr().Interface().(Comp[A]), usedContextValue
+	}
+
+	return compCopy.Interface().(Comp[A]), usedContextValue
+}
+
+// Returns a pointer to the used part of the global context (if any).
+func ReflectTypedContextSelect[A any, C any](comp Comp[A], globalContext C) *UsedContextValue {
+
+	t := reflect.TypeOf(comp)
+
+	// dereference pointer
+	if t.Kind() == reflect.Pointer {
+		t = t.Elem()
+	}
+
+	_, hasContext := t.FieldByName("Context")
+	selector, hasSelector := t.MethodByName("Selector")
+
+	if !hasContext {
+		return nil
+	}
+
+	var usedContextValue UsedContextValue
+
+	compCopy := reflect.New(t).Elem()
+
+	compCopyCtx := compCopy.FieldByName("Context")
+
+	ctxValue := globalContext
+
+	compCopyCtx.Set(reflect.ValueOf(ctxValue))
+
+	if hasSelector {
+		usedContextValue = selector.Func.Call([]reflect.Value{compCopy})
+	} else {
+		usedContextValue = []reflect.Value{reflect.ValueOf(globalContext)}
+	}
+
+	return &usedContextValue
+}
+
+func ReflectStructName(any any) string {
+	return reflect.TypeOf(any).String()
 }

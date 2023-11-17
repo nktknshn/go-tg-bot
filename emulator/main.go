@@ -39,16 +39,21 @@ func EmulatorMain(
 		},
 		UserInputHandler: func(s string) {
 			logger.Info("user input handler", zap.String("input", s))
+			// bot.AddUserMessage
+
+			userMessageUpdate := NewTextMessageUpdate(TextMessageUpdate{
+				Text: s,
+				UpdateProps: UpdateProps{
+					ChatID: chatID,
+				},
+			})
+
+			bot.AddUserMessage(userMessageUpdate)
 
 			dispatcher.HandleUpdate(
 				context.Background(),
 				bot,
-				NewTextMessageUpdate(TextMessageUpdate{
-					Text: s,
-					UpdateProps: UpdateProps{
-						ChatID: chatID,
-					},
-				}))
+				userMessageUpdate)
 		},
 	}
 

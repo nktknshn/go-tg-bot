@@ -201,7 +201,7 @@ type RunContext[A any] struct {
 
 	localStateTree *LocalStateTree
 
-	globalContext GlobalContext
+	globalContext GlobalContextTyped[any]
 
 	// position of the component in the tree
 	componentIndex []int
@@ -214,7 +214,7 @@ type RerunContext[A any] struct {
 
 	localStateTree LocalStateTree
 
-	globalContext GlobalContext
+	globalContext GlobalContextTyped[any]
 
 	// position of the component in the tree
 	componentIndex []int
@@ -249,12 +249,20 @@ func RunComponentTree[A any](ctx *RunContext[A], comp Comp[A]) RunResultComponen
 
 	ctx.logger.Debug("Running the component")
 
-	elements, closure, contextQueryResult := RunComponent[A](comp, ctx.globalContext, localState.Getset)
+	elements, closure, usedContextValue := RunComponent[A](
+		ctx.logger, comp, ctx.globalContext, localState.Getset,
+	)
 
 	ctx.logger.Debug("Local state status after the run",
 		zap.Bool("initialzied", closure.Initialized),
 		zap.Any("value", closure.Value),
 	)
+
+	if usedContextValue == nil {
+		ctx.logger.Debug("The component doesn't use global context")
+	} else {
+		ctx.logger.Debug("Used context value", zap.Any("usedContextValue", usedContextValue))
+	}
 
 	localState.LocalState = &closure
 
@@ -295,7 +303,7 @@ func RunComponentTree[A any](ctx *RunContext[A], comp Comp[A]) RunResultComponen
 	runResult := RunResultComponent[A]{
 		comp:         comp,
 		inputProps:   reflectCompProps[A](comp),
-		inputContext: contextQueryResult,
+		inputContext: usedContextValue,
 		// TODO FIX
 		inputLocalStateClosure: *localState.LocalState,
 		output:                 output,
@@ -309,6 +317,7 @@ func RunComponentTree[A any](ctx *RunContext[A], comp Comp[A]) RunResultComponen
 
 }
 
+// rerun the component tree
 func RerunComponentTree[A any](
 	ctx *RerunContext[A],
 	comp Comp[A],
@@ -319,16 +328,17 @@ func RerunComponentTree[A any](
 	localStateClosure := ctx.localStateTree.LocalStateClosure
 	childrenState := ctx.localStateTree.Children
 
-	actualContextQuery := ReflectContextQueryResultGet[A](comp, ctx.globalContext)
+	currentUsedContext := ReflectTypedContextSelect[A](comp, ctx.globalContext.Get())
+
 	// localState := NewGetSet(ctx.componentIndex, localStateclosure)
 
 	// signals if the component has to be rerun
 	var rerun bool = false
 
-	if !reflect.DeepEqual(ctx.prevRunResult.inputContext, actualContextQuery) {
-		ctx.logger.Debug("The context has changed",
+	if !reflect.DeepEqual(ctx.prevRunResult.inputContext, currentUsedContext) {
+		ctx.logger.Debug("The global context has changed",
 			zap.Any("before", ctx.prevRunResult.inputContext),
-			zap.Any("now", actualContextQuery),
+			zap.Any("now", currentUsedContext),
 		)
 
 		rerun = true
@@ -420,127 +430,29 @@ func RerunComponentTree[A any](
 	}
 }
 
-// sets the local state of the component if it has one defined
-func ReflectCompLocalState[A any](comp Comp[A], ls GetSetLocalStateImpl[any]) Comp[A] {
+func RunComponent[A any](logger *zap.Logger, comp Comp[A], globalContext GlobalContextTyped[any], getset State[any]) ([]Element, LocalStateClosure[any], *UsedContextValue) {
 
-	// isPointer := false
-	// TODO
-
-	t := reflect.TypeOf(comp).Elem()
-
-	// fmt.Println("t: ", t)
-
-	if ls.LocalState.Value == nil {
-		// initialize local state
-		// fmt.Println("No input state. Default will be used")
-		return comp
-	}
-
-	_, ok := t.FieldByName("State")
-
-	if !ok {
-		// fmt.Println("Component doesn't use local state")
-		return comp
-	}
-
-	v := reflect.ValueOf(comp).Elem()
-	// vp := reflect.ValueOf(&comp).Elem()
-
-	// fmt.Println("v: ", v)
-	// fmt.Println("v.Type(): ", v.Type())
-	// fmt.Println("vp: ", vp)
-	// fmt.Println("vp.Type(): ", vp.Type())
-
-	// fmt.Println("vp.Elem(): ", vp.Elem())
-	// fmt.Println("vp.Elem().Type(): ", vp.Elem().Type())
-	// fmt.Println("vp.Elem().Elem().Type(): ", vp.Elem().Elem().Type())
-
-	// sf := vp.Elem().Elem().FieldByName(stateField.Name)
-
-	vls := reflect.ValueOf(ls)
-
-	// fmt.Printf("sf: %v\n", sf.Type())
-	// fmt.Printf("vls: %v\n", vls.Type())
-
-	// for i := 0; i < vls.NumField(); i++ {
-	// 	fmt.Printf("vls.Field(%v): %v\n", i, vls.Field(i).Type().Name())
-	// }
-
-	vlsValue := vls.FieldByName("LocalState").FieldByName("Value")
-
-	// fmt.Println("vlsValue: ", reflect.TypeOf(vlsValue))
-	// fmt.Println("vlsValue: ", reflect.TypeOf(vlsValue.Interface()))
-
-	// fmt.Println("sf.CanSet(): ", sf.CanSet())
-
-	nt := reflect.New(t).Elem()
-
-	// fmt.Println("nt.Type(): ", nt.Type())
-
-	// ntf := nt.Interface()
-	// nts := reflect.ValueOf(&ntf).Elem()
-
-	// fmt.Println("nt.CanSet(): ", nt.CanSet())
-	// fmt.Println("nt.CanSet(): ", nts.CanAddr())
-
-	for i := 0; i < nt.NumField(); i++ {
-		nt.Field(i).Set(v.Field(i))
-		// fmt.Printf("nt.Field(%v): %v\n", i, nt.Field(i))
-	}
-
-	// fmt.Println("vls.Type()", vls.Type())
-	// fmt.Println("nt.state", nt.FieldByName("State").Type())
-
-	nt.FieldByName("State").FieldByName("LocalState").FieldByName("Value").Set(
-		reflect.ValueOf(vlsValue.Interface()),
+	// contextQueryResult := ReflectContextQueryResultGet(comp, globalContext)
+	logger.Debug("RunComponent",
+		zap.String("compId", reflectCompId[A](comp)),
+		zap.Any("globalContext", globalContext),
 	)
-	nt.FieldByName("State").FieldByName("LocalState").FieldByName("Initialized").SetBool(
-		true,
-	)
-
-	nt.FieldByName("State").FieldByName("Index").Set(
-		vls.FieldByName("Index"),
-	)
-
-	// fmt.Println("nt.value", nt.FieldByName("State").FieldByName("LocalState").FieldByName("Value"))
-
-	// fmt.Println("nt.init", nt.FieldByName("State").FieldByName("LocalState").FieldByName("Initialized"))
-
-	return nt.Addr().Interface().(Comp[A])
-}
-
-func RunComponent[A any](comp Comp[A], globalContext GlobalContext, getset GetSetLocalStateImpl[any]) ([]Element, LocalStateClosure[any], *ContextQueryResult) {
-
-	contextQueryResult := ReflectContextQueryResultGet(comp, globalContext)
-
-	// contextQuery := ReflectCompCtxReqsTags[A](comp)
-
-	// if !contextQuery.IsEmpty() {
-	// 	fmt.Println("contextQuery", contextQuery)
-	// 	fmt.Println("globalContext", globalContext)
-
-	// 	res, err := globalContext.Query(contextQuery)
-
-	// 	if err != nil {
-	// 		fmt.Println(err)
-	// 	}
-
-	// 	contextQueryResult = res
-	// }
 
 	comp = ReflectCompLocalState[A](comp, getset)
 
-	if contextQueryResult != nil {
-		comp = ReflectContextQueryResultSet[A](comp, contextQueryResult)
-	}
+	comp, usedContextValue := ReflectTypedContext[A](comp, globalContext.Get())
 
-	o := newOutput[A]()
+	// if contextQueryResult != nil {
+	// 	comp = ReflectContextQueryResultSet[A](comp, contextQueryResult)
+	// }
+
+	o := NewOutput[A]()
 	comp.Render(o)
 
 	_, ok := reflect.TypeOf(comp).Elem().FieldByName("State")
 
 	if !ok {
-		return o.result, getset.LocalState, contextQueryResult
+		return o.Result, getset.LocalState, usedContextValue
 	}
 
 	// s, ok := reflect.ValueOf(comp).Elem().FieldByName("State")
@@ -553,9 +465,9 @@ func RunComponent[A any](comp Comp[A], globalContext GlobalContext, getset GetSe
 	// fmt.Println("vi", vi)
 	// fmt.Println("vv", vv)
 
-	return o.result, LocalStateClosure[any]{
+	return o.Result, LocalStateClosure[any]{
 		Initialized: vi.Bool(),
 		Value:       vv.Interface(),
-	}, contextQueryResult
+	}, usedContextValue
 
 }

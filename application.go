@@ -9,7 +9,7 @@ import (
 type ChatInputHandler[A any] func(string) A
 type ChatCallbackHandler[A any] func(string) *A
 
-type InternalChatState[S any, A any] struct {
+type InternalChatState[S any, A any, C any] struct {
 	ChatID int64
 
 	// state of the application
@@ -22,7 +22,7 @@ type InternalChatState[S any, A any] struct {
 	RenderedElements []RenderedElement
 
 	// handler for text messages
-	InputHandler ChatInputHandler[A]
+	InputHandler ChatInputHandler[any]
 
 	// handler for callback queries
 	CallbackHandler ChatCallbackHandler[A]
@@ -30,60 +30,61 @@ type InternalChatState[S any, A any] struct {
 	Renderer ChatRenderer
 }
 
-type HandleMessageFunc[S any, A any] func(*ApplicationContext[S, A], *TelegramContext)
-type HandleCallbackFunc[S any, A any] func(*ApplicationContext[S, A], *TelegramContext)
+type HandleMessageFunc[S any, A any, C any] func(*ApplicationContext[S, A, C], *TelegramContext)
+type HandleCallbackFunc[S any, A any, C any] func(*ApplicationContext[S, A, C], *TelegramContext)
 type HandleInitFunc[S any] func(*TelegramContext)
 
-type HandleActionFunc[S any, A any] func(*ApplicationContext[S, A], *TelegramContext, A)
+type HandleActionFunc[S any, A any, C any] func(*ApplicationContext[S, A, C], *TelegramContext, any)
 
-type RenderFuncType[S any, A any] func(*ApplicationContext[S, A]) error
-type StateToCompFuncType[S any, A any] func(S) Comp[A]
+type RenderFuncType[S any, A any, C any] func(*ApplicationContext[S, A, C]) error
+type StateToCompFuncType[S any, A any, C any] func(S) Comp[A]
 
-type ApplicationContext[S any, A any] struct {
-	App    *Application[S, A]
-	State  *InternalChatState[S, A]
+type ApplicationContext[S any, A any, C any] struct {
+	App    *Application[S, A, C]
+	State  *InternalChatState[S, A, C]
 	Logger *zap.Logger
 }
 
 // Defines Application with state S
-type Application[S any, A any] struct {
+type Application[S any, A any, C any] struct {
 	CreateAppState func(*TelegramContext) S
 
 	// actions reducer
-	HandleAction HandleActionFunc[S, A]
+	HandleAction HandleActionFunc[S, A, C]
 
-	HandleMessage HandleMessageFunc[S, A]
+	HandleMessage HandleMessageFunc[S, A, C]
 
-	HandleCallback HandleCallbackFunc[S, A]
+	HandleCallback HandleCallbackFunc[S, A, C]
 
-	CreateGlobalContext func(state *InternalChatState[S, A]) GlobalContext
+	CreateGlobalContext func(state *InternalChatState[S, A, C]) GlobalContextTyped[C]
 
 	HandleInit HandleInitFunc[S]
 
 	// taken S renderes elements
-	RenderFunc  RenderFuncType[S, A]
-	StateToComp StateToCompFuncType[S, A]
+	RenderFunc  RenderFuncType[S, A, C]
+	StateToComp StateToCompFuncType[S, A, C]
 
 	CreateChatRenderer func(*TelegramContext) ChatRenderer
 }
 
-type NewApplicationProps[S any, A any] struct {
+type NewApplicationProps[S any, A any, C any] struct {
 	// CreateAppState func(*TelegramContext) S
-	// HandleAction  HandleActionFunc[S, A]
-	HandleMessage       HandleMessageFunc[S, A]
-	HandleCallback      HandleCallbackFunc[S, A]
+	// HandleAction  HandleActionFunc[S, A, C]
+	HandleMessage       HandleMessageFunc[S, A, C]
+	HandleCallback      HandleCallbackFunc[S, A, C]
 	HandleInit          HandleInitFunc[S]
-	RenderFunc          RenderFuncType[S, A]
+	RenderFunc          RenderFuncType[S, A, C]
 	CreateRenderer      func(*TelegramContext) ChatRenderer
-	CreateGlobalContext func(*InternalChatState[S, A]) GlobalContext
+	CreateGlobalContext func(*InternalChatState[S, A, C]) GlobalContextTyped[C]
 }
 
-func DefaultCreateContext[S any, A any](state *InternalChatState[S, A]) GlobalContext {
+func DefaultCreateContext[S any, A any, C any](state *InternalChatState[S, A, C]) GlobalContextTyped[C] {
 	// create empty context
-	return NewGlobalContext()
+	// return NewGlobalContextTyped[C](struct{}{})
+	return nil
 }
 
-func DefaultRenderFunc[S any, A any](ac *ApplicationContext[S, A]) error {
+func DefaultRenderFunc[S any, A any, C any](ac *ApplicationContext[S, A, C]) error {
 	ac.Logger.Info("RenderFunc")
 
 	res := ac.App.PreRender(ac)
@@ -100,20 +101,7 @@ func DefaultRenderFunc[S any, A any](ac *ApplicationContext[S, A]) error {
 	return nil
 }
 
-func handleAction[S any, A any](ac *ApplicationContext[S, A], tc *TelegramContext, a A) {
-	tc.Logger.Debug("HandleAction", zap.Any("action", a))
-
-	switch a := (any)(a).(type) {
-	case ActionLocalState[any]:
-		tc.Logger.Debug("ActionLocalState was caught. Applying it to the local state tree.", zap.Any("index", a.index))
-		ac.State.TreeState.LocalStateTree.Set(a.index, a.f)
-		return
-	}
-
-	ac.App.HandleAction(ac, tc, a)
-}
-
-func DefaultHandlerCallback[S any, A any](ac *ApplicationContext[S, A], tc *TelegramContext) {
+func DefaultHandlerCallback[S any, A any, C any](ac *ApplicationContext[S, A, C], tc *TelegramContext) {
 	tc.Logger.Info("HandleCallback", zap.Any("data", tc.Update.CallbackQuery.Data))
 
 	if ac.State.CallbackHandler != nil {
@@ -125,7 +113,7 @@ func DefaultHandlerCallback[S any, A any](ac *ApplicationContext[S, A], tc *Tele
 			return
 		}
 
-		handleAction(ac, tc, *action)
+		internalHandleAction(ac, tc, *action)
 
 		tc.Bot.AnswerCallbackQuery(tc.Ctx, &bot.AnswerCallbackQueryParams{
 			CallbackQueryID: tc.Update.CallbackQuery.ID,
@@ -143,16 +131,18 @@ func DefaultHandlerCallback[S any, A any](ac *ApplicationContext[S, A], tc *Tele
 
 }
 
-func DefaultHandleMessage[S any, A any](ac *ApplicationContext[S, A], tc *TelegramContext) {
+func DefaultHandleMessage[S any, A any, C any](ac *ApplicationContext[S, A, C], tc *TelegramContext) {
 	tc.Logger.Info("HandleMessage", zap.Any("text", tc.Update.Message.Text))
 
 	if ac.State.InputHandler != nil {
 
-		ac.State.RenderedElements = append(ac.State.RenderedElements, NewRenderedUserMessage(tc.Update.Message.ID))
+		ac.State.RenderedElements = append(
+			ac.State.RenderedElements, NewRenderedUserMessage(tc.Update.Message.ID),
+		)
 
 		action := ac.State.InputHandler(tc.Update.Message.Text)
 
-		handleAction(ac, tc, action)
+		internalHandleAction(ac, tc, action)
 
 		err := ac.App.RenderFunc(ac)
 
@@ -165,17 +155,17 @@ func DefaultHandleMessage[S any, A any](ac *ApplicationContext[S, A], tc *Telegr
 	}
 }
 
-func NewApplication[S any, A any](
+func NewApplication[S any, A any, C any](
 	// Creates state
 	createAppState func(*TelegramContext) S,
 	// turns state into basic elements
-	stateToComp StateToCompFuncType[S, A],
+	stateToComp StateToCompFuncType[S, A, C],
 	// handles action
-	handleAction HandleActionFunc[S, A],
-	propss ...*NewApplicationProps[S, A],
-) *Application[S, A] {
+	handleAction HandleActionFunc[S, A, C],
+	propss ...*NewApplicationProps[S, A, C],
+) *Application[S, A, C] {
 
-	props := &NewApplicationProps[S, A]{}
+	props := &NewApplicationProps[S, A, C]{}
 
 	if len(propss) > 0 {
 		props = propss[0]
@@ -191,11 +181,11 @@ func NewApplication[S any, A any](
 	)
 
 	if handleMessage == nil {
-		handleMessage = DefaultHandleMessage[S, A]
+		handleMessage = DefaultHandleMessage[S, A, C]
 	}
 
 	if handleCallback == nil {
-		handleCallback = DefaultHandlerCallback[S, A]
+		handleCallback = DefaultHandlerCallback[S, A, C]
 	}
 
 	if handleInit == nil {
@@ -203,7 +193,7 @@ func NewApplication[S any, A any](
 	}
 
 	if renderFunc == nil {
-		renderFunc = DefaultRenderFunc[S, A]
+		renderFunc = DefaultRenderFunc[S, A, C]
 	}
 
 	if createRenderer == nil {
@@ -213,10 +203,10 @@ func NewApplication[S any, A any](
 	}
 
 	if createContext == nil {
-		createContext = DefaultCreateContext[S, A]
+		createContext = DefaultCreateContext[S, A, C]
 	}
 
-	return &Application[S, A]{
+	return &Application[S, A, C]{
 		CreateAppState:      createAppState,
 		StateToComp:         stateToComp,
 		HandleAction:        handleAction,
@@ -229,6 +219,14 @@ func NewApplication[S any, A any](
 	}
 }
 
-func (a *Application[S, A]) NewHandler(tc *TelegramContext) *Handler[S, A] {
-	return NewHandler[S, A](*a, tc)
+func (a *Application[S, A, C]) NewHandler(tc *TelegramContext) *Handler[S, A, C] {
+	return NewHandler[S, A, C](*a, tc)
+}
+
+func (a *Application[S, A, C]) ChatsDispatcher() *ChatsDispatcher {
+	return NewChatsDispatcher(&ChatsDispatcherProps{
+		ChatFactory: func(tc *TelegramContext) ChatHandler {
+			return a.NewHandler(tc)
+		},
+	})
 }
