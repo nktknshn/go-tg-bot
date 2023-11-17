@@ -72,12 +72,16 @@ func (a *PageTodoList) Render(o tgbot.OO) {
 		return
 	}
 
-	for idx, item := range tdl.Items {
-		if item.Done {
-			o.MessagePartf("/%v [x] %v", idx, item.Text)
-		} else {
-			o.MessagePartf("/%v [ ] %v", idx, item.Text)
+	if !tdl.IsEmpty() {
+		for idx, item := range tdl.Items {
+			if item.Done {
+				o.MessagePartf("/%v [x] %v", idx, item.Text)
+			} else {
+				o.MessagePartf("/%v [ ] %v", idx, item.Text)
+			}
 		}
+
+		o.MessageComplete()
 	}
 
 	if isItemSelected {
@@ -99,8 +103,6 @@ func (a *PageTodoList) Render(o tgbot.OO) {
 			return resetState
 		})
 
-	} else {
-		o.MessageComplete()
 	}
 
 	if hasCandidateItem {

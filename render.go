@@ -27,7 +27,8 @@ func (a *Application[S, A, C]) PreRender(ac *ApplicationContext[S, A, C]) *PreRe
 
 	res := ElementsToMessagesAndHandlers[A](els)
 
-	ac.Logger.Debug("PreRender", zap.Any("elements", res))
+	ac.Logger.Debug("PreRender",
+		zap.Any("OutcomingMessages", res))
 
 	var inputHandler ChatInputHandler[any]
 
