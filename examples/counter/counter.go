@@ -139,9 +139,9 @@ func main() {
 	dispatcher := counterApp.ChatsDispatcher()
 
 	if len(flag.Args()) > 0 && flag.Args()[0] == "emulator" {
-		emulator.RunEmulator(logger, dispatcher)
+		emulator.Run(logger, dispatcher)
 	} else if len(flag.Args()) > 0 && flag.Args()[0] == "real" {
-		tgbot.RunReal(logger, dispatcher)
+		tgbot.Run(logger, dispatcher)
 	} else {
 		logger.Fatal("Unknown argument", zap.Any("args", flag.Args()))
 		fmt.Println("emulator or real")

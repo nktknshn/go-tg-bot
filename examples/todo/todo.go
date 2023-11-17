@@ -15,12 +15,12 @@ func main() {
 	dispatcher := todo.TodoApp.ChatsDispatcher()
 
 	if runEmul {
-		emulator.RunEmulator(
+		emulator.Run(
 			tgbot.GetLogger(),
 			dispatcher,
 		)
 	} else {
-		tgbot.RunReal(
+		tgbot.Run(
 			tgbot.GetLogger(),
 			dispatcher,
 		)

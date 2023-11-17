@@ -13,10 +13,23 @@ type FakeBot struct {
 	lastID         int
 	Messages       map[int]*models.Message
 	updateCallback func()
+	dispatcher     *tgbot.ChatsDispatcher
+}
+
+func (fb *FakeBot) NewUser() *FakeBotUser {
+	return &FakeBotUser{
+		UserID: rand.Int63(),
+		ChatID: rand.Int63(),
+		Bot:    fb,
+	}
 }
 
 func (fb *FakeBot) AddUserMessage(update *models.Update) {
 	fb.Messages[update.Message.ID] = update.Message
+}
+
+func (fb *FakeBot) SetDispatcher(d *tgbot.ChatsDispatcher) {
+	fb.dispatcher = d
 }
 
 // implement TelegramContextBot
@@ -97,6 +110,42 @@ func NewFakeBot() *FakeBot {
 	return &FakeBot{
 		Messages: make(map[int]*models.Message),
 	}
+}
+
+type FakeBotUser struct {
+	UserID int64
+	ChatID int64
+	Bot    *FakeBot
+}
+
+func (u *FakeBotUser) SendTextMessage(text string) *models.Update {
+	update := NewTextMessageUpdate(TextMessageUpdate{
+		Text: text,
+		UpdateProps: UpdateProps{
+			ChatID: u.ChatID,
+			UserID: u.UserID,
+		},
+	})
+
+	u.Bot.AddUserMessage(update)
+	u.Bot.dispatcher.HandleUpdate(context.Background(), u.Bot, update)
+
+	return update
+}
+
+func (u *FakeBotUser) SendCallbackQuery(data string) *models.Update {
+	update := NewCallbackQueryUpdate(CallbackQueryUpdate{
+		Data: data,
+		UpdateProps: UpdateProps{
+			ChatID: u.ChatID,
+			UserID: u.UserID,
+		},
+	})
+
+	// u.Bot.AddUserMessage(update)/
+	u.Bot.dispatcher.HandleUpdate(context.Background(), u.Bot, update)
+
+	return update
 }
 
 type UpdateProps struct {

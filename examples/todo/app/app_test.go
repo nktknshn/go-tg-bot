@@ -1,7 +1,6 @@
 package todo_test
 
 import (
-	"context"
 	"testing"
 
 	emulator "github.com/nktknshn/go-tg-bot/emulator"
@@ -11,31 +10,16 @@ import (
 func TestTodoApp(t *testing.T) {
 	d := todo.TodoApp.ChatsDispatcher()
 	bot := emulator.NewFakeBot()
+	bot.SetDispatcher(d)
 
-	msg1 := emulator.NewTextMessageUpdate(emulator.TextMessageUpdate{
-		Text:        "/start",
-		UpdateProps: emulator.UpdateProps{ChatID: 1, UserID: 1},
-	})
+	user1 := bot.NewUser()
 
-	bot.AddUserMessage(msg1)
-	d.HandleUpdate(context.Background(), bot, msg1)
-
-	d.HandleUpdate(
-		context.Background(),
-		bot,
-		emulator.NewCallbackQueryUpdate(
-			emulator.CallbackQueryUpdate{
-				Data:        "Go to main",
-				UpdateProps: emulator.UpdateProps{ChatID: 1, UserID: 1},
-			},
-		),
-	)
-
-	msg2 := emulator.NewTextMessageUpdate(emulator.TextMessageUpdate{
-		Text:        "test",
-		UpdateProps: emulator.UpdateProps{ChatID: 1, UserID: 1},
-	})
-
-	bot.AddUserMessage(msg2)
-	d.HandleUpdate(context.Background(), bot, msg2)
+	user1.SendTextMessage("/start")
+	user1.SendCallbackQuery("Go to main")
+	user1.SendTextMessage("task 1")
+	user1.SendCallbackQuery("Yes")
+	user1.SendTextMessage("task 2")
+	user1.SendCallbackQuery("Yes")
+	user1.SendTextMessage("/0")
+	user1.SendTextMessage("/1")
 }

@@ -5,7 +5,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func RunEmulator(logger *zap.Logger, dispatcher *tgbot.ChatsDispatcher) {
+func Run(logger *zap.Logger, dispatcher *tgbot.ChatsDispatcher) {
 	bot := NewFakeBot()
 	EmulatorMain(bot, dispatcher)
 }

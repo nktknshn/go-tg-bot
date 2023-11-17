@@ -7,6 +7,8 @@ import (
 	tgbot "github.com/nktknshn/go-tg-bot"
 )
 
+var rexItemIdex = regexp.MustCompile(`^/(\d+)`)
+
 type PageTodoListState struct {
 	CandidateItem string
 
@@ -20,8 +22,6 @@ type PageTodoList struct {
 	Context AppGlobalContext
 	State   tgbot.State[PageTodoListState]
 }
-
-var rexItemIdex = regexp.MustCompile(`^/(\d+)`)
 
 // Select TodoList from the global context.
 // When TodoList is updated, the page will be re-rendered
@@ -75,9 +75,9 @@ func (a *PageTodoList) Render(o tgbot.OO) {
 	if !tdl.IsEmpty() {
 		for idx, item := range tdl.Items {
 			if item.Done {
-				o.MessagePartf("/%v [x] %v", idx, item.Text)
+				o.MessagePartf("/%v 🟢 %v", idx, item.Text)
 			} else {
-				o.MessagePartf("/%v [ ] %v", idx, item.Text)
+				o.MessagePartf("/%v ⭕️ %v", idx, item.Text)
 			}
 		}
 
@@ -85,12 +85,20 @@ func (a *PageTodoList) Render(o tgbot.OO) {
 
 	if isItemSelected {
 		selectedItem := tdl.Items[selectedIndex]
-		o.MessagePartf("Selected: %v", selectedItem.Text)
+		o.MessagePartf("\nSelected: %v", selectedItem.Text)
 
-		o.Button("Done", func() any {
+		var btnCaption string
+
+		if selectedItem.Done {
+			btnCaption = "⭕️ Undone"
+		} else {
+			btnCaption = "🟢 Done"
+		}
+
+		o.Button(btnCaption, func() any {
 			return []any{
 				resetState,
-				ActionMarkDone{ItemIndex: selectedIndex},
+				ActionToggle{ItemIndex: selectedIndex},
 			}
 		})
 

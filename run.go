@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func RunReal(logger *zap.Logger, dispatcher *ChatsDispatcher) {
+func Run(logger *zap.Logger, dispatcher *ChatsDispatcher) {
 	logger.Debug("Starting real telegram bot")
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
