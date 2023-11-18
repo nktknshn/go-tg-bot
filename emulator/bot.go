@@ -16,6 +16,10 @@ type FakeBot struct {
 	dispatcher     *tgbot.ChatsDispatcher
 }
 
+func (fb *FakeBot) Test() {
+
+}
+
 func (fb *FakeBot) NewUser() *FakeBotUser {
 	return &FakeBotUser{
 		UserID: rand.Int63(),
@@ -142,7 +146,6 @@ func (u *FakeBotUser) SendCallbackQuery(data string) *models.Update {
 		},
 	})
 
-	// u.Bot.AddUserMessage(update)/
 	u.Bot.dispatcher.HandleUpdate(context.Background(), u.Bot, update)
 
 	return update
