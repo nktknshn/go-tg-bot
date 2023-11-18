@@ -16,7 +16,7 @@ type FakeBot struct {
 	dispatcher     *tgbot.ChatsDispatcher
 }
 
-func (fb *FakeBot) Test() {
+func (fb *FakeBot) Test2() {
 
 }
 
