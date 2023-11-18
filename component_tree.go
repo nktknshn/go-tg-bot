@@ -496,15 +496,13 @@ func RunComponent[A any](logger *zap.Logger, comp Comp[A], globalContext GlobalC
 	o := NewOutput[A]()
 	comp.Render(o)
 
-	_, ok := reflect.TypeOf(comp).Elem().FieldByName("State")
-
-	if !ok {
+	if !ReflectHasState(comp) {
 		return o.Result, getset.LocalState, usedContextValue
 	}
 
 	// s, ok := reflect.ValueOf(comp).Elem().FieldByName("State")
 
-	ls := reflect.ValueOf(comp).Elem().FieldByName("State").FieldByName("LocalState")
+	ls := ReflectDeref(reflect.ValueOf(comp)).FieldByName("State").FieldByName("LocalState")
 
 	vi := ls.FieldByName("Initialized")
 	vv := ls.FieldByName("Value")

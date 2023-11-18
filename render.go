@@ -68,6 +68,7 @@ func (a *Application[S, A, C]) PreRender(ac *ApplicationContext[S, A, C]) *PreRe
 		CallbackHandler:  res.CallbackHandler,
 		Renderer:         ac.State.Renderer,
 		TreeState:        &createElementsResult.TreeState,
+		Lock:             ac.State.Lock,
 	}
 
 	return &PreRenderData[S, A, C]{

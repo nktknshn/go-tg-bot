@@ -37,7 +37,7 @@ type O[A any] interface {
 	Messagef(string, ...interface{})
 	MessagePart(string)
 	MessagePartf(string, ...interface{})
-	Button(string, func() A)
+	Button(string, func() A, ...interface{})
 	ButtonsRow([]string, func(int, string) A)
 	BottomButton(string)
 	MessageComplete()
@@ -59,6 +59,10 @@ type outputImpl[A any] struct {
 	Result []Element
 }
 
+type NoCallbackStruct struct{}
+
+var NoCallback = NoCallbackStruct{}
+
 func NewOutput[A any]() *outputImpl[A] {
 	return &outputImpl[A]{Result: make([]Element, 0)}
 }
@@ -79,8 +83,21 @@ func (o *outputImpl[A]) MessagePartf(format string, args ...interface{}) {
 	o.Result = append(o.Result, MessagePart(fmt.Sprintf(format, args...)))
 }
 
-func (o *outputImpl[A]) Button(text string, handler func() A) {
-	o.Result = append(o.Result, Button(text, handler, text, false))
+func (o *outputImpl[A]) Button(text string, handler func() A, options ...interface{}) {
+	var noCallback = false
+
+	if options == nil {
+		options = make([]interface{}, 0)
+	}
+
+	for _, option := range options {
+		switch option.(type) {
+		case NoCallbackStruct:
+			noCallback = true
+		}
+	}
+
+	o.Result = append(o.Result, Button(text, handler, text, false, noCallback))
 }
 
 func (o *outputImpl[A]) ButtonsRow(texts []string, handler func(int, string) A) {

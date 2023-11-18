@@ -1,13 +1,14 @@
 package tgbot
 
 import (
-	"github.com/go-telegram/bot"
+	"sync"
+
 	"go.uber.org/zap"
 )
 
 // A is a type of returned Action to be used in actions reducers
 type ChatInputHandler[A any] func(string) A
-type ChatCallbackHandler[A any] func(string) *A
+type ChatCallbackHandler[A any] func(string) *CallbackResult[A]
 
 type InternalChatState[S any, A any, C any] struct {
 	ChatID int64
@@ -28,6 +29,18 @@ type InternalChatState[S any, A any, C any] struct {
 	CallbackHandler ChatCallbackHandler[A]
 
 	Renderer ChatRenderer
+
+	Lock *sync.Mutex
+}
+
+func (s *InternalChatState[S, A, C]) LockState(logger *zap.Logger) {
+	logger.Debug("LockState")
+	s.Lock.Lock()
+}
+
+func (s *InternalChatState[S, A, C]) UnlockState(logger *zap.Logger) {
+	logger.Debug("UnlockState")
+	s.Lock.Unlock()
 }
 
 type HandleMessageFunc[S any, A any, C any] func(*ApplicationContext[S, A, C], *TelegramContext)
@@ -49,6 +62,8 @@ type ApplicationContext[S any, A any, C any] struct {
 type Application[S any, A any, C any] struct {
 	CreateAppState func(*TelegramContext) S
 
+	HandleActionExternal HandleActionFunc[S, A, C]
+
 	// actions reducer
 	HandleAction HandleActionFunc[S, A, C]
 
@@ -60,7 +75,7 @@ type Application[S any, A any, C any] struct {
 
 	HandleInit HandleInitFunc[S]
 
-	// taken S renderes elements
+	// use state to render bot interface to the user
 	RenderFunc  RenderFuncType[S, A, C]
 	StateToComp StateToCompFuncType[S, A, C]
 
@@ -68,8 +83,6 @@ type Application[S any, A any, C any] struct {
 }
 
 type NewApplicationProps[S any, A any, C any] struct {
-	// CreateAppState func(*TelegramContext) S
-	// HandleAction  HandleActionFunc[S, A, C]
 	HandleMessage       HandleMessageFunc[S, A, C]
 	HandleCallback      HandleCallbackFunc[S, A, C]
 	HandleInit          HandleInitFunc[S]
@@ -82,6 +95,23 @@ func DefaultCreateContext[S any, A any, C any](state *InternalChatState[S, A, C]
 	return nil
 }
 
+func DefaultHandleActionExternal[S any, A any, C any](ac *ApplicationContext[S, A, C], tc *TelegramContext, action any) {
+	ac.Logger.Info("HandleActionExternal", zap.Any("action", action))
+
+	ac.State.LockState(tc.Logger)
+	defer ac.State.UnlockState(tc.Logger)
+
+	internalHandleAction(ac, tc, action)
+
+	err := ac.App.RenderFunc(ac)
+
+	if err != nil {
+		tc.Logger.Error("Error rendering state", zap.Error(err))
+	}
+
+}
+
+// Computes the output based on the state and renders it to the user
 func DefaultRenderFunc[S any, A any, C any](ac *ApplicationContext[S, A, C]) error {
 	ac.Logger.Info("RenderFunc")
 
@@ -103,36 +133,43 @@ func DefaultHandlerCallback[S any, A any, C any](ac *ApplicationContext[S, A, C]
 	tc.Logger.Info("HandleCallback", zap.Any("data", tc.Update.CallbackQuery.Data))
 	tc.Logger.Debug("LocalStateTree", zap.String("tree", ac.State.TreeState.LocalStateTree.String()))
 
+	ac.State.LockState(tc.Logger)
+	defer ac.State.UnlockState(tc.Logger)
+
 	if ac.State.CallbackHandler != nil {
-		action := ac.State.CallbackHandler(tc.Update.CallbackQuery.Data)
+		result := ac.State.CallbackHandler(tc.Update.CallbackQuery.Data)
 
-		ac.Logger.Debug("HandleCallback", zap.Any("action", action))
+		ac.Logger.Debug("HandleCallback", zap.Any("action", result))
 
-		if action == nil {
+		if result == nil {
 			return
 		}
 
-		internalHandleAction(ac, tc, *action)
+		internalHandleAction(ac, tc, result.action)
 
-		tc.Bot.AnswerCallbackQuery(tc.Ctx, &bot.AnswerCallbackQueryParams{
-			CallbackQueryID: tc.Update.CallbackQuery.ID,
-			ShowAlert:       false,
-		})
-
-		err := ac.App.RenderFunc(ac)
-
-		if err != nil {
-			tc.Logger.Error("Error rendering state", zap.Error(err))
+		if !result.noCallback {
+			tc.AnswerCallbackQuery()
 		}
+
 	} else {
-		tc.Logger.Error("Missing CallbackHandler")
+		tc.Logger.Warn("Missing CallbackHandler")
+	}
+
+	err := ac.App.RenderFunc(ac)
+
+	if err != nil {
+		tc.Logger.Error("Error rendering state", zap.Error(err))
 	}
 
 }
 
 func DefaultHandleMessage[S any, A any, C any](ac *ApplicationContext[S, A, C], tc *TelegramContext) {
+
 	tc.Logger.Info("HandleMessage", zap.Any("text", tc.Update.Message.Text))
 	tc.Logger.Debug("LocalStateTree", zap.String("tree", ac.State.TreeState.LocalStateTree.String()))
+
+	ac.State.LockState(tc.Logger)
+	defer ac.State.UnlockState(tc.Logger)
 
 	if ac.State.InputHandler != nil {
 
@@ -144,14 +181,14 @@ func DefaultHandleMessage[S any, A any, C any](ac *ApplicationContext[S, A, C], 
 
 		internalHandleAction(ac, tc, action)
 
-		err := ac.App.RenderFunc(ac)
-
-		if err != nil {
-			tc.Logger.Error("Error rendering state", zap.Error(err))
-		}
-
 	} else {
-		tc.Logger.Error("Missing InputHandler")
+		tc.Logger.Warn("Missing InputHandler")
+	}
+
+	err := ac.App.RenderFunc(ac)
+
+	if err != nil {
+		tc.Logger.Error("Error rendering state", zap.Error(err))
 	}
 }
 
@@ -207,26 +244,15 @@ func NewApplication[S any, A any, C any](
 	}
 
 	return &Application[S, A, C]{
-		CreateAppState:      createAppState,
-		StateToComp:         stateToComp,
-		HandleAction:        handleAction,
-		HandleMessage:       handleMessage,
-		HandleCallback:      handleCallback,
-		HandleInit:          handleInit,
-		RenderFunc:          renderFunc,
-		CreateChatRenderer:  createRenderer,
-		CreateGlobalContext: createContext,
+		CreateAppState:       createAppState,
+		StateToComp:          stateToComp,
+		HandleAction:         handleAction,
+		HandleMessage:        handleMessage,
+		HandleCallback:       handleCallback,
+		HandleInit:           handleInit,
+		RenderFunc:           renderFunc,
+		CreateChatRenderer:   createRenderer,
+		CreateGlobalContext:  createContext,
+		HandleActionExternal: DefaultHandleActionExternal[S, A, C],
 	}
-}
-
-func (a *Application[S, A, C]) NewHandler(tc *TelegramContext) *Handler[S, A, C] {
-	return NewHandler[S, A, C](*a, tc)
-}
-
-func (a *Application[S, A, C]) ChatsDispatcher() *ChatsDispatcher {
-	return NewChatsDispatcher(&ChatsDispatcherProps{
-		ChatFactory: func(tc *TelegramContext) ChatHandler {
-			return a.NewHandler(tc)
-		},
-	})
 }

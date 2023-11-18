@@ -202,7 +202,7 @@ func TestCreate(t *testing.T) {
 	re := &MockRenderer{}
 
 	m := tgbot.NewOutcomingTextMessage[int]("message 1")
-	b1 := tgbot.Button("button 1", func() int { return 1 }, "button 1", false)
+	b1 := tgbot.Button("button 1", func() int { return 1 }, "button 1", false, false)
 	m.AddButton(b1)
 
 	tgbot.ExecuteRenderActions[int](

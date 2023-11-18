@@ -37,12 +37,13 @@ func Message(text string) *ElementMessage {
 	}
 }
 
-func Button[A any](text string, onClick func() A, action string, nextRow bool) *ElementButton[A] {
+func Button[A any](text string, onClick func() A, action string, nextRow bool, noCallback bool) *ElementButton[A] {
 	return &ElementButton[A]{
-		Text:    text,
-		Action:  action,
-		OnClick: onClick,
-		NextRow: nextRow,
+		Text:       text,
+		Action:     action,
+		OnClick:    onClick,
+		NextRow:    nextRow,
+		NoCallback: noCallback,
 	}
 }
 
@@ -194,10 +195,11 @@ func (c *ElementMessagePart) Equal(other BasicElement) bool {
 }
 
 type ElementButton[A any] struct {
-	Text    string
-	Action  string
-	NextRow bool
-	OnClick func() A
+	Text       string
+	Action     string
+	NextRow    bool
+	NoCallback bool
+	OnClick    func() A
 }
 
 func (b *ElementButton[A]) CallbackData() string {

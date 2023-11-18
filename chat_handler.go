@@ -2,6 +2,7 @@ package tgbot
 
 import (
 	"context"
+	"sync"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
@@ -23,6 +24,13 @@ type TelegramContext struct {
 	Ctx    context.Context
 	Update *models.Update
 	Logger *zap.Logger
+}
+
+func (tc *TelegramContext) AnswerCallbackQuery() {
+	tc.Bot.AnswerCallbackQuery(tc.Ctx, &bot.AnswerCallbackQueryParams{
+		CallbackQueryID: tc.Update.CallbackQuery.ID,
+		ShowAlert:       false,
+	})
 }
 
 type ChatHandler interface {
@@ -48,6 +56,7 @@ func NewHandler[S any, A any, C any](app Application[S, A, C], tc *TelegramConte
 		CallbackHandler:  nil,
 		Renderer:         app.CreateChatRenderer(tc),
 		TreeState:        nil,
+		Lock:             &sync.Mutex{},
 	}
 
 	ac := &ApplicationContext[S, A, C]{
@@ -57,6 +66,8 @@ func NewHandler[S any, A any, C any](app Application[S, A, C], tc *TelegramConte
 	}
 
 	tc.Logger.Debug("PreRender")
+
+	// prerender to get input handlers
 	res := app.PreRender(ac)
 
 	tc.Logger.Debug("New handler has been created.")
@@ -85,4 +96,16 @@ func (h *Handler[S, A, C]) HandleUpdate(tc *TelegramContext) {
 	}
 
 	tc.Logger.Debug("Unkown update (neither message nor callback)")
+}
+
+func (a *Application[S, A, C]) NewHandler(tc *TelegramContext) *Handler[S, A, C] {
+	return NewHandler[S, A, C](*a, tc)
+}
+
+func (a *Application[S, A, C]) ChatsDispatcher() *ChatsDispatcher {
+	return NewChatsDispatcher(&ChatsDispatcherProps{
+		ChatFactory: func(tc *TelegramContext) ChatHandler {
+			return a.NewHandler(tc)
+		},
+	})
 }

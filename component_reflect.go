@@ -7,8 +7,16 @@ import (
 )
 
 func reflectCompProps[A any](comp Comp[A]) any {
-	t := reflect.TypeOf(comp).Elem()
-	v := reflect.ValueOf(comp).Elem()
+
+	t := reflect.TypeOf(comp)
+	// .Elem()
+	v := reflect.ValueOf(comp)
+	// .Elem()
+
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+		v = v.Elem()
+	}
 
 	fs := make([]reflect.StructField, 0)
 
@@ -62,8 +70,15 @@ func ReflectCompLocalState[A any](comp Comp[A], ls State[any]) Comp[A] {
 	// fmt.Println("ReflectCompLocalState")
 	// isPointer := false
 	// TODO
+	wasapointer := false
+	t := reflect.TypeOf(comp)
 
-	t := reflect.TypeOf(comp).Elem()
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+		wasapointer = true
+	}
+
+	// .Elem()
 
 	// fmt.Println("t: ", t)
 
@@ -152,7 +167,10 @@ func ReflectCompLocalState[A any](comp Comp[A], ls State[any]) Comp[A] {
 	// fmt.Println("nt.value", nt.FieldByName("State").FieldByName("LocalState").FieldByName("Value"))
 	// fmt.Println("nt.init", nt.FieldByName("State").FieldByName("LocalState").FieldByName("Initialized"))
 
-	return nt.Addr().Interface().(Comp[A])
+	if wasapointer {
+		return nt.Addr().Interface().(Comp[A])
+	}
+	return nt.Interface().(Comp[A])
 }
 
 // Returns a struct that will be used to request the global context
@@ -350,6 +368,27 @@ func (ucv UsedContextValue) Equal(other UsedContextValue) bool {
 	return reflect.DeepEqual(ucv.Interface(), other.Interface())
 }
 
+func ReflectDeref(v reflect.Value) reflect.Value {
+
+	if v.Kind() == reflect.Ptr {
+		return v.Elem()
+	}
+
+	return v
+}
+
+func ReflectHasState[A any](comp Comp[A]) bool {
+	t := reflect.TypeOf(comp)
+
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+
+	_, ok := t.FieldByName("State")
+
+	return ok
+}
+
 // Try to find `Context` field.
 // If found fill it with the global context values returning a new component.
 // Returns the new component and a pointer to the used context value (if any).
@@ -358,10 +397,12 @@ func ReflectTypedContext[A any, C any](comp Comp[A], globalContext C) (Comp[A], 
 	var wasapointer = false
 
 	t := reflect.TypeOf(comp)
+	v := reflect.ValueOf(comp)
 
 	// dereference pointer
 	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
+		v = v.Elem()
 		wasapointer = true
 	}
 
@@ -374,7 +415,7 @@ func ReflectTypedContext[A any, C any](comp Comp[A], globalContext C) (Comp[A], 
 	compCopy := reflect.New(t).Elem()
 
 	for i := 0; i < t.NumField(); i++ {
-		compCopy.Field(i).Set(reflect.ValueOf(comp).Elem().Field(i))
+		compCopy.Field(i).Set(v.Field(i))
 	}
 
 	compCopyCtx := compCopy.FieldByName("Context")

@@ -13,10 +13,11 @@ type FakeBot struct {
 	lastID         int
 	Messages       map[int]*models.Message
 	updateCallback func()
+	replyCallback  func()
 	dispatcher     *tgbot.ChatsDispatcher
 }
 
-func (fb *FakeBot) Test2() {
+func (fb *FakeBot) Test3() {
 
 }
 
@@ -36,8 +37,12 @@ func (fb *FakeBot) SetDispatcher(d *tgbot.ChatsDispatcher) {
 	fb.dispatcher = d
 }
 
-// implement TelegramContextBot
 func (fb *FakeBot) AnswerCallbackQuery(ctx context.Context, params *bot.AnswerCallbackQueryParams) (bool, error) {
+
+	if fb.replyCallback != nil {
+		fb.replyCallback()
+	}
+
 	return true, nil
 }
 
@@ -90,6 +95,10 @@ func (fb *FakeBot) notify() {
 
 func (fs *FakeBot) SetUpdateCallback(cb func()) {
 	fs.updateCallback = cb
+}
+
+func (fs *FakeBot) SetReplyCallback(cb func()) {
+	fs.replyCallback = cb
 }
 
 func (fs *FakeBot) getNewID() int {

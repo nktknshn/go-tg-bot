@@ -18,7 +18,8 @@ func EmulatorMain(
 ) {
 	a := app.New()
 	w := a.NewWindow("Emulator")
-	// bot := emulator.NewFakeBot()
+
+	emul := NewEmulator()
 
 	chatID := int64(1)
 
@@ -57,9 +58,11 @@ func EmulatorMain(
 		},
 	}
 
+	emul.SetHandler(&handlers)
+
 	updateInterface := func() {
 
-		output := EmulatorDraw(
+		output := emul.Draw(
 			FakeServerToInput(bot),
 			&handlers,
 		)
@@ -78,6 +81,15 @@ func EmulatorMain(
 	updateInterface()
 
 	bot.SetUpdateCallback(func() {
+		go updateInterface()
+	})
+
+	bot.SetReplyCallback(func() {
+		emul.SetCallbackReceived()
+	})
+
+	emul.SetEmulatorStateUpdatedCallback(func() {
+		logger.Info("emulator state updated")
 		go updateInterface()
 	})
 

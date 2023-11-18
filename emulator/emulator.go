@@ -3,7 +3,6 @@ package emulator
 import (
 	"github.com/go-telegram/bot/models"
 	tgbot "github.com/nktknshn/go-tg-bot"
-	"go.uber.org/zap"
 )
 
 func InlineKeyboardToButtons(ik *models.InlineKeyboardMarkup) MessageButtons {
@@ -42,16 +41,3 @@ func FakeServerToInput(fakeServer *FakeBot) *DrawInput {
 }
 
 var logger = tgbot.GetLogger()
-
-func DrawFakeServer(fakeServer *FakeBot) {
-	drawInput := FakeServerToInput(fakeServer)
-
-	EmulatorDraw(drawInput, &ActionsHandler{
-		CallbackHandlers: func(s string) {
-			logger.Info("callback handler", zap.String("callback", s))
-		},
-		UserInputHandler: func(s string) {
-			logger.Info("user input handler", zap.String("input", s))
-		},
-	})
-}
