@@ -96,7 +96,7 @@ func DefaultCreateContext[S any, A any, C any](state *InternalChatState[S, A, C]
 }
 
 func DefaultHandleActionExternal[S any, A any, C any](ac *ApplicationContext[S, A, C], tc *TelegramContext, action any) {
-	ac.Logger.Info("HandleActionExternal", zap.Any("action", action))
+	ac.Logger.Info("HandleActionExternal", zap.String("action", ReflectStructName(action)))
 
 	ac.State.LockState(tc.Logger)
 	defer ac.State.UnlockState(tc.Logger)

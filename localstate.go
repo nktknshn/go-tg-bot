@@ -108,8 +108,8 @@ type ActionLocalState[S any] struct {
 }
 
 type State[S any] struct {
-	LocalState LocalStateClosure[S]
-	Index      []int
+	LocalStateClosure *LocalStateClosure[S]
+	Index             []int
 }
 
 type GetSetStruct[S any, A any] struct {
@@ -119,16 +119,19 @@ type GetSetStruct[S any, A any] struct {
 
 func (g State[S]) Init(initialValue S) GetSetStruct[S, any] {
 
-	if !g.LocalState.Initialized {
-		globalLogger.Debug("Initializing", zap.Any("index", g.Index))
+	if !g.LocalStateClosure.Initialized {
+		globalLogger.Debug("Initializing",
+			zap.Any("index", g.Index),
+			zap.Any("initialValue", initialValue),
+		)
 
-		g.LocalState.Value = initialValue
-		g.LocalState.Initialized = true
+		g.LocalStateClosure.Value = initialValue
+		g.LocalStateClosure.Initialized = true
 	}
 
 	return GetSetStruct[S, any]{
 		Get: func() S {
-			return g.LocalState.Value
+			return g.LocalStateClosure.Value
 		},
 		Set: func(f func(S) S) any {
 			return ActionLocalState[any]{
@@ -143,7 +146,7 @@ func (g State[S]) Init(initialValue S) GetSetStruct[S, any] {
 
 func NewGetSet[S any](index []int, localState *LocalStateClosure[S]) State[S] {
 	return State[S]{
-		Index:      index,
-		LocalState: *localState,
+		Index:             index,
+		LocalStateClosure: localState,
 	}
 }

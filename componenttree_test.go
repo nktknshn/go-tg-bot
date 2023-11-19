@@ -56,7 +56,7 @@ func TestRunComponent(t *testing.T) {
 		&comp,
 		globalContext,
 		tgbot.State[any]{
-			LocalState: tgbot.LocalStateClosure[any]{
+			LocalStateClosure: tgbot.LocalStateClosure[any]{
 				Initialized: true,
 				Value:       App1State{night: true, hour: 2},
 			},

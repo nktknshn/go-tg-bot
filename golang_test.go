@@ -6,6 +6,36 @@ import (
 	"testing"
 )
 
+type TestRefCopy1State struct {
+	TrilpleSix int
+}
+
+type TestRefCopy1StateContainer struct {
+	State *TestRefCopy1State
+}
+
+type TestRefCopy1StateComp struct {
+	State TestRefCopy1StateContainer
+}
+
+func (c TestRefCopy1StateContainer) Render() {
+	c.State.TrilpleSix = 666
+}
+
+func TestRefCopy1(t *testing.T) {
+	comp := TestRefCopy1StateComp{
+		State: TestRefCopy1StateContainer{
+			State: &TestRefCopy1State{0},
+		},
+	}
+
+	comp.State.Render()
+
+	if comp.State.State.TrilpleSix != 666 {
+		t.Error("comp.State.State.TrilpleSix != 666")
+	}
+}
+
 func TestHtmlUnescape(t *testing.T) {
 	// conclusion: html.UnescapeString() does not unescape &amp; to &
 

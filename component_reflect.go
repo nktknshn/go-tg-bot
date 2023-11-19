@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+
+	"go.uber.org/zap"
 )
 
 func reflectCompProps[A any](comp Comp[A]) any {
@@ -64,12 +66,18 @@ func reflectCompId[A any](comp Comp[A]) string {
 	return fmt.Sprintf("%v", t)
 }
 
-// sets the local state of the component if it has one defined
-func ReflectCompLocalState[A any](comp Comp[A], ls State[any]) Comp[A] {
+const LocalStateClosureName = "LocalStateClosure"
 
-	// fmt.Println("ReflectCompLocalState")
-	// isPointer := false
-	// TODO
+// sets the local state of the component if it has one defined
+// returns a copy of the component where State.LocalStateClosure initialized to zero value
+// and filled with values from state if any
+func ReflectCompLocalState[A any](
+	logger *zap.Logger,
+	comp Comp[A],
+	state State[any],
+) Comp[A] {
+	logger.Debug("ReflectCompLocalState")
+
 	wasapointer := false
 
 	t := reflect.TypeOf(comp)
@@ -81,98 +89,72 @@ func ReflectCompLocalState[A any](comp Comp[A], ls State[any]) Comp[A] {
 		wasapointer = true
 	}
 
-	// .Elem()
-
-	// fmt.Println("t: ", t)
-
-	_, ok := t.FieldByName("State")
+	compStateField, ok := t.FieldByName("State")
 
 	if !ok {
-		// fmt.Println("Component doesn't use local state")
+		logger.Debug("Component doesn't use local state")
 		return comp
 	}
 
-	// vp := reflect.ValueOf(&comp).Elem()
+	compStateClosurePtrField, ok := compStateField.Type.FieldByName(LocalStateClosureName)
 
-	// fmt.Println("v: ", v)
-	// fmt.Println("v.Type(): ", v.Type())
-	// fmt.Println("vp: ", vp)
-	// fmt.Println("vp.Type(): ", vp.Type())
-
-	// fmt.Println("vp.Elem(): ", vp.Elem())
-	// fmt.Println("vp.Elem().Type(): ", vp.Elem().Type())
-	// fmt.Println("vp.Elem().Elem().Type(): ", vp.Elem().Elem().Type())
-
-	// sf := vp.Elem().Elem().FieldByName(stateField.Name)
-
-	vls := reflect.ValueOf(ls)
-
-	// fmt.Printf("sf: %v\n", sf.Type())
-	// fmt.Printf("vls: %v\n", vls.Type())
-
-	// for i := 0; i < vls.NumField(); i++ {
-	// 	fmt.Printf("vls.Field(%v): %v\n", i, vls.Field(i).Type().Name())
-	// }
-
-	vlsValue := vls.FieldByName("LocalState").FieldByName("Value")
-
-	// fmt.Println("vlsValue: ", reflect.TypeOf(vlsValue))
-	// fmt.Println("vlsValue: ", reflect.TypeOf(vlsValue.Interface()))
-
-	// fmt.Println("sf.CanSet(): ", sf.CanSet())
-
-	nt := reflect.New(t).Elem()
-
-	// fmt.Println("nt.Type(): ", nt.Type())
-
-	// ntf := nt.Interface()
-	// nts := reflect.ValueOf(&ntf).Elem()
-
-	// fmt.Println("nt.CanSet(): ", nt.CanSet())
-	// fmt.Println("nt.CanSet(): ", nts.CanAddr())
-
-	for i := 0; i < nt.NumField(); i++ {
-		// copy props
-		nt.Field(i).Set(v.Field(i))
-		// fmt.Printf("nt.Field(%v): %v\n", i, nt.Field(i))
+	if !ok {
+		panic(fmt.Errorf("ReflectCompLocalState: %w", fmt.Errorf("Component has State but doesn't have LocalStateClosure")))
 	}
 
-	// fmt.Println("vls.Type()", vls.Type())
-	// fmt.Println("nt.state", nt.FieldByName("State").Type())
+	compStateClosureType := compStateClosurePtrField.Type.Elem()
 
-	// fmt.Println(ls.Index)
+	stateValue := reflect.ValueOf(state)
+	stateClosurePtr := stateValue.FieldByName(LocalStateClosureName)
+	stateClosureValue := stateClosurePtr.Elem().FieldByName("Value")
 
-	// set state index
+	compCopy := reflect.New(t).Elem()
 
-	// stateType, _ := t.FieldByName("State")
-	// newState := reflect.New(stateType.Type).Elem()
-
-	nt.FieldByName("State").FieldByName("Index").Set(
-		vls.FieldByName("Index"),
-	)
-
-	if !ls.LocalState.Initialized {
-		// initialize local state
-		// fmt.Println("No input state. Default will be used")
-		// fmt.Println(nt.FieldByName("State"))
-
-		return nt.Addr().Interface().(Comp[A])
+	for i := 0; i < compCopy.NumField(); i++ {
+		compCopy.Field(i).Set(v.Field(i))
 	}
 
-	nt.FieldByName("State").FieldByName("LocalState").FieldByName("Value").Set(
-		reflect.ValueOf(vlsValue.Interface()),
+	// copy index
+	compCopy.FieldByName("State").FieldByName("Index").Set(
+		stateValue.FieldByName("Index"),
 	)
-	nt.FieldByName("State").FieldByName("LocalState").FieldByName("Initialized").SetBool(
+
+	if state.LocalStateClosure == nil {
+		panic("state.LocalState is nil. Initialize zero closure before running the component")
+	}
+
+	newClosurePtr := reflect.New(compStateClosureType)
+
+	compCopy.FieldByName("State").FieldByName(LocalStateClosureName).Set(
+		newClosurePtr,
+	)
+
+	if !state.LocalStateClosure.Initialized {
+		logger.Debug("No input state (component first run). Default will be used.")
+
+		// copy ptr to the closure
+		// component Render func fill use it to write the initial values
+
+		return compCopy.Addr().Interface().(Comp[A])
+	}
+
+	logger.Debug("Filling component local state from input state",
+		zap.Any("state", stateClosureValue.Interface()),
+	)
+
+	newClosurePtr.Elem().FieldByName("Initialized").SetBool(
 		true,
 	)
 
-	// fmt.Println("nt.value", nt.FieldByName("State").FieldByName("LocalState").FieldByName("Value"))
-	// fmt.Println("nt.init", nt.FieldByName("State").FieldByName("LocalState").FieldByName("Initialized"))
+	newClosurePtr.Elem().FieldByName("Value").Set(
+		reflect.ValueOf(stateClosureValue.Interface()),
+	)
 
 	if wasapointer {
-		return nt.Addr().Interface().(Comp[A])
+		return compCopy.Addr().Interface().(Comp[A])
 	}
-	return nt.Interface().(Comp[A])
+
+	return compCopy.Interface().(Comp[A])
 }
 
 // Returns a struct that will be used to request the global context
@@ -370,7 +352,7 @@ func (ucv UsedContextValue) Equal(other UsedContextValue) bool {
 	return reflect.DeepEqual(ucv.Interface(), other.Interface())
 }
 
-func ReflectDeref(v reflect.Value) reflect.Value {
+func ReflectDerefValue(v reflect.Value) reflect.Value {
 
 	if v.Kind() == reflect.Ptr {
 		return v.Elem()
