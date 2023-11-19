@@ -81,10 +81,11 @@ func (r *TelegramChatRenderer) Message(ctx context.Context, props *ChatRendererM
 			}
 		} else {
 			editedMessage, err := r.Bot.EditMessageText(ctx, &bot.EditMessageTextParams{
-				ChatID:      r.ChatID,
-				MessageID:   props.TargetMessage.ID,
-				Text:        props.Text,
-				ReplyMarkup: props.ReplyMarkup,
+				ChatID:                r.ChatID,
+				MessageID:             props.TargetMessage.ID,
+				Text:                  props.Text,
+				ReplyMarkup:           props.ReplyMarkup,
+				DisableWebPagePreview: true,
 			})
 
 			if err != nil {
@@ -97,9 +98,11 @@ func (r *TelegramChatRenderer) Message(ctx context.Context, props *ChatRendererM
 	}
 
 	message, err := r.Bot.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID:      r.ChatID,
-		Text:        props.Text,
-		ReplyMarkup: props.ReplyMarkup,
+		ChatID:                r.ChatID,
+		Text:                  props.Text,
+		ReplyMarkup:           props.ReplyMarkup,
+		DisableWebPagePreview: true,
+		// ParseMode:             models.ParseModeMarkdown,
 	})
 
 	if err != nil {

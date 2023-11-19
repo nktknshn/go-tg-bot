@@ -60,8 +60,10 @@ type outputImpl[A any] struct {
 }
 
 type NoCallbackStruct struct{}
+type NextRowStruct struct{}
 
 var NoCallback = NoCallbackStruct{}
+var NextRow = NextRowStruct{}
 
 func NewOutput[A any]() *outputImpl[A] {
 	return &outputImpl[A]{Result: make([]Element, 0)}
@@ -84,7 +86,10 @@ func (o *outputImpl[A]) MessagePartf(format string, args ...interface{}) {
 }
 
 func (o *outputImpl[A]) Button(text string, handler func() A, options ...interface{}) {
-	var noCallback = false
+	var (
+		noCallback = false
+		nextRow    = false
+	)
 
 	if options == nil {
 		options = make([]interface{}, 0)
@@ -94,10 +99,12 @@ func (o *outputImpl[A]) Button(text string, handler func() A, options ...interfa
 		switch option.(type) {
 		case NoCallbackStruct:
 			noCallback = true
+		case NextRowStruct:
+			nextRow = true
 		}
 	}
 
-	o.Result = append(o.Result, Button(text, handler, text, false, noCallback))
+	o.Result = append(o.Result, Button(text, handler, text, nextRow, noCallback))
 }
 
 func (o *outputImpl[A]) ButtonsRow(texts []string, handler func(int, string) A) {

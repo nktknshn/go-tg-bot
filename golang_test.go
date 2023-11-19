@@ -2,8 +2,16 @@ package tgbot_test
 
 import (
 	"fmt"
+	"html"
 	"testing"
 )
+
+func TestHtmlUnescape(t *testing.T) {
+	// conclusion: html.UnescapeString() does not unescape &amp; to &
+
+	s := "&#128995; 19.11 Встреча с группой «Обними Кита»"
+	fmt.Println(html.UnescapeString(s))
+}
 
 func TestStructSlice(t *testing.T) {
 

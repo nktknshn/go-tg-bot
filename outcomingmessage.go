@@ -109,7 +109,10 @@ type OutcomingTextMessage[A any] struct {
 }
 
 func (t *OutcomingTextMessage[T]) String() string {
-	return fmt.Sprintf("OutcomingTextMessage{text: %s, buttons: %v, isComplete: %v}", t.Text, t.Buttons, t.isComplete)
+	// maximum 20 chars from t.Text
+	text := t.Text[:20]
+
+	return fmt.Sprintf("OutcomingTextMessage{text: %s, buttons: %v, isComplete: %v}", text, t.Buttons, t.isComplete)
 }
 
 func EqualReplyKeyboardMarkup(a models.ReplyKeyboardMarkup, b models.ReplyKeyboardMarkup) bool {
@@ -238,7 +241,13 @@ func (t *OutcomingTextMessage[T]) InlineKeyboardMarkup() models.InlineKeyboardMa
 }
 
 func (t *OutcomingTextMessage[T]) AddButton(button *ElementButton[T]) {
-	t.Buttons[0] = append(t.Buttons[0], *button)
+	emptyButtons := len(t.Buttons) == 1 && len(t.Buttons[0]) == 0
+
+	if button.NextRow && !emptyButtons {
+		t.Buttons = append(t.Buttons, make([]ElementButton[T], 0))
+	}
+
+	t.Buttons[len(t.Buttons)-1] = append(t.Buttons[len(t.Buttons)-1], *button)
 }
 
 func (t *OutcomingTextMessage[T]) AddButtonsRow(buttonsRow *ElementButtonsRow[T]) {

@@ -71,10 +71,13 @@ func ReflectCompLocalState[A any](comp Comp[A], ls State[any]) Comp[A] {
 	// isPointer := false
 	// TODO
 	wasapointer := false
+
 	t := reflect.TypeOf(comp)
+	v := reflect.ValueOf(comp)
 
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
+		v = v.Elem()
 		wasapointer = true
 	}
 
@@ -89,7 +92,6 @@ func ReflectCompLocalState[A any](comp Comp[A], ls State[any]) Comp[A] {
 		return comp
 	}
 
-	v := reflect.ValueOf(comp).Elem()
 	// vp := reflect.ValueOf(&comp).Elem()
 
 	// fmt.Println("v: ", v)

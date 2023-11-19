@@ -12,6 +12,8 @@ type PreRenderData[S any, A any, C any] struct {
 }
 
 func (a *Application[S, A, C]) PreRender(ac *ApplicationContext[S, A, C]) *PreRenderData[S, A, C] {
+	// /	logger := ac.Logger
+	logger := zap.NewNop()
 
 	comp := ac.App.StateToComp(ac.State.AppState)
 
@@ -27,7 +29,7 @@ func (a *Application[S, A, C]) PreRender(ac *ApplicationContext[S, A, C]) *PreRe
 
 	res := ElementsToMessagesAndHandlers[A](els)
 
-	ac.Logger.Debug("PreRender",
+	logger.Debug("PreRender",
 		zap.Any("OutcomingMessages", res))
 
 	var inputHandler ChatInputHandler[any]
@@ -37,14 +39,14 @@ func (a *Application[S, A, C]) PreRender(ac *ApplicationContext[S, A, C]) *PreRe
 
 		inputHandler = func(text string) any {
 
-			ac.Logger.Debug("InputHandler",
+			logger.Debug("InputHandler",
 				zap.Any("text", text),
 				zap.Any("handlers_count", len(handlers)))
 
 			for idx, h := range handlers {
 				res := h.Handler(text)
 
-				ac.Logger.Debug("InputHandler",
+				logger.Debug("InputHandler",
 					zap.Any("idx", idx),
 					zap.Any("res", ReflectStructName(res)),
 				)
@@ -74,7 +76,7 @@ func (a *Application[S, A, C]) PreRender(ac *ApplicationContext[S, A, C]) *PreRe
 	return &PreRenderData[S, A, C]{
 		InternalChatState: nextState,
 		ExecuteRender: func(renderer ChatRenderer) ([]RenderedElement, error) {
-			ac.Logger.Info("ExecuteRender")
+			logger.Info("ExecuteRender")
 
 			actions := GetRenderActions[A](
 				ac.State.RenderedElements,
@@ -82,7 +84,7 @@ func (a *Application[S, A, C]) PreRender(ac *ApplicationContext[S, A, C]) *PreRe
 			)
 
 			for _, a := range actions {
-				ac.Logger.Info("RenderActions", zap.Any("action", a))
+				logger.Info("RenderActions", zap.Any("action", a))
 			}
 
 			rendered, err := ExecuteRenderActions[A](
@@ -91,15 +93,15 @@ func (a *Application[S, A, C]) PreRender(ac *ApplicationContext[S, A, C]) *PreRe
 				actions,
 			)
 
-			ac.Logger.Info("Rendered", zap.Any("count", len(rendered)))
+			logger.Info("Rendered", zap.Any("count", len(rendered)))
 
 			if err != nil {
-				ac.Logger.Error("Error rendering", zap.Error(err))
+				logger.Error("Error rendering", zap.Error(err))
 				return []RenderedElement{}, err
 			}
 
 			for _, r := range rendered {
-				ac.Logger.Info("Rendered", zap.Any("element", r.renderedKind()))
+				logger.Info("Rendered", zap.Any("element", r.renderedKind()))
 			}
 
 			return rendered, nil

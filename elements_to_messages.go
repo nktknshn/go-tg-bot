@@ -104,13 +104,14 @@ func ElementsToMessagesAndHandlers[A any](elements []Element) *ProcessElementsRe
 
 		case *ElementMessagePart:
 			_lastMessage := getLastMessage()
+
 			text := element.(*ElementMessagePart).Text
 
 			if _lastMessage.isComplete {
-				messages = append(messages, NewOutcomingTextMessage[A](text))
+				lastMessage = NewOutcomingTextMessage[A](text)
+				messages = append(messages, lastMessage)
 			} else {
 				getLastMessage().ConcatText(text)
-
 			}
 
 		case *ElementCompleteMessage:

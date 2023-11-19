@@ -46,9 +46,6 @@ func (c *RunResultComponent[A]) RunResultKind() string {
 // extract local state tree from the component
 func (c *RunResultComponent[A]) ExtractLocalStateTree() *LocalStateTree {
 
-	// fmt.Println("ExtractLocalStateTree", c.compID)
-	// fmt.Println("Closure", c.inputLocalStateClosure)
-
 	children := make([]*LocalStateTree, len(c.output))
 
 	for idx, e := range c.output {
@@ -114,9 +111,20 @@ type RerunResultUpdated[A any] struct {
 	oldChildren []RunResult
 }
 
+func (c *RerunResultUpdated[A]) ExtractLocalStateTree() *LocalStateTree {
+	return c.RunResultComponent.ExtractLocalStateTree()
+}
+
 type RerunResultUnchanged[A any] struct {
 	RunResultComponent[A]
 	rerunOutput []RerunResult
+}
+
+func (c *RerunResultUnchanged[A]) ExtractLocalStateTree() *LocalStateTree {
+	ac := RunResultFromRerun[A](c)
+	bc := ac.(*RunResultComponent[A])
+	return bc.ExtractLocalStateTree()
+
 }
 
 func (c *RerunResultUpdated[A]) RerunResultKind() string {
@@ -253,7 +261,7 @@ func RunComponentTree[A any](ctx *RunContext[A], comp Comp[A]) RunResultComponen
 		ctx.localStateTree.CompId = reflectCompId[A](comp)
 	} else {
 		ctx.logger.Debug("Existing local state tree will be used",
-			zap.Any("localStateTree", ctx.localStateTree))
+			zap.Any("localStateTree", ctx.localStateTree.LocalStateClosure))
 	}
 
 	// creates new GetSet reusing ctx.localStateTree.LocalStateClosure
@@ -321,14 +329,14 @@ func RunComponentTree[A any](ctx *RunContext[A], comp Comp[A]) RunResultComponen
 		inputProps:   reflectCompProps[A](comp),
 		inputContext: usedContextValue,
 		// TODO FIX
-		inputLocalStateClosure: *localState.LocalState,
+		inputLocalStateClosure: closure,
 		output:                 output,
 		compID:                 reflectCompId[A](comp),
 	}
 
 	// ctx.logger.Debug("local state", zap.Any("localState", runResult.inputLocalStateClosure))
 
-	ctx.logger.Debug("RunComponentTree done")
+	ctx.logger.Debug("RunComponentTree done", zap.String("compId", reflectCompId[A](comp)))
 	// , zap.Any("runResult", runResult)
 
 	return runResult
@@ -344,6 +352,7 @@ func RerunComponentTree[A any](
 	ctx.logger.Debug("Detect if the component needs a rerun",
 		zap.Any("comp", reflectCompId[A](comp)),
 		zap.Any("props", reflectCompProps[A](comp)),
+		zap.Any("used_context", ctx.prevRunResult.inputContext),
 	)
 
 	localStateClosure := ctx.localStateTree.LocalStateClosure
@@ -382,6 +391,8 @@ func RerunComponentTree[A any](
 		)
 
 		rerun = true
+	} else {
+		ctx.logger.Debug("The global context is the same")
 	}
 
 	if ctx.prevRunResult.compID != reflectCompId[A](comp) {
@@ -408,7 +419,7 @@ func RerunComponentTree[A any](
 	}
 
 	if rerun {
-		ctx.logger.Debug("Rerunning component")
+		ctx.logger.Debug("Rerunning component", zap.Any("comp", reflectCompId[A](comp)))
 
 		runResult := RunComponentTree(&RunContext[A]{
 			logger: ctx.logger,
@@ -438,8 +449,10 @@ func RerunComponentTree[A any](
 		}
 
 		for idx, e := range ctx.prevRunResult.output {
+
 			switch e := e.(type) {
 			case *RunResultComponent[A]:
+				ctx.logger.Debug("Reruning comp", zap.String("compId", e.compID))
 
 				rerunResult := RerunComponentTree[A](
 					&RerunContext[A]{
@@ -448,16 +461,20 @@ func RerunComponentTree[A any](
 						localStateTree: *(*childrenState)[idx],
 						globalContext:  ctx.globalContext,
 						componentIndex: append(ctx.componentIndex, idx),
-						parents:        append(ctx.parents, ElementComponent[A]{(*e).comp}),
+						parents:        append(ctx.parents, ElementComponent[A]{e.comp}),
 					},
-					(*e).comp,
+					e.comp,
 				)
+
+				ctx.logger.Debug("rerun done", zap.String("compId", e.compID))
 
 				returnOutput = append(returnOutput, rerunResult)
 			case *RunResultElement:
 				returnOutput = append(returnOutput, &ReRunResultElement{*e})
 			}
 		}
+
+		ctx.logger.Debug("RerunComponentTree done", zap.String("compId", reflectCompId[A](comp)))
 
 		return &RerunResultUnchanged[A]{
 			RunResultComponent: RunResultComponent[A]{
