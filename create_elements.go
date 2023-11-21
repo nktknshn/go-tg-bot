@@ -8,39 +8,39 @@ import (
 
 // holds the inputs and outputs of the previous render
 // and the extracted local states tree
-type RunResultWithStateTree[A any] struct {
-	RunResult      RunResultComponent[A]
-	LocalStateTree *LocalStateTree
+type runResultWithStateTree struct {
+	RunResult      runResultComponent
+	LocalStateTree *localStateTree
 }
 
-type CreateElementsResult[A any] struct {
-	Elements       []Element
-	NewElements    []Element
-	RemoveElements []Element
-	TreeState      RunResultWithStateTree[A]
+type createElementsResult struct {
+	Elements       []anyElement
+	NewElements    []anyElement
+	RemoveElements []anyElement
+	TreeState      runResultWithStateTree
 }
 
-func (r CreateElementsResult[any]) String() string {
+func (r createElementsResult) String() string {
 	result := ""
 
 	result += "CreateElementsResult"
-	result += fmt.Sprintf("Elements: %v", Elements(r.Elements))
+	result += fmt.Sprintf("Elements: %v", elementsList(r.Elements))
 
 	return result
 }
 
 // given
-func CreateElements[A any](
-	comp Comp[A],
-	globalContext GlobalContextTyped[any],
-	stateTree *RunResultWithStateTree[A],
-) *CreateElementsResult[A] {
+func createElements(
+	comp Comp,
+	gc globalContext[any],
+	stateTree *runResultWithStateTree,
+) *createElementsResult {
 	logger := GetLogger()
 	// logger := zap.NewNop()
 
 	logger.Debug("CreateElements",
-		zap.String("compId", reflectCompId[A](comp)),
-		zap.Any("props", reflectCompProps[A](comp)),
+		zap.String("compId", reflectCompId(comp)),
+		zap.Any("props", reflectCompProps(comp)),
 	)
 
 	logger.Debug("StateTree", zap.Any("stateTree", stateTree))
@@ -49,12 +49,12 @@ func CreateElements[A any](
 		logger.Debug("Running first time (stateTree == nil)")
 
 		// this is the first render
-		runResult := RunComponentTree[A](&RunContext[A]{
+		runResult := runComponentTree(&runContext{
 			logger:         logger,
-			globalContext:  globalContext,
+			globalContext:  gc,
 			localStateTree: nil,
 			componentIndex: []int{0},
-			parents:        make([]ElementComponent[A], 0),
+			parents:        make([]elementComponent, 0),
 		}, comp)
 
 		elements := runResult.ExtractElements()
@@ -62,11 +62,11 @@ func CreateElements[A any](
 		logger.Debug("Extracting local state tree from the run")
 		localStateTree := runResult.ExtractLocalStateTree()
 
-		return &CreateElementsResult[A]{
+		return &createElementsResult{
 			Elements:       elements,
 			NewElements:    elements,
-			RemoveElements: make([]Element, 0),
-			TreeState: RunResultWithStateTree[A]{
+			RemoveElements: make([]anyElement, 0),
+			TreeState: runResultWithStateTree{
 				RunResult:      runResult,
 				LocalStateTree: localStateTree,
 			},
@@ -76,26 +76,26 @@ func CreateElements[A any](
 	logger.Debug("This is not the first render (stateTree != nil)")
 	// logger.Debug("used context", zap.Any("context", stateTree.RunResult.inputContext))
 
-	rerunResult := RerunComponentTree[A](
-		&RerunContext[A]{
+	rerunResult := rerunComponentTree(
+		&rerunContext{
 			logger:         logger,
-			globalContext:  globalContext,
+			globalContext:  gc,
 			prevRunResult:  stateTree.RunResult,
 			localStateTree: *stateTree.LocalStateTree,
 			componentIndex: []int{0},
-			parents:        make([]ElementComponent[A], 0),
+			parents:        make([]elementComponent, 0),
 		},
 		comp,
 	)
 
 	logger.Debug("Extracting local state tree from rerun")
 
-	var localStateTree *LocalStateTree
+	var localStateTree *localStateTree
 
 	switch r := rerunResult.(type) {
-	case *RerunResultUnchanged[A]:
+	case *rerunResultUnchanged:
 		localStateTree = r.ExtractLocalStateTree()
-	case *RerunResultUpdated[A]:
+	case *rerunResultUpdated:
 		localStateTree = r.ExtractLocalStateTree()
 	}
 
@@ -103,17 +103,17 @@ func CreateElements[A any](
 
 	logger.Debug("Forming RunResult from rerun")
 
-	rr := RunResultFromRerun[A](rerunResult)
+	rr := runResultFromRerun(rerunResult)
 
-	aa := ExtractElementsFromRerun(rerunResult)
+	aa := extractElementsFromRerun(rerunResult)
 
-	if rrr, ok := rr.(*RunResultComponent[A]); ok {
+	if rrr, ok := rr.(*runResultComponent); ok {
 
-		return &CreateElementsResult[A]{
+		return &createElementsResult{
 			Elements:       aa.elements,
 			NewElements:    aa.newElements,
 			RemoveElements: aa.removedElements,
-			TreeState: RunResultWithStateTree[A]{
+			TreeState: runResultWithStateTree{
 				RunResult:      *rrr,
 				LocalStateTree: localStateTree,
 			},
@@ -125,16 +125,16 @@ func CreateElements[A any](
 
 }
 
-func RunResultFromRerun[A any](rerunResult RerunResult) RunResult {
+func runResultFromRerun(rerunResult RerunResult) runResult {
 	switch r := rerunResult.(type) {
-	case *RerunResultUnchanged[A]:
-		output := make([]RunResult, len(r.output))
+	case *rerunResultUnchanged:
+		output := make([]runResult, len(r.output))
 
 		for i, o := range r.rerunOutput {
-			output[i] = RunResultFromRerun[A](o)
+			output[i] = runResultFromRerun(o)
 		}
 
-		return &RunResultComponent[A]{
+		return &runResultComponent{
 			comp:                   r.comp,
 			compID:                 r.compID,
 			inputProps:             r.inputProps,
@@ -143,9 +143,9 @@ func RunResultFromRerun[A any](rerunResult RerunResult) RunResult {
 			output:                 output,
 		}
 
-	case *RerunResultUpdated[A]:
-		return &r.RunResultComponent
-	case *ReRunResultElement:
+	case *rerunResultUpdated:
+		return &r.runResultComponent
+	case *reRunResultElement:
 		return &r.element
 	}
 

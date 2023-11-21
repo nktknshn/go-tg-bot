@@ -7,7 +7,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type ChatHandlerFactory func(*TelegramContext) ChatHandler
+type ChatHandlerFactory func(*TelegramContext) chatHandler
 
 type ChatsDispatcherProps struct {
 	ChatFactory ChatHandlerFactory
@@ -16,14 +16,14 @@ type ChatsDispatcherProps struct {
 // ChatsDispatcher is a map of chats
 // dispatches updates to chats
 type ChatsDispatcher struct {
-	ChatHandlers       map[int64]ChatHandler
+	ChatHandlers       map[int64]chatHandler
 	ChatHandlerFactory ChatHandlerFactory
 	Logger             *zap.Logger
 }
 
 func NewChatsDispatcher(props *ChatsDispatcherProps) *ChatsDispatcher {
 	return &ChatsDispatcher{
-		ChatHandlers:       make(map[int64]ChatHandler),
+		ChatHandlers:       make(map[int64]chatHandler),
 		ChatHandlerFactory: props.ChatFactory,
 		Logger:             GetLogger(),
 	}
@@ -42,7 +42,7 @@ func (cd *ChatsDispatcher) HandleUpdate(ctx context.Context, bot TelegramBot, up
 
 	logger := cd.Logger.With(zap.Int64("updateID", update.ID))
 
-	chatID := GetUpdateChatId(update)
+	chatID := getUpdateChatId(update)
 
 	if chatID == 0 {
 		logger.Debug("Update has no chat id, skipping.")

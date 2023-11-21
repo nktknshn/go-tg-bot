@@ -8,51 +8,12 @@ import (
 	"github.com/go-telegram/bot/models"
 )
 
-var ErrMessageNotFound = fmt.Errorf("message not found")
-
-type MessageDeleter interface {
-	DeleteMessage(ctx context.Context, params *bot.DeleteMessageParams) (bool, error)
-}
-
-type MessageEditor interface {
-	EditMessageText(ctx context.Context, params *bot.EditMessageTextParams) (*models.Message, error)
-}
-
-type MessageSender interface {
-	SendMessage(ctx context.Context, params *bot.SendMessageParams) (*models.Message, error)
-}
-
-type ChatRenderer interface {
-	Message(context.Context, *ChatRendererMessageProps) (*models.Message, error)
-	Delete(messageId int) error
-}
-
-type ChatRendererBot interface {
-	MessageDeleter
-	MessageEditor
-	MessageSender
-}
-
-type TelegramChatRenderer struct {
-	Bot    ChatRendererBot
+type telegramChatRenderer struct {
+	Bot    TelegramBot
 	ChatID int64
 }
 
-func NewTelegramChatRenderer(bot TelegramBot, chatID int64) *TelegramChatRenderer {
-	return &TelegramChatRenderer{
-		Bot:    bot,
-		ChatID: chatID,
-	}
-}
-
-type ChatRendererMessageProps struct {
-	Text          string
-	ReplyMarkup   models.ReplyMarkup
-	TargetMessage *models.Message
-	RemoveTarget  bool
-}
-
-func (r *TelegramChatRenderer) Delete(messageId int) error {
+func (r *telegramChatRenderer) Delete(messageId int) error {
 	removed, err := r.Bot.DeleteMessage(context.Background(), &bot.DeleteMessageParams{
 		ChatID:    r.ChatID,
 		MessageID: messageId,
@@ -69,7 +30,7 @@ func (r *TelegramChatRenderer) Delete(messageId int) error {
 	return nil
 }
 
-func (r *TelegramChatRenderer) Message(ctx context.Context, props *ChatRendererMessageProps) (*models.Message, error) {
+func (r *telegramChatRenderer) Message(ctx context.Context, props *ChatRendererMessageProps) (*models.Message, error) {
 	if props.TargetMessage != nil {
 
 		// the message must be removed
@@ -110,4 +71,11 @@ func (r *TelegramChatRenderer) Message(ctx context.Context, props *ChatRendererM
 	}
 
 	return message, nil
+}
+
+func NewTelegramChatRenderer(bot TelegramBot, chatID int64) *telegramChatRenderer {
+	return &telegramChatRenderer{
+		Bot:    bot,
+		ChatID: chatID,
+	}
 }

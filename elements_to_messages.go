@@ -6,26 +6,26 @@ import (
 	"go.uber.org/zap"
 )
 
-type ProcessElementsResult[A any] struct {
-	OutcomingMessages []OutcomingMessage
-	InputHandlers     []ElementInputHandler[A]
-	CallbackHandler   ChatCallbackHandler[A]
-	CallbackMap       callbackMap[A]
-	BottomButtons     []ElementBottomButton
+type processElementsResult struct {
+	OutcomingMessages []outcomingMessage
+	InputHandlers     []elementInputHandler
+	CallbackHandler   chatCallbackHandler
+	CallbackMap       callbackMap
+	BottomButtons     []elementBottomButton
 	isComplete        bool
 }
 
-func (per *ProcessElementsResult[A]) lastTextMessage() *OutcomingTextMessage[A] {
+func (per *processElementsResult) lastTextMessage() *outcomingTextMessage {
 	for i := len(per.OutcomingMessages) - 1; i >= 0; i-- {
-		if per.OutcomingMessages[i].OutcomingKind() == KindOutcomingTextMessage {
-			return per.OutcomingMessages[i].(*OutcomingTextMessage[A])
+		if per.OutcomingMessages[i].OutcomingKind() == kindOutcomingTextMessage {
+			return per.OutcomingMessages[i].(*outcomingTextMessage)
 		}
 	}
 	return nil
 }
 
 // adds keyboard extra to the last message
-func (per *ProcessElementsResult[A]) Complete() {
+func (per *processElementsResult) Complete() {
 
 	if per.isComplete {
 		globalLogger.Error("ProcessElementsResult.Complete: already complete")
@@ -46,7 +46,7 @@ func (per *ProcessElementsResult[A]) Complete() {
 	per.isComplete = true
 }
 
-func (per *ProcessElementsResult[A]) String() string {
+func (per *processElementsResult) String() string {
 	messagesStr := ""
 
 	for _, m := range per.OutcomingMessages {
@@ -65,27 +65,27 @@ func (per *ProcessElementsResult[A]) String() string {
 	)
 }
 
-func ElementsToMessagesAndHandlers[A any](elements []Element) *ProcessElementsResult[A] {
-	messages := make([]OutcomingMessage, 0)
-	inputHandlers := make([]ElementInputHandler[A], 0)
-	bottomButtons := make([]ElementBottomButton, 0)
+func elementsToMessagesAndHandlers(elements []anyElement) *processElementsResult {
+	messages := make([]outcomingMessage, 0)
+	inputHandlers := make([]elementInputHandler, 0)
+	bottomButtons := make([]elementBottomButton, 0)
 	// callbackHandlers := make(map[string]func() A)
 
-	var lastMessage *OutcomingTextMessage[A]
+	var lastMessage *outcomingTextMessage
 
-	getLastMessage := func() *OutcomingTextMessage[A] {
+	getLastMessage := func() *outcomingTextMessage {
 		if lastMessage != nil {
 			return lastMessage
 		}
 
 		for _, message := range messages {
-			if message.OutcomingKind() == KindOutcomingTextMessage {
-				lastMessage = message.(*OutcomingTextMessage[A])
+			if message.OutcomingKind() == kindOutcomingTextMessage {
+				lastMessage = message.(*outcomingTextMessage)
 			}
 		}
 
 		if lastMessage == nil {
-			lastMessage = NewOutcomingTextMessage[A]("")
+			lastMessage = newOutcomingTextMessage("")
 			messages = append(messages, lastMessage)
 		}
 
@@ -95,51 +95,51 @@ func ElementsToMessagesAndHandlers[A any](elements []Element) *ProcessElementsRe
 	for _, element := range elements {
 		switch el := element.(type) {
 
-		case *ElementMessage:
+		case *elementMessage:
 			globalLogger.Debug("ElementMessage", zap.Any("el", el))
 
-			outcoming := NewOutcomingTextMessage[A](el.Text)
+			outcoming := newOutcomingTextMessage(el.Text)
 			lastMessage = outcoming
 			messages = append(messages, outcoming)
 
-		case *ElementMessagePart:
+		case *elementMessagePart:
 			_lastMessage := getLastMessage()
 
-			text := element.(*ElementMessagePart).Text
+			text := element.(*elementMessagePart).Text
 
 			if _lastMessage.isComplete {
-				lastMessage = NewOutcomingTextMessage[A](text)
+				lastMessage = newOutcomingTextMessage(text)
 				messages = append(messages, lastMessage)
 			} else {
 				getLastMessage().ConcatText(text)
 			}
 
-		case *ElementCompleteMessage:
+		case *elementCompleteMessage:
 			if lastMessage != nil {
 				getLastMessage().SetComplete()
 			}
 
-		case *ElementButton[A]:
-			getLastMessage().AddButton(element.(*ElementButton[A]))
+		case *elementButton:
+			getLastMessage().AddButton(element.(*elementButton))
 
-		case *ElementButtonsRow[A]:
-			getLastMessage().AddButtonsRow(element.(*ElementButtonsRow[A]))
+		case *elementButtonsRow:
+			getLastMessage().AddButtonsRow(element.(*elementButtonsRow))
 
-		case *ElementInputHandler[A]:
+		case *elementInputHandler:
 			inputHandlers = append(inputHandlers, *el)
 
-		case *ElementBottomButton:
+		case *elementBottomButton:
 			bottomButtons = append(bottomButtons, *el)
 
-		case *ElementUserMessage:
-			messages = append(messages, &OutcomingUserMessage{*el})
+		case *elementUserMessage:
+			messages = append(messages, &outcomingUserMessage{*el})
 		}
 	}
 
-	callbackMap := getCallbackHandlersMap[A](messages)
-	callbackHandler := callbackMapToHandler[A](callbackMap)
+	callbackMap := getCallbackHandlersMap(messages)
+	callbackHandler := callbackMapToHandler(callbackMap)
 
-	return &ProcessElementsResult[A]{
+	return &processElementsResult{
 		OutcomingMessages: messages,
 		InputHandlers:     inputHandlers,
 		CallbackMap:       callbackMap,

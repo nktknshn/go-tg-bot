@@ -1,9 +1,7 @@
-package tgbot_test
+package tgbot
 
 import (
 	"testing"
-
-	tgbot "github.com/nktknshn/go-tg-bot"
 )
 
 type App1State struct {
@@ -15,10 +13,10 @@ type App1 struct {
 	// props
 	Counter int
 	// local state
-	State tgbot.State[App1State]
+	State CompState[App1State]
 }
 
-func (a *App1) Render(o tgbot.OO) {
+func (a *App1) Render(o O) {
 	// TODO make it INIT
 	lsgs := a.State.Init(App1State{
 		night: false,
@@ -28,10 +26,10 @@ func (a *App1) Render(o tgbot.OO) {
 	o.Message("Hello")
 
 	if lsgs.Get().night {
-		tgbot.GetLogger().Debug("night")
+		GetLogger().Debug("night")
 		o.Messagef("Night: %v", lsgs.Get().hour)
 	} else {
-		tgbot.GetLogger().Debug("day")
+		GetLogger().Debug("day")
 		o.Messagef("Day: %v", lsgs.Get().hour)
 	}
 
@@ -49,14 +47,14 @@ type EmptyContext struct{}
 
 func TestRunComponent(t *testing.T) {
 	comp := App1{Counter: 1}
-	globalContext := tgbot.NewGlobalContextTyped[any](EmptyContext{})
+	globalContext := newGlobalContextTyped[any](EmptyContext{})
 
-	tgbot.RunComponent(
-		tgbot.GetLogger(),
+	runComponent(
+		GetLogger(),
 		&comp,
 		globalContext,
-		tgbot.State[any]{
-			LocalStateClosure: tgbot.LocalStateClosure[any]{
+		CompState[any]{
+			LocalStateClosure: &localStateClosure[any]{
 				Initialized: true,
 				Value:       App1State{night: true, hour: 2},
 			},
@@ -67,17 +65,17 @@ func TestRunComponent(t *testing.T) {
 
 func TestRunCreateElements1(t *testing.T) {
 
-	globalContext := tgbot.NewGlobalContextTyped[any](EmptyContext{})
+	globalContext := newGlobalContextTyped[any](EmptyContext{})
 
 	comp := App1{Counter: 1}
 
-	res := tgbot.CreateElements[any](&comp, globalContext, nil)
+	res := createElements(&comp, globalContext, nil)
 
 	if len(res.Elements) != 4 {
 		t.Fatal("len(res.Elements) != 4")
 	}
 
-	if res.Elements[1].(*tgbot.ElementMessage).Text != "Day: 3" {
+	if res.Elements[1].(*elementMessage).Text != "Day: 3" {
 		t.Fatal("Day: 3 was expected")
 	}
 
@@ -91,13 +89,13 @@ func TestRunCreateElements1(t *testing.T) {
 		}
 	})
 
-	res = tgbot.CreateElements[any](&comp, globalContext, &res.TreeState)
+	res = createElements(&comp, globalContext, &res.TreeState)
 
 	if len(res.Elements) != 4 {
 		t.Fatal("len(res.Elements) != 4")
 	}
 
-	if res.Elements[1].(*tgbot.ElementMessage).Text != "Night: 8" {
+	if res.Elements[1].(*elementMessage).Text != "Night: 8" {
 		t.Fatal("Night: 8 was expected")
 	}
 
@@ -109,7 +107,7 @@ type TestNestedCompContext struct {
 
 type TestNestedCompApp struct{}
 
-func (c *TestNestedCompApp) Render(o tgbot.OO) {
+func (c *TestNestedCompApp) Render(o O) {
 	o.Message("App1")
 
 	o.Comp(&TestNestedComp1{})
@@ -123,7 +121,7 @@ type TestNestedComp1 struct {
 	Context TestNestedCompContext
 }
 
-func (c *TestNestedComp1) Render(o tgbot.OO) {
+func (c *TestNestedComp1) Render(o O) {
 	o.Message("Comp1")
 
 	if c.Context.Flag1 {
@@ -135,32 +133,32 @@ func (c *TestNestedComp1) Render(o tgbot.OO) {
 
 type TestNestedComp2 struct{}
 
-func (c *TestNestedComp2) Render(o tgbot.OO) {
+func (c *TestNestedComp2) Render(o O) {
 	o.Message("Comp2")
 
 }
 
 type TestNestedComp3 struct{}
 
-func (c *TestNestedComp3) Render(o tgbot.OO) {
+func (c *TestNestedComp3) Render(o O) {
 	o.Message("Comp3")
 }
 
 func TestNestedComp(t *testing.T) {
 
-	globalContext := tgbot.NewGlobalContextTyped[any](TestNestedCompContext{
+	globalContext := newGlobalContextTyped[any](TestNestedCompContext{
 		Flag1: false,
 	})
 
 	t.Log("globalContext", globalContext)
 
-	res := tgbot.CreateElements(&TestNestedCompApp{}, globalContext, nil)
+	res := createElements(&TestNestedCompApp{}, globalContext, nil)
 
-	globalContext = tgbot.NewGlobalContextTyped[any](TestNestedCompContext{
+	globalContext = newGlobalContextTyped[any](TestNestedCompContext{
 		Flag1: true,
 	})
 
-	res = tgbot.CreateElements(&TestNestedCompApp{}, globalContext, &res.TreeState)
+	res = createElements(&TestNestedCompApp{}, globalContext, &res.TreeState)
 
 	t.Log(res.Elements)
 }

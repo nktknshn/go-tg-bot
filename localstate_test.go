@@ -1,48 +1,46 @@
-package tgbot_test
+package tgbot
 
 import (
 	"testing"
-
-	tgbot "github.com/nktknshn/go-tg-bot"
 )
 
 func TestLocalStateTree(t *testing.T) {
 	type V struct {
 		v int
 	}
-	ls := tgbot.LocalStateTree{
-		LocalStateClosure: &tgbot.LocalStateClosure[any]{
+	ls := localStateTree{
+		LocalStateClosure: &localStateClosure[any]{
 			Initialized: true,
 			Value:       1,
 		},
-		Children: &[]*tgbot.LocalStateTree{
+		Children: &[]*localStateTree{
 			nil,
 			{
-				LocalStateClosure: &tgbot.LocalStateClosure[any]{
+				LocalStateClosure: &localStateClosure[any]{
 					Initialized: true,
 					Value:       2,
 				},
-				Children: &[]*tgbot.LocalStateTree{},
+				Children: &[]*localStateTree{},
 			},
 			{
-				LocalStateClosure: &tgbot.LocalStateClosure[any]{
+				LocalStateClosure: &localStateClosure[any]{
 					Initialized: true,
 					Value:       3,
 				},
-				Children: &[]*tgbot.LocalStateTree{},
+				Children: &[]*localStateTree{},
 			},
 			{
-				LocalStateClosure: &tgbot.LocalStateClosure[any]{
+				LocalStateClosure: &localStateClosure[any]{
 					Initialized: true,
 					Value:       4,
 				},
-				Children: &[]*tgbot.LocalStateTree{
+				Children: &[]*localStateTree{
 					{
-						LocalStateClosure: &tgbot.LocalStateClosure[any]{
+						LocalStateClosure: &localStateClosure[any]{
 							Initialized: true,
 							Value:       V{v: 5},
 						},
-						Children: &[]*tgbot.LocalStateTree{},
+						Children: &[]*localStateTree{},
 					},
 				},
 			},

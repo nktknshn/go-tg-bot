@@ -16,7 +16,7 @@ func TryReadBotTokenFile() (string, error) {
 	return string(res), nil
 }
 
-func GetUsername(update *models.Update) string {
+func UpdateGetUsername(update *models.Update) string {
 	username := ""
 
 	if update.Message != nil {
@@ -26,7 +26,7 @@ func GetUsername(update *models.Update) string {
 	return username
 }
 
-func GetUpdateChatId(update *models.Update) int64 {
+func getUpdateChatId(update *models.Update) int64 {
 
 	if update.Message != nil {
 		return update.Message.Chat.ID

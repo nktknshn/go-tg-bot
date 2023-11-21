@@ -30,7 +30,7 @@ type Props struct {
 	Username string
 }
 
-func AppInputHandler(o tgbot.OO) {
+func AppInputHandler(o tgbot.O) {
 
 	o.InputHandler(func(s string) any {
 		if s == "/start" {
@@ -51,10 +51,10 @@ type WelcomState struct {
 
 type Welcom struct {
 	Username string `tgbot:"ctx"`
-	State    tgbot.State[WelcomState]
+	State    tgbot.CompState[WelcomState]
 }
 
-func (w *Welcom) Render(o tgbot.OO) {
+func (w *Welcom) Render(o tgbot.O) {
 
 	ls := w.State.Init(WelcomState{})
 
@@ -83,7 +83,7 @@ type App struct {
 	Props
 }
 
-func (app *App) Render(o tgbot.OO) {
+func (app *App) Render(o tgbot.O) {
 
 	AppInputHandler(o)
 
@@ -110,17 +110,17 @@ var counterApp = tgbot.NewApplication[State, any](
 
 		return State{Counter: 0, Username: uname}
 	},
-	func(s State) tgbot.Comp[any] {
+	func(s State) tgbot.Comp {
 		app := App{Props(s)}
 
 		return &app
 	},
-	func(ac *tgbot.ApplicationContext[State, any, any], tc *tgbot.TelegramContext, a any) {
+	func(ac *tgbot.ApplicationContext[State, any], tc *tgbot.TelegramContext, a any) {
 		// tc.Logger.Info("HandleAction", zap.Any("action", a))
 
 		switch a := a.(type) {
 		case ActionReload:
-			ac.State.RenderedElements = make([]tgbot.RenderedElement, 0)
+			ac.State.ResetRenderedElements()
 		case ActionCounter:
 			ac.State.AppState.Counter += a.Increment
 			ac.State.AppState.Error = a.Error

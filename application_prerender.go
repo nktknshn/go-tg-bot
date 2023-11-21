@@ -6,33 +6,39 @@ import (
 	"go.uber.org/zap"
 )
 
-type PreRenderData[S any, A any, C any] struct {
-	InternalChatState InternalChatState[S, A, C]
+type preRenderData[S any, C any] struct {
+	InternalChatState ChatState[S, C]
 	ExecuteRender     func(renderer ChatRenderer) ([]RenderedElement, error)
 }
 
-func (a *Application[S, A, C]) PreRender(ac *ApplicationContext[S, A, C]) *PreRenderData[S, A, C] {
+func (a *Application[S, C]) PreRender(ac *ApplicationContext[S, C]) *preRenderData[S, C] {
 	// /	logger := ac.Logger
 	logger := zap.NewNop()
 
 	comp := ac.App.StateToComp(ac.State.AppState)
 
-	globalContext := ac.App.CreateGlobalContext(ac.State)
+	var globalContext globalContext[C]
 
-	createElementsResult := CreateElements[A](
+	if ac.App.CreateGlobalContext != nil {
+		globalContext = newGlobalContextTyped[C](ac.App.CreateGlobalContext(ac.State))
+	} else {
+		globalContext = newEmptyGlobalContext()
+	}
+
+	createElementsResult := createElements(
 		comp,
-		globalContext.(GlobalContextTyped[any]),
-		ac.State.TreeState,
+		globalContext,
+		ac.State.treeState,
 	)
 
 	els := createElementsResult.Elements
 
-	res := ElementsToMessagesAndHandlers[A](els)
+	res := elementsToMessagesAndHandlers(els)
 
 	logger.Debug("PreRender",
 		zap.Any("OutcomingMessages", res))
 
-	var inputHandler ChatInputHandler[any]
+	var inputHandler chatInputHandler
 
 	if len(res.InputHandlers) > 0 {
 		handlers := res.InputHandlers
@@ -48,7 +54,7 @@ func (a *Application[S, A, C]) PreRender(ac *ApplicationContext[S, A, C]) *PreRe
 
 				logger.Debug("InputHandler",
 					zap.Any("idx", idx),
-					zap.Any("res", ReflectStructName(res)),
+					zap.Any("res", reflectStructName(res)),
 				)
 
 				_, goNext := res.(Next)
@@ -62,24 +68,24 @@ func (a *Application[S, A, C]) PreRender(ac *ApplicationContext[S, A, C]) *PreRe
 		}
 	}
 
-	nextState := InternalChatState[S, A, C]{
+	nextState := ChatState[S, C]{
 		ChatID:           ac.State.ChatID,
 		AppState:         ac.State.AppState,
-		RenderedElements: ac.State.RenderedElements,
-		InputHandler:     inputHandler,
-		CallbackHandler:  res.CallbackHandler,
+		renderedElements: ac.State.renderedElements,
+		inputHandler:     inputHandler,
+		callbackHandler:  res.CallbackHandler,
 		Renderer:         ac.State.Renderer,
-		TreeState:        &createElementsResult.TreeState,
-		Lock:             ac.State.Lock,
+		treeState:        &createElementsResult.TreeState,
+		lock:             ac.State.lock,
 	}
 
-	return &PreRenderData[S, A, C]{
+	return &preRenderData[S, C]{
 		InternalChatState: nextState,
 		ExecuteRender: func(renderer ChatRenderer) ([]RenderedElement, error) {
 			logger.Info("ExecuteRender")
 
-			actions := GetRenderActions[A](
-				ac.State.RenderedElements,
+			actions := getRenderActions(
+				ac.State.renderedElements,
 				res.OutcomingMessages,
 			)
 
@@ -87,7 +93,7 @@ func (a *Application[S, A, C]) PreRender(ac *ApplicationContext[S, A, C]) *PreRe
 				logger.Info("RenderActions", zap.Any("action", a))
 			}
 
-			rendered, err := ExecuteRenderActions[A](
+			rendered, err := executeRenderActions(
 				context.Background(),
 				ac.State.Renderer,
 				actions,

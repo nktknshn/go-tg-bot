@@ -3,12 +3,13 @@ package tgbot
 import (
 	"fmt"
 	"reflect"
-	"strings"
 
 	"go.uber.org/zap"
 )
 
-func reflectCompProps[A any](comp Comp[A]) any {
+const localStateClosureName = "LocalStateClosure"
+
+func reflectCompProps(comp Comp) any {
 
 	t := reflect.TypeOf(comp)
 	// .Elem()
@@ -61,21 +62,19 @@ func reflectCompProps[A any](comp Comp[A]) any {
 	return props.Interface()
 }
 
-func reflectCompId[A any](comp Comp[A]) string {
+func reflectCompId(comp Comp) string {
 	t := reflect.TypeOf(comp)
 	return fmt.Sprintf("%v", t)
 }
 
-const LocalStateClosureName = "LocalStateClosure"
-
 // sets the local state of the component if it has one defined
 // returns a copy of the component where State.LocalStateClosure initialized to zero value
 // and filled with values from state if any
-func ReflectCompLocalState[A any](
+func reflectCompLocalState(
 	logger *zap.Logger,
-	comp Comp[A],
-	state State[any],
-) Comp[A] {
+	comp Comp,
+	state CompState[any],
+) Comp {
 	logger.Debug("ReflectCompLocalState")
 
 	wasapointer := false
@@ -96,16 +95,16 @@ func ReflectCompLocalState[A any](
 		return comp
 	}
 
-	compStateClosurePtrField, ok := compStateField.Type.FieldByName(LocalStateClosureName)
+	compStateClosurePtrField, ok := compStateField.Type.FieldByName(localStateClosureName)
 
 	if !ok {
-		panic(fmt.Errorf("ReflectCompLocalState: %w", fmt.Errorf("Component has State but doesn't have LocalStateClosure")))
+		panic(fmt.Errorf("ReflectCompLocalState: %w", fmt.Errorf("component has State but doesn't have LocalStateClosure")))
 	}
 
 	compStateClosureType := compStateClosurePtrField.Type.Elem()
 
 	stateValue := reflect.ValueOf(state)
-	stateClosurePtr := stateValue.FieldByName(LocalStateClosureName)
+	stateClosurePtr := stateValue.FieldByName(localStateClosureName)
 	stateClosureValue := stateClosurePtr.Elem().FieldByName("Value")
 
 	compCopy := reflect.New(t).Elem()
@@ -125,7 +124,7 @@ func ReflectCompLocalState[A any](
 
 	newClosurePtr := reflect.New(compStateClosureType)
 
-	compCopy.FieldByName("State").FieldByName(LocalStateClosureName).Set(
+	compCopy.FieldByName("State").FieldByName(localStateClosureName).Set(
 		newClosurePtr,
 	)
 
@@ -135,7 +134,7 @@ func ReflectCompLocalState[A any](
 		// copy ptr to the closure
 		// component Render func fill use it to write the initial values
 
-		return compCopy.Addr().Interface().(Comp[A])
+		return compCopy.Addr().Interface().(Comp)
 	}
 
 	logger.Debug("Filling component local state from input state",
@@ -151,194 +150,13 @@ func ReflectCompLocalState[A any](
 	)
 
 	if wasapointer {
-		return compCopy.Addr().Interface().(Comp[A])
+		return compCopy.Addr().Interface().(Comp)
 	}
 
-	return compCopy.Interface().(Comp[A])
+	return compCopy.Interface().(Comp)
 }
 
-// Returns a struct that will be used to request the global context
-// Field that starts with Ctx will be queried
-// comp is a pointer
-func ReflectCompCtxReqs[A any](comp Comp[A]) reflect.Value {
-	var prefix = "Ctx"
-	t := reflect.TypeOf(comp)
-	v := reflect.ValueOf(comp)
-
-	if t.Kind() == reflect.Pointer {
-		t = t.Elem()
-		v = v.Elem()
-	}
-
-	fs := make([]reflect.StructField, 0)
-
-	for i := 0; i < t.NumField(); i++ {
-		f := t.Field(i)
-
-		// fmt.Println("field ", f.Name)
-
-		if !strings.HasPrefix(f.Name, prefix) {
-			// fmt.Println("no prefix ", prefix)
-			continue
-		}
-
-		fs = append(fs, reflect.StructField{
-			Name:      f.Name[len(prefix):],
-			PkgPath:   f.PkgPath,
-			Type:      f.Type,
-			Tag:       f.Tag,
-			Index:     f.Index,
-			Offset:    f.Offset,
-			Anonymous: f.Anonymous,
-		})
-	}
-
-	reqStructType := reflect.StructOf(fs)
-	reqStruct := reflect.New(reqStructType)
-
-	for _, f := range fs {
-		reqStruct.Elem().FieldByName(f.Name).Set(v.FieldByName(prefix + f.Name))
-	}
-
-	return reqStruct.Elem()
-}
-
-type ContextQuery struct {
-	reflect.Type
-}
-
-func (r ContextQuery) IsEmpty() bool {
-	return r.NumField() == 0
-}
-
-func (r ContextQuery) Get(key string) reflect.Type {
-	t, ok := r.FieldByName(key)
-
-	if !ok {
-		panic(ok)
-	}
-
-	return t.Type
-}
-
-func (r ContextQuery) String() string {
-	result := ""
-
-	for i := 0; i < r.NumField(); i++ {
-		result += fmt.Sprintf("%s: %v\n", r.Field(i).Name, r.Field(i))
-	}
-
-	return result
-}
-
-func ReflectCompCtxReqsTags[A any](comp Comp[A]) ContextQuery {
-	var tag = "tgbot"
-	var tagValue = "ctx"
-
-	t := reflect.TypeOf(comp)
-	// v := reflect.ValueOf(comp)
-
-	// dereference pointer
-	if t.Kind() == reflect.Pointer {
-		t = t.Elem()
-		// v = v.Elem()
-	}
-
-	fs := make([]reflect.StructField, 0)
-
-	for i := 0; i < t.NumField(); i++ {
-		f := t.Field(i)
-
-		// fmt.Println("field ", f.Name)
-
-		if f.Tag.Get(tag) != tagValue {
-			continue
-		}
-
-		fs = append(fs, f)
-
-	}
-
-	reqStructType := reflect.StructOf(fs)
-	// reqStruct := reflect.New(reqStructType)
-
-	// for _, f := range fs {
-	// 	reqStruct.Elem().FieldByName(f.Name).Set(v.FieldByName(f.Name))
-	// }
-
-	return ContextQuery{reqStructType}
-}
-
-func ReflectContextQueryResultGet[A any](comp Comp[A], globalContext GlobalContext) *ContextQueryResult {
-	q := ReflectCompCtxReqsTags[A](comp)
-
-	if q.IsEmpty() {
-		return nil
-	}
-
-	res, err := globalContext.Query(q)
-
-	if err != nil {
-		panic(fmt.Errorf("ReflectContextQueryResultGet: %w", err))
-	}
-
-	return res
-}
-
-func ReflectContextQueryResultSet[A any](comp Comp[A], cqr *ContextQueryResult) Comp[A] {
-
-	var wasapointer = false
-
-	if cqr == nil {
-		return comp
-	}
-
-	t := reflect.TypeOf(comp)
-	v := reflect.ValueOf(comp)
-
-	// dereference pointer
-	if t.Kind() == reflect.Pointer {
-		wasapointer = true
-		t = t.Elem()
-		v = v.Elem()
-	}
-
-	q := ReflectCompCtxReqsTags[A](comp)
-
-	if q.IsEmpty() {
-		//
-		return comp
-	}
-
-	// component copy
-	nt := reflect.New(t).Elem()
-
-	for i := 0; i < t.NumField(); i++ {
-		nt.Field(i).Set(v.Field(i))
-	}
-
-	for i := 0; i < q.NumField(); i++ {
-		f := q.Field(i)
-
-		// fmt.Println("field ", f.Name)
-
-		if f.Tag.Get("tgbot") != "ctx" {
-			continue
-		}
-
-		nt.FieldByName(f.Name).Set(cqr.Get(f.Name))
-	}
-
-	if wasapointer {
-		return nt.Addr().Interface().(Comp[A])
-	}
-
-	return nt.Interface().(Comp[A])
-}
-
-type UsedContextValue []reflect.Value
-
-func (ucv UsedContextValue) Interface() []any {
+func (ucv usedContextValue) Interface() []any {
 	result := make([]any, 0)
 
 	for _, v := range ucv {
@@ -348,11 +166,11 @@ func (ucv UsedContextValue) Interface() []any {
 	return result
 }
 
-func (ucv UsedContextValue) Equal(other UsedContextValue) bool {
+func (ucv usedContextValue) Equal(other usedContextValue) bool {
 	return reflect.DeepEqual(ucv.Interface(), other.Interface())
 }
 
-func ReflectDerefValue(v reflect.Value) reflect.Value {
+func reflectDerefValue(v reflect.Value) reflect.Value {
 
 	if v.Kind() == reflect.Ptr {
 		return v.Elem()
@@ -361,7 +179,7 @@ func ReflectDerefValue(v reflect.Value) reflect.Value {
 	return v
 }
 
-func ReflectHasState[A any](comp Comp[A]) bool {
+func reflectHasState(comp Comp) bool {
 	t := reflect.TypeOf(comp)
 
 	if t.Kind() == reflect.Ptr {
@@ -377,7 +195,7 @@ func ReflectHasState[A any](comp Comp[A]) bool {
 // If found fill it with the global context values returning a new component.
 // Returns the new component and a pointer to the used context value (if any).
 // If the component has a `Selector` method, it will be called to get the context value.
-func ReflectTypedContext[A any, C any](comp Comp[A], globalContext C) (Comp[A], *UsedContextValue) {
+func reflectTypedContext[C any](comp Comp, globalContext C) (Comp, *usedContextValue) {
 	var wasapointer = false
 
 	t := reflect.TypeOf(comp)
@@ -406,17 +224,17 @@ func ReflectTypedContext[A any, C any](comp Comp[A], globalContext C) (Comp[A], 
 
 	compCopyCtx.Set(reflect.ValueOf(globalContext))
 
-	var usedContextValue *UsedContextValue = ReflectTypedContextSelect[A, C](comp, globalContext)
+	var usedContextValue *usedContextValue = reflectTypedContextSelect[C](comp, globalContext)
 
 	if wasapointer {
-		return compCopy.Addr().Interface().(Comp[A]), usedContextValue
+		return compCopy.Addr().Interface().(Comp), usedContextValue
 	}
 
-	return compCopy.Interface().(Comp[A]), usedContextValue
+	return compCopy.Interface().(Comp), usedContextValue
 }
 
 // Returns a pointer to the used part of the global context (if any).
-func ReflectTypedContextSelect[A any, C any](comp Comp[A], globalContext C) *UsedContextValue {
+func reflectTypedContextSelect[C any](comp Comp, globalContext C) *usedContextValue {
 
 	t := reflect.TypeOf(comp)
 
@@ -432,7 +250,7 @@ func ReflectTypedContextSelect[A any, C any](comp Comp[A], globalContext C) *Use
 		return nil
 	}
 
-	var usedContextValue UsedContextValue
+	var usedContextValue usedContextValue
 
 	compCopy := reflect.New(t).Elem()
 
@@ -449,8 +267,4 @@ func ReflectTypedContextSelect[A any, C any](comp Comp[A], globalContext C) *Use
 	}
 
 	return &usedContextValue
-}
-
-func ReflectStructName(any any) string {
-	return reflect.TypeOf(any).String()
 }

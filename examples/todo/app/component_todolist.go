@@ -20,7 +20,7 @@ type S = PageTodoListState
 
 type PageTodoList struct {
 	Context TodoGlobalContext
-	State   tgbot.State[PageTodoListState]
+	State   tgbot.CompState[PageTodoListState]
 }
 
 // Select TodoList from the global context.
@@ -29,7 +29,7 @@ func (a *PageTodoList) Selector() TodoList {
 	return a.Context.TodoList
 }
 
-func (a *PageTodoList) Render(o tgbot.OO) {
+func (a *PageTodoList) Render(o tgbot.O) {
 	tdl := a.Selector()
 
 	// initialize the component state

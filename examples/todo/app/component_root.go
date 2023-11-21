@@ -16,7 +16,7 @@ func (a *PageWelcome) Selector() string {
 	return a.Context.Username
 }
 
-func (a *PageWelcome) Render(o tgbot.OO) {
+func (a *PageWelcome) Render(o tgbot.O) {
 	o.Messagef("Welcome %v", a.Selector())
 	o.Button("Go to main", func() any {
 		return ActionGoPage{Page: ValuePageMain}
@@ -27,7 +27,7 @@ type RootComponent struct {
 	CurrentPage string
 }
 
-func (a *RootComponent) Render(o tgbot.OO) {
+func (a *RootComponent) Render(o tgbot.O) {
 	o.InputHandler(func(s string) any {
 		if s == "/start" {
 			return &tgbot.ActionReload{}

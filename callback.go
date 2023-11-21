@@ -1,29 +1,22 @@
 package tgbot
 
-import "go.uber.org/zap"
+type callbackMap map[string]func() *callbackResult
 
-type CallbackResult[A any] struct {
-	action     A
-	noCallback bool
-}
+func getCallbackHandlersMap(outcomingMessages []outcomingMessage) callbackMap {
 
-type callbackMap[A any] map[string]func() *CallbackResult[A]
-
-func getCallbackHandlersMap[A any](outcomingMessages []OutcomingMessage) callbackMap[A] {
-
-	callbackHandlers := make(map[string]func() *CallbackResult[A])
+	callbackHandlers := make(map[string]func() *callbackResult)
 
 	for _, m := range outcomingMessages {
 		switch el := m.(type) {
-		case *OutcomingTextMessage[A]:
+		case *outcomingTextMessage:
 			for _, row := range el.Buttons {
 				for _, butt := range row {
 
 					butt := butt
-					callbackHandlers[butt.CallbackData()] = func() *CallbackResult[A] {
+					callbackHandlers[butt.CallbackData()] = func() *callbackResult {
 						v := butt.OnClick()
 
-						return &CallbackResult[A]{
+						return &callbackResult{
 							action:     v,
 							noCallback: butt.NoCallback,
 						}
@@ -33,20 +26,16 @@ func getCallbackHandlersMap[A any](outcomingMessages []OutcomingMessage) callbac
 		}
 	}
 
-	return callbackMap[A](callbackHandlers)
+	return callbackMap(callbackHandlers)
 }
 
-func callbackMapToHandler[A any](cbmap callbackMap[A]) ChatCallbackHandler[A] {
-	return func(callbackData string) *CallbackResult[A] {
-
-		globalLogger.Info("Callback handler", zap.String("data", callbackData))
+func callbackMapToHandler(cbmap callbackMap) chatCallbackHandler {
+	return func(callbackData string) *callbackResult {
 
 		if handler, ok := cbmap[callbackData]; ok {
-			globalLogger.Info("Calling handler", zap.String("data", callbackData))
 
 			return handler()
 		} else {
-			globalLogger.Error("No handler for callback", zap.String("key", callbackData))
 			return nil
 		}
 

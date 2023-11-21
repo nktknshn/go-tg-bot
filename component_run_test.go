@@ -1,10 +1,8 @@
-package tgbot_test
+package tgbot
 
 import (
 	"fmt"
 	"testing"
-
-	tgbot "github.com/nktknshn/go-tg-bot"
 )
 
 type TestRunComponent1State struct {
@@ -12,10 +10,10 @@ type TestRunComponent1State struct {
 }
 
 type TestRunComponent1Comp struct {
-	State tgbot.State[TestRunComponent1State]
+	State CompState[TestRunComponent1State]
 }
 
-func (c TestRunComponent1Comp) Render(o tgbot.OO) {
+func (c TestRunComponent1Comp) Render(o O) {
 	state := c.State.Init(TestRunComponent1State{
 		TrilpleSix: 666,
 	})
@@ -26,19 +24,19 @@ func (c TestRunComponent1Comp) Render(o tgbot.OO) {
 func TestRunComponent1(t *testing.T) {
 	comp := TestRunComponent1Comp{}
 
-	localStateClosure := tgbot.LocalStateClosure[any]{
+	localStateClosure := localStateClosure[any]{
 		Initialized: true,
 		Value: TestRunComponent1State{
 			111,
 		},
 	}
-	state := tgbot.State[any]{
+	state := CompState[any]{
 		LocalStateClosure: &localStateClosure,
 		Index:             []int{},
 	}
 
-	els, closure, ctx := tgbot.RunComponent(
-		tgbot.GetLogger(), comp, tgbot.NewGlobalContextTyped(1), state,
+	els, closure, ctx := runComponent(
+		GetLogger(), comp, newGlobalContextTyped(1), state,
 	)
 
 	fmt.Println("els", els)

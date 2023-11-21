@@ -6,27 +6,27 @@ import (
 	"go.uber.org/zap"
 )
 
-func RunComponent[A any](
+func runComponent(
 	logger *zap.Logger,
-	comp Comp[A],
-	globalContext GlobalContextTyped[any],
-	state State[any],
-) ([]Element, LocalStateClosure[any], *UsedContextValue) {
+	comp Comp,
+	gc globalContext[any],
+	state CompState[any],
+) ([]anyElement, localStateClosure[any], *usedContextValue) {
 
 	logger.Debug("RunComponent",
-		zap.String("compId", reflectCompId[A](comp)),
+		zap.String("compId", reflectCompId(comp)),
 		// zap.String("globalContext", globalContext),
 		zap.Bool("isPointer", reflect.TypeOf(comp).Kind() == reflect.Ptr),
 	)
 
-	comp = ReflectCompLocalState[A](logger, comp, state)
+	comp = reflectCompLocalState(logger, comp, state)
 
-	comp, usedContextValue := ReflectTypedContext[A](comp, globalContext.Get())
+	comp, usedContextValue := reflectTypedContext(comp, gc.Get())
 
-	o := NewOutput[A]()
+	o := newOutput()
 	comp.Render(o)
 
-	ls := ReflectDerefValue(reflect.ValueOf(comp)).FieldByName("State").FieldByName(LocalStateClosureName).Elem()
+	ls := reflectDerefValue(reflect.ValueOf(comp)).FieldByName("State").FieldByName(localStateClosureName).Elem()
 
 	vi := ls.FieldByName("Initialized")
 	vv := ls.FieldByName("Value")
@@ -34,12 +34,12 @@ func RunComponent[A any](
 	// fmt.Println("Initialized", vi)
 	// fmt.Println("Value", vv)
 
-	if !ReflectHasState(comp) {
+	if !reflectHasState(comp) {
 		logger.Debug("Component doesn't have state")
 		return o.Result, *state.LocalStateClosure, usedContextValue
 	}
 
-	return o.Result, LocalStateClosure[any]{
+	return o.Result, localStateClosure[any]{
 		Initialized: vi.Bool(),
 		Value:       vv.Interface(),
 	}, usedContextValue

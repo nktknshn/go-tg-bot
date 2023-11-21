@@ -10,6 +10,7 @@ func (a *PageSettings) Selector() map[string]string {
 	return a.Context.Settings
 }
 
-func (a *PageSettings) Render(o tgbot.OO) {
-
+func (a *PageSettings) Render(o tgbot.O) {
+	// tgbot.ErrMessageNotFound.Error()
+	// tgbot.NewGlobalContextTyped[]()
 }

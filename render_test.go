@@ -1,18 +1,18 @@
-package tgbot_test
+package tgbot
 
 type AppProps struct {
 	Name    string
 	Counter int
 }
 
-// func HelloMessage(name string) tgbot.Comp {
-// 	return func(o tgbot.O) {
+// func HelloMessage(name string) Comp {
+// 	return func(o O) {
 // 		o.Message(fmt.Sprintf("Hello, %v", name))
 // 	}
 // }
 
-// func Counter(value int) tgbot.Comp {
-// 	return func(o tgbot.O) {
+// func Counter(value int) Comp {
+// 	return func(o O) {
 // 		messageText := fmt.Sprintf("Counter %v", value)
 
 // 		o.Message(messageText)
@@ -22,15 +22,15 @@ type AppProps struct {
 // 	}
 // }
 
-// func App(props *AppProps) tgbot.Comp {
-// 	return func(o tgbot.O) {
+// func App(props *AppProps) Comp {
+// 	return func(o O) {
 // 		o.Comp(HelloMessage(props.Name))
 // 		o.Comp(Counter(props.Counter))
 // 	}
 // }
 
 // func TestRenderComp(t *testing.T) {
-// 	tgbot.ComponentToElements(
+// 	ComponentToElements(
 // 		App,
 // 		&AppProps{Counter: 1},
 // 	)

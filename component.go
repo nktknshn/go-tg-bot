@@ -4,88 +4,55 @@ import (
 	"fmt"
 )
 
-type LocalStateSetter[S any] interface {
-	Set(func(S)) S
-}
-
-type LocalStateGetter[S any] interface {
-	Get() S
-}
-
-// type LocalStateIniter[S any] interface {
-// 	Init(S) GetSetLocalState[S, any]
-// }
-
-type GetSetLocalState[S any] interface {
-	LocalStateSetter[S]
-	LocalStateGetter[S]
-}
-
-type LocalStateProvider[S any] interface {
-	GetSetLocalState[S]
-}
-
-type Z interface {
-	O[any]
-	CompZ(func(any, Z), any)
-}
-
-type O[A any] interface {
-	Send(Element)
-	Comp(Comp[A])
+type O interface {
+	Send(anyElement)
+	Comp(Comp)
 	Message(string)
 	Messagef(string, ...interface{})
 	MessagePart(string)
 	MessagePartf(string, ...interface{})
-	Button(string, func() A, ...interface{})
-	ButtonsRow([]string, func(int, string) A)
+	Button(string, func() any, ...interface{})
+	ButtonsRow([]string, func(int, string) any)
 	BottomButton(string)
 	MessageComplete()
 	InputHandler(func(string) any)
-	// Dispatch(A)
-	// LocalStateProvider[any, A]
 }
 
-type OO = O[any]
-
-// type Comp[A any] func(O[A])
-// type ComponentCons[T any, A any] func(props *T) Comp[A]
-
-type Comp[A any] interface {
-	Render(O[A])
+type Comp interface {
+	Render(O)
 }
 
-type outputImpl[A any] struct {
-	Result []Element
+type outputImpl struct {
+	Result []anyElement
 }
 
-type NoCallbackStruct struct{}
-type NextRowStruct struct{}
+type noCallbackStruct struct{}
+type nextRowStruct struct{}
 
-var NoCallback = NoCallbackStruct{}
-var NextRow = NextRowStruct{}
+var BtnNoCallback = noCallbackStruct{}
+var BtnNextRow = nextRowStruct{}
 
-func NewOutput[A any]() *outputImpl[A] {
-	return &outputImpl[A]{Result: make([]Element, 0)}
+func newOutput() *outputImpl {
+	return &outputImpl{Result: make([]anyElement, 0)}
 }
 
-func (o *outputImpl[A]) Message(text string) {
-	o.Result = append(o.Result, Message(text))
+func (o *outputImpl) Message(text string) {
+	o.Result = append(o.Result, newMessage(text))
 }
 
-func (o *outputImpl[A]) Messagef(format string, args ...interface{}) {
-	o.Result = append(o.Result, Message(fmt.Sprintf(format, args...)))
+func (o *outputImpl) Messagef(format string, args ...interface{}) {
+	o.Result = append(o.Result, newMessage(fmt.Sprintf(format, args...)))
 }
 
-func (o *outputImpl[A]) MessagePart(text string) {
-	o.Result = append(o.Result, MessagePart(text))
+func (o *outputImpl) MessagePart(text string) {
+	o.Result = append(o.Result, newMessagePart(text))
 }
 
-func (o *outputImpl[A]) MessagePartf(format string, args ...interface{}) {
-	o.Result = append(o.Result, MessagePart(fmt.Sprintf(format, args...)))
+func (o *outputImpl) MessagePartf(format string, args ...interface{}) {
+	o.Result = append(o.Result, newMessagePart(fmt.Sprintf(format, args...)))
 }
 
-func (o *outputImpl[A]) Button(text string, handler func() A, options ...interface{}) {
+func (o *outputImpl) Button(text string, handler func() any, options ...interface{}) {
 	var (
 		noCallback = false
 		nextRow    = false
@@ -97,36 +64,36 @@ func (o *outputImpl[A]) Button(text string, handler func() A, options ...interfa
 
 	for _, option := range options {
 		switch option.(type) {
-		case NoCallbackStruct:
+		case noCallbackStruct:
 			noCallback = true
-		case NextRowStruct:
+		case nextRowStruct:
 			nextRow = true
 		}
 	}
 
-	o.Result = append(o.Result, Button(text, handler, text, nextRow, noCallback))
+	o.Result = append(o.Result, newButton(text, handler, text, nextRow, noCallback))
 }
 
-func (o *outputImpl[A]) ButtonsRow(texts []string, handler func(int, string) A) {
-	o.Result = append(o.Result, ButtonsRow(texts, handler))
+func (o *outputImpl) ButtonsRow(texts []string, handler func(int, string) any) {
+	o.Result = append(o.Result, newButtonsRow(texts, handler))
 }
 
-func (o *outputImpl[A]) BottomButton(text string) {
-	o.Result = append(o.Result, MessagePart(text))
+func (o *outputImpl) BottomButton(text string) {
+	o.Result = append(o.Result, newMessagePart(text))
 }
 
-func (o *outputImpl[A]) Send(element Element) {
+func (o *outputImpl) Send(element anyElement) {
 	o.Result = append(o.Result, element)
 }
 
-func (o *outputImpl[A]) Comp(comp Comp[A]) {
-	o.Result = append(o.Result, Component(comp))
+func (o *outputImpl) Comp(comp Comp) {
+	o.Result = append(o.Result, newComponent(comp))
 }
 
-func (o *outputImpl[A]) MessageComplete() {
-	o.Result = append(o.Result, MessageComplete())
+func (o *outputImpl) MessageComplete() {
+	o.Result = append(o.Result, newMessageComplete())
 }
 
-func (o *outputImpl[A]) InputHandler(handler func(string) any) {
-	o.Result = append(o.Result, AInputHandler[A](handler))
+func (o *outputImpl) InputHandler(handler func(string) any) {
+	o.Result = append(o.Result, newInputHandler(handler))
 }

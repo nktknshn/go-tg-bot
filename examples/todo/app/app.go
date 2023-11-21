@@ -14,13 +14,13 @@ type TodoGlobalContext struct {
 	TodoList TodoList
 }
 
-type ApplicationContext = tgbot.ApplicationContext[TodoState, any, TodoGlobalContext]
+type ApplicationContext = tgbot.ApplicationContext[TodoState, TodoGlobalContext]
 
-var TodoApp = tgbot.NewApplication[TodoState, any](
+var TodoApp = tgbot.NewApplication[TodoState, TodoGlobalContext](
 	// initial state
 	func(tc *tgbot.TelegramContext) TodoState {
 
-		username := tgbot.GetUsername(tc.Update)
+		username := tgbot.UpdateGetUsername(tc.Update)
 
 		return TodoState{
 			Username:    username,
@@ -29,7 +29,7 @@ var TodoApp = tgbot.NewApplication[TodoState, any](
 		}
 	},
 	// create root component
-	func(s TodoState) tgbot.Comp[any] {
+	func(s TodoState) tgbot.Comp {
 		return &RootComponent{
 			CurrentPage: s.CurrentPage,
 		}
@@ -37,15 +37,13 @@ var TodoApp = tgbot.NewApplication[TodoState, any](
 	// handle actions
 	actionsReducer,
 	// create global context
-	&tgbot.NewApplicationProps[TodoState, any, TodoGlobalContext]{
-		CreateGlobalContext: func(ics *tgbot.InternalChatState[TodoState, any, TodoGlobalContext]) tgbot.GlobalContextTyped[TodoGlobalContext] {
-
-			return tgbot.NewGlobalContextTyped(TodoGlobalContext{
-				TodoList: ics.AppState.List,
-				Username: ics.AppState.Username,
+	&tgbot.NewApplicationProps[TodoState, TodoGlobalContext]{
+		CreateGlobalContext: func(cs *tgbot.ChatState[TodoState, TodoGlobalContext]) TodoGlobalContext {
+			return TodoGlobalContext{
+				TodoList: cs.AppState.List,
+				Username: cs.AppState.Username,
 				Settings: make(map[string]string),
-			})
-
+			}
 		},
 	},
 )

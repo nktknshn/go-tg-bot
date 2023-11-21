@@ -8,37 +8,37 @@ import (
 )
 
 const (
-	KindElementPhotoGroup      = "ElementPhotoGroup"
-	KindElementFile            = "ElementFile"
-	KindElementMessage         = "ElementMessage"
-	KindElementMessagePart     = "ElementMessagePart"
-	KindElementButton          = "ElementButton"
-	KindElementBottomButton    = "KindElementBottomButton"
-	KindElementComponent       = "ElementComponent"
-	KindElementInputHandler    = "ElementInputHandler"
-	KindElementUserMessage     = "ElementUserMessage"
-	KindElementCompleteMessage = "ElementCompleteMessage"
-	KindElementButtonsRow      = "ElementButtonsRow"
+	kindElementPhotoGroup      = "ElementPhotoGroup"
+	kindElementFile            = "ElementFile"
+	kindElementMessage         = "ElementMessage"
+	kindElementMessagePart     = "ElementMessagePart"
+	kindElementButton          = "ElementButton"
+	kindElementBottomButton    = "ElementBottomButton"
+	kindElementComponent       = "ElementComponent"
+	kindElementInputHandler    = "ElementInputHandler"
+	kindElementUserMessage     = "ElementUserMessage"
+	kindElementCompleteMessage = "ElementCompleteMessage"
+	kindElementButtonsRow      = "ElementButtonsRow"
 )
 
-func MessageComplete() *ElementCompleteMessage {
-	return &ElementCompleteMessage{}
+func newMessageComplete() *elementCompleteMessage {
+	return &elementCompleteMessage{}
 }
 
-func MessagePart(text string) *ElementMessagePart {
-	return &ElementMessagePart{
+func newMessagePart(text string) *elementMessagePart {
+	return &elementMessagePart{
 		Text: text,
 	}
 }
 
-func Message(text string) *ElementMessage {
-	return &ElementMessage{
+func newMessage(text string) *elementMessage {
+	return &elementMessage{
 		Text: text,
 	}
 }
 
-func Button[A any](text string, onClick func() A, action string, nextRow bool, noCallback bool) *ElementButton[A] {
-	return &ElementButton[A]{
+func newButton(text string, onClick func() any, action string, nextRow bool, noCallback bool) *elementButton {
+	return &elementButton{
 		Text:       text,
 		Action:     action,
 		OnClick:    onClick,
@@ -47,85 +47,85 @@ func Button[A any](text string, onClick func() A, action string, nextRow bool, n
 	}
 }
 
-func ButtonsRow[A any](texts []string, onClick func(int, string) A) *ElementButtonsRow[A] {
-	return &ElementButtonsRow[A]{
+func newButtonsRow(texts []string, onClick func(int, string) any) *elementButtonsRow {
+	return &elementButtonsRow{
 		Texts:   texts,
 		OnClick: onClick,
 	}
 }
 
-func BottomButton(text string) *ElementBottomButton {
-	return &ElementBottomButton{
+func newBottomButton(text string) *elementBottomButton {
+	return &elementBottomButton{
 		Text: text,
 	}
 }
 
-func Component[A any](comp Comp[A]) *ElementComponent[A] {
-	return &ElementComponent[A]{
+func newComponent(comp Comp) *elementComponent {
+	return &elementComponent{
 		comp: comp,
 	}
 }
 
-func AInputHandler[A any](handler func(string) any) *ElementInputHandler[A] {
-	return &ElementInputHandler[A]{
+func newInputHandler(handler func(string) any) *elementInputHandler {
+	return &elementInputHandler{
 		Handler: handler,
 	}
 }
 
 // Element is button, message, handler etc...
-type BasicElement interface {
+type basicElement interface {
 	String() string
 	elementKind() string
 }
 
-// Element is BasicElement or another component etc...
-type Element interface {
+// anyElement is BasicElement or another component etc...
+type anyElement interface {
 	// String() string
 	elementKind() string
 }
 
-type ElementComponent[A any] struct {
-	comp Comp[A]
+type elementComponent struct {
+	comp Comp
 }
 
-func (c *ElementComponent[A]) elementKind() string {
-	return KindElementComponent
+func (c *elementComponent) elementKind() string {
+	return kindElementComponent
 }
 
-func (c ElementComponent[A]) String() string {
+func (c elementComponent) String() string {
 	return fmt.Sprintf("ElementComponent{comp=%v}", reflectCompId(c.comp))
 }
 
-type ElementInputHandler[A any] struct {
+type elementInputHandler struct {
 	Handler func(string) any
 }
 
-func (c *ElementInputHandler[A]) elementKind() string {
-	return KindElementInputHandler
+func (c *elementInputHandler) elementKind() string {
+	return kindElementInputHandler
 }
 
-func (c ElementInputHandler[A]) String() string {
+func (c elementInputHandler) String() string {
 	return "ElementInputHandler{}"
 }
 
-type ElementPhotoGroup struct {
-	photos []ElementFile
+type elementPhotoGroup struct {
+	photos []elementFile
 }
 
-func (c *ElementPhotoGroup) elementKind() string {
-	return KindElementPhotoGroup
+func (c *elementPhotoGroup) elementKind() string {
+	return kindElementPhotoGroup
 }
 
-func (c ElementPhotoGroup) String() string {
+func (c elementPhotoGroup) String() string {
 	return fmt.Sprintf("ElementPhotoGroup{photos=%v}", c.photos)
 }
 
-func (c *ElementPhotoGroup) Equal(other BasicElement) bool {
-	if other.elementKind() != KindElementPhotoGroup {
+func (c *elementPhotoGroup) Equal(other basicElement) bool {
+	if other.elementKind() != kindElementPhotoGroup {
 		return false
 	}
 
-	otherPhotoGroup := other.(*ElementPhotoGroup)
+	otherPhotoGroup := other.(*elementPhotoGroup)
 
 	if len(c.photos) != len(otherPhotoGroup.photos) {
 		return false
@@ -140,69 +140,69 @@ func (c *ElementPhotoGroup) Equal(other BasicElement) bool {
 	return true
 }
 
-type ElementMessage struct {
+type elementMessage struct {
 	Text string
 }
 
-func (c *ElementMessage) elementKind() string {
-	return KindElementMessage
+func (c *elementMessage) elementKind() string {
+	return kindElementMessage
 }
 
-func (c ElementMessage) String() string {
+func (c elementMessage) String() string {
 	return fmt.Sprintf("ElementMessage{Text=%s}", c.Text)
 }
 
-func (c *ElementMessage) Equal(other BasicElement) bool {
-	if other.elementKind() != KindElementMessage {
+func (c *elementMessage) Equal(other basicElement) bool {
+	if other.elementKind() != kindElementMessage {
 		return false
 	}
 
-	otherMessage := other.(*ElementMessage)
+	otherMessage := other.(*elementMessage)
 
 	return c.Text == otherMessage.Text
 }
 
-type ElementCompleteMessage struct{}
+type elementCompleteMessage struct{}
 
-func (c *ElementCompleteMessage) elementKind() string {
-	return KindElementCompleteMessage
+func (c *elementCompleteMessage) elementKind() string {
+	return kindElementCompleteMessage
 }
 
-func (c ElementCompleteMessage) String() string {
+func (c elementCompleteMessage) String() string {
 	return "ElementCompleteMessage{}"
 }
 
-type ElementMessagePart struct {
+type elementMessagePart struct {
 	Text string
 }
 
-func (c *ElementMessagePart) elementKind() string {
-	return KindElementMessagePart
+func (c *elementMessagePart) elementKind() string {
+	return kindElementMessagePart
 }
 
-func (c ElementMessagePart) String() string {
+func (c elementMessagePart) String() string {
 	return fmt.Sprintf("ElementMessagePart{Text=%s}", c.Text)
 }
 
-func (c *ElementMessagePart) Equal(other BasicElement) bool {
-	if other.elementKind() != KindElementMessagePart {
+func (c *elementMessagePart) Equal(other basicElement) bool {
+	if other.elementKind() != kindElementMessagePart {
 		return false
 	}
 
-	otherMessagePart := other.(*ElementMessagePart)
+	otherMessagePart := other.(*elementMessagePart)
 
 	return c.Text == otherMessagePart.Text
 }
 
-type ElementButton[A any] struct {
+type elementButton struct {
 	Text       string
 	Action     string
 	NextRow    bool
 	NoCallback bool
-	OnClick    func() A
+	OnClick    func() any
 }
 
-func (b *ElementButton[A]) CallbackData() string {
+func (b *elementButton) CallbackData() string {
 	if b.Action != "" {
 		return b.Action
 	}
@@ -210,40 +210,40 @@ func (b *ElementButton[A]) CallbackData() string {
 	return b.Text
 }
 
-func (c *ElementButton[A]) elementKind() string {
-	return KindElementButton
+func (c *elementButton) elementKind() string {
+	return kindElementButton
 }
 
-func (c ElementButton[A]) String() string {
+func (c elementButton) String() string {
 	return fmt.Sprintf("ElementButton{Text=%s, Action=%s}", c.Text, c.Action)
 }
 
-func (c *ElementButton[A]) Equal(other BasicElement) bool {
-	if other.elementKind() != KindElementButton {
+func (c *elementButton) Equal(other basicElement) bool {
+	if other.elementKind() != kindElementButton {
 		return false
 	}
 
-	otherButton := other.(*ElementButton[A])
+	otherButton := other.(*elementButton)
 
 	return c.Text == otherButton.Text && c.Action == otherButton.Action
 }
 
-type ElementButtonsRow[A any] struct {
+type elementButtonsRow struct {
 	Texts   []string
-	OnClick func(int, string) A
+	OnClick func(int, string) any
 }
 
-func (br *ElementButtonsRow[A]) Buttons() []ElementButton[A] {
-	result := make([]ElementButton[A], 0)
+func (br *elementButtonsRow) Buttons() []elementButton {
+	result := make([]elementButton, 0)
 
 	for idx, b := range br.Texts {
 		idx := idx
 		b := b
-		result = append(result, ElementButton[A]{
+		result = append(result, elementButton{
 			Text:    b,
 			Action:  b,
 			NextRow: false,
-			OnClick: func() A {
+			OnClick: func() any {
 				return br.OnClick(idx, b)
 			},
 		})
@@ -252,76 +252,76 @@ func (br *ElementButtonsRow[A]) Buttons() []ElementButton[A] {
 	return result
 }
 
-func (c *ElementButtonsRow[A]) elementKind() string {
-	return KindElementButtonsRow
+func (c *elementButtonsRow) elementKind() string {
+	return kindElementButtonsRow
 }
 
-func (c ElementButtonsRow[A]) String() string {
+func (c elementButtonsRow) String() string {
 	return fmt.Sprintf("ElementButtonsRow{Texts=%v}", c.Texts)
 }
 
-type ElementBottomButton struct {
+type elementBottomButton struct {
 	Text  string
 	Texts []string
 	Hide  bool
 }
 
-func (c *ElementBottomButton) elementKind() string {
-	return KindElementBottomButton
+func (c *elementBottomButton) elementKind() string {
+	return kindElementBottomButton
 }
 
-func (c ElementBottomButton) String() string {
+func (c elementBottomButton) String() string {
 	return fmt.Sprintf("ElementBottomButton{Text=%s, Texts=%s}", c.Text, c.Texts)
 }
 
-type ElementUserMessage struct {
+type elementUserMessage struct {
 	MessageID int
 }
 
-func (c *ElementUserMessage) elementKind() string {
-	return KindElementUserMessage
+func (c *elementUserMessage) elementKind() string {
+	return kindElementUserMessage
 }
 
-func (c ElementUserMessage) String() string {
+func (c elementUserMessage) String() string {
 	return fmt.Sprintf("ElementUserMessage{MessageId=%d}", c.MessageID)
 }
 
-func (c *ElementUserMessage) Equal(other BasicElement) bool {
+func (c *elementUserMessage) Equal(other basicElement) bool {
 
-	if other.elementKind() != KindElementUserMessage {
+	if other.elementKind() != kindElementUserMessage {
 		return false
 	}
 
-	otherUserMessage := other.(*ElementUserMessage)
+	otherUserMessage := other.(*elementUserMessage)
 
 	return c.MessageID == otherUserMessage.MessageID
 }
 
-type ElementFile struct {
+type elementFile struct {
 	FileId string
 }
 
-func (ef ElementFile) String() string {
+func (ef elementFile) String() string {
 	return fmt.Sprintf("ElementFile{FileId=%s}", ef.FileId)
 }
 
-func (c ElementFile) elementKind() string {
-	return KindElementFile
+func (c elementFile) elementKind() string {
+	return kindElementFile
 }
 
-func (c *ElementFile) Equal(other BasicElement) bool {
-	if other.elementKind() != KindElementFile {
+func (c *elementFile) Equal(other basicElement) bool {
+	if other.elementKind() != kindElementFile {
 		return false
 	}
 
-	otherFile := other.(*ElementFile)
+	otherFile := other.(*elementFile)
 
 	return c.FileId == otherFile.FileId
 }
 
-type Elements []Element
+type elementsList []anyElement
 
-func (es Elements) String() string {
+func (es elementsList) String() string {
 
 	if len(es) == 0 {
 		return "[]"
@@ -336,7 +336,7 @@ func (es Elements) String() string {
 	return result + "]"
 }
 
-func (es Elements) ZapField(key string) zap.Field {
+func (es elementsList) ZapField(key string) zap.Field {
 	return zap.Array(key, zapcore.ArrayMarshalerFunc(func(ae zapcore.ArrayEncoder) error {
 		for _, e := range es {
 			ae.AppendObject(

@@ -11,3 +11,5 @@ func GetLogger() *zap.Logger {
 	return zap.Must(cfg.Build())
 
 }
+
+var globalLogger = GetLogger()

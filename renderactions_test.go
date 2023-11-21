@@ -1,4 +1,4 @@
-package tgbot_test
+package tgbot
 
 import (
 	"context"
@@ -6,16 +6,15 @@ import (
 	"testing"
 
 	"github.com/go-telegram/bot/models"
-	tgbot "github.com/nktknshn/go-tg-bot"
 )
 
 func Check(
 	t *testing.T,
-	renderedElements []tgbot.RenderedElement,
-	outcomingMessages []tgbot.OutcomingMessage,
-	expected []tgbot.RenderActionType,
+	renderedElements []RenderedElement,
+	outcomingMessages []outcomingMessage,
+	expected []renderActionType,
 ) {
-	res0 := tgbot.GetRenderActions[any](renderedElements, outcomingMessages)
+	res0 := getRenderActions(renderedElements, outcomingMessages)
 
 	if len(res0) != len(expected) {
 		for i, v := range res0 {
@@ -34,38 +33,38 @@ func Check(
 			t.Fatalf("res0[%d].RenderActionKind() != expected[%d].RenderActionKind()", i, i)
 		}
 
-		if v.RenderActionKind() == tgbot.KindRenderActionCreate {
+		if v.RenderActionKind() == kindRenderActionCreate {
 
-			check := v.(*tgbot.RenderActionCreate).NewElement.Equal(e.(*tgbot.RenderActionCreate).NewElement)
-
-			if !check {
-				t.Fatalf("res0[%d].NewElement != expected[%d].NewElement", i, i)
-			}
-		}
-
-		if v.RenderActionKind() == tgbot.KindRenderActionKeep {
-
-			check := v.(*tgbot.RenderActionKeep).NewElement.Equal(e.(*tgbot.RenderActionKeep).NewElement)
-			check = check && v.(*tgbot.RenderActionKeep).RenderedElement.Equal(e.(*tgbot.RenderActionKeep).RenderedElement)
+			check := v.(*renderActionCreate).NewElement.Equal(e.(*renderActionCreate).NewElement)
 
 			if !check {
 				t.Fatalf("res0[%d].NewElement != expected[%d].NewElement", i, i)
 			}
 		}
 
-		if v.RenderActionKind() == tgbot.KindRenderActionReplace {
+		if v.RenderActionKind() == kindRenderActionKeep {
 
-			check := v.(*tgbot.RenderActionReplace).NewElement.Equal(e.(*tgbot.RenderActionReplace).NewElement)
-			check = check && v.(*tgbot.RenderActionReplace).RenderedElement.Equal(e.(*tgbot.RenderActionReplace).RenderedElement)
+			check := v.(*renderActionKeep).NewElement.Equal(e.(*renderActionKeep).NewElement)
+			check = check && v.(*renderActionKeep).RenderedElement.Equal(e.(*renderActionKeep).RenderedElement)
 
 			if !check {
 				t.Fatalf("res0[%d].NewElement != expected[%d].NewElement", i, i)
 			}
 		}
 
-		if v.RenderActionKind() == tgbot.KindRenderActionRemove {
+		if v.RenderActionKind() == kindRenderActionReplace {
 
-			check := v.(*tgbot.RenderActionRemove).RenderedElement.Equal(e.(*tgbot.RenderActionRemove).RenderedElement)
+			check := v.(*renderActionReplace).NewElement.Equal(e.(*renderActionReplace).NewElement)
+			check = check && v.(*renderActionReplace).RenderedElement.Equal(e.(*renderActionReplace).RenderedElement)
+
+			if !check {
+				t.Fatalf("res0[%d].NewElement != expected[%d].NewElement", i, i)
+			}
+		}
+
+		if v.RenderActionKind() == kindRenderActionRemove {
+
+			check := v.(*renderActionRemove).RenderedElement.Equal(e.(*renderActionRemove).RenderedElement)
 
 			if !check {
 				t.Fatalf("res0[%d].RenderedElement != expected[%d].RenderedElement", i, i)
@@ -77,24 +76,24 @@ func Check(
 }
 
 var (
-	m1 = tgbot.NewOutcomingTextMessage[any]("message 1")
-	m2 = tgbot.NewOutcomingTextMessage[any]("message 2")
-	m3 = tgbot.NewOutcomingTextMessage[any]("message 3")
-	m4 = tgbot.NewOutcomingTextMessage[any]("message 4")
+	m1 = newOutcomingTextMessage("message 1")
+	m2 = newOutcomingTextMessage("message 2")
+	m3 = newOutcomingTextMessage("message 3")
+	m4 = newOutcomingTextMessage("message 4")
 
-	rm1 = &tgbot.RenderedBotMessage[any]{
+	rm1 = &renderedBotMessage{
 		OutcomingTextMessage: m1,
 		Message:              &models.Message{},
 	}
-	rm2 = &tgbot.RenderedBotMessage[any]{
+	rm2 = &renderedBotMessage{
 		OutcomingTextMessage: m2,
 		Message:              &models.Message{},
 	}
-	rm3 = &tgbot.RenderedBotMessage[any]{
+	rm3 = &renderedBotMessage{
 		OutcomingTextMessage: m3,
 		Message:              &models.Message{},
 	}
-	rm4 = &tgbot.RenderedBotMessage[any]{
+	rm4 = &renderedBotMessage{
 		OutcomingTextMessage: m4,
 		Message:              &models.Message{},
 	}
@@ -102,61 +101,61 @@ var (
 
 func TestGetRenderActionsInsertedMiddle(t *testing.T) {
 	Check(t,
-		[]tgbot.RenderedElement{rm1, rm2, rm3},
-		[]tgbot.OutcomingMessage{m1, m2, m4, m3},
-		[]tgbot.RenderActionType{
-			&tgbot.RenderActionKeep{RenderedElement: rm1, NewElement: m1},
-			&tgbot.RenderActionKeep{RenderedElement: rm2, NewElement: m2},
-			&tgbot.RenderActionReplace{RenderedElement: rm3, NewElement: m4},
-			&tgbot.RenderActionCreate{NewElement: m3},
+		[]RenderedElement{rm1, rm2, rm3},
+		[]outcomingMessage{m1, m2, m4, m3},
+		[]renderActionType{
+			&renderActionKeep{RenderedElement: rm1, NewElement: m1},
+			&renderActionKeep{RenderedElement: rm2, NewElement: m2},
+			&renderActionReplace{RenderedElement: rm3, NewElement: m4},
+			&renderActionCreate{NewElement: m3},
 		})
 
 }
 
 func TestGetRenderActionsInsertedFirst(t *testing.T) {
 	Check(t,
-		[]tgbot.RenderedElement{rm1, rm2, rm3},
-		[]tgbot.OutcomingMessage{m4, m1, m2, m3},
-		[]tgbot.RenderActionType{
-			&tgbot.RenderActionReplace{RenderedElement: rm1, NewElement: m4},
-			&tgbot.RenderActionReplace{RenderedElement: rm2, NewElement: m1},
-			&tgbot.RenderActionReplace{RenderedElement: rm3, NewElement: m2},
-			&tgbot.RenderActionCreate{NewElement: m3},
+		[]RenderedElement{rm1, rm2, rm3},
+		[]outcomingMessage{m4, m1, m2, m3},
+		[]renderActionType{
+			&renderActionReplace{RenderedElement: rm1, NewElement: m4},
+			&renderActionReplace{RenderedElement: rm2, NewElement: m1},
+			&renderActionReplace{RenderedElement: rm3, NewElement: m2},
+			&renderActionCreate{NewElement: m3},
 		})
 
 }
 
 func TestGetRenderActionsBasic(t *testing.T) {
-	// r := make([]tgbot.RenderedElement, 0)
-	// r = append(r, &tgbot.RenderedUserMessage{})
-	// n := make([]tgbot.OutcomingMessageType, 0)
+	// r := make([]RenderedElement, 0)
+	// r = append(r, &RenderedUserMessage{})
+	// n := make([]OutcomingMessageType, 0)
 
 	Check(t,
-		[]tgbot.RenderedElement{},
-		[]tgbot.OutcomingMessage{m1},
-		[]tgbot.RenderActionType{
-			&tgbot.RenderActionCreate{NewElement: m1},
+		[]RenderedElement{},
+		[]outcomingMessage{m1},
+		[]renderActionType{
+			&renderActionCreate{NewElement: m1},
 		})
 
 	Check(t,
-		[]tgbot.RenderedElement{},
-		[]tgbot.OutcomingMessage{m1, m2, m3},
-		[]tgbot.RenderActionType{
-			&tgbot.RenderActionCreate{NewElement: m1},
-			&tgbot.RenderActionCreate{NewElement: m2},
-			&tgbot.RenderActionCreate{NewElement: m3},
+		[]RenderedElement{},
+		[]outcomingMessage{m1, m2, m3},
+		[]renderActionType{
+			&renderActionCreate{NewElement: m1},
+			&renderActionCreate{NewElement: m2},
+			&renderActionCreate{NewElement: m3},
 		})
 
 	Check(t,
-		[]tgbot.RenderedElement{
-			&tgbot.RenderedBotMessage[any]{
+		[]RenderedElement{
+			&renderedBotMessage{
 				OutcomingTextMessage: m2,
 			},
 		},
-		[]tgbot.OutcomingMessage{m2},
-		[]tgbot.RenderActionType{
-			&tgbot.RenderActionKeep{
-				RenderedElement: &tgbot.RenderedBotMessage[any]{
+		[]outcomingMessage{m2},
+		[]renderActionType{
+			&renderActionKeep{
+				RenderedElement: &renderedBotMessage{
 					OutcomingTextMessage: m2,
 				},
 				NewElement: m2,
@@ -165,10 +164,10 @@ func TestGetRenderActionsBasic(t *testing.T) {
 
 	// rm1 is supposed to be replaced with m2
 	Check(t,
-		[]tgbot.RenderedElement{rm1},
-		[]tgbot.OutcomingMessage{m2},
-		[]tgbot.RenderActionType{
-			&tgbot.RenderActionReplace{
+		[]RenderedElement{rm1},
+		[]outcomingMessage{m2},
+		[]renderActionType{
+			&renderActionReplace{
 				RenderedElement: rm1,
 				NewElement:      m2,
 			},
@@ -176,10 +175,10 @@ func TestGetRenderActionsBasic(t *testing.T) {
 
 	// rm1 is supposed to be removed
 	Check(t,
-		[]tgbot.RenderedElement{rm1},
-		[]tgbot.OutcomingMessage{},
-		[]tgbot.RenderActionType{
-			&tgbot.RenderActionRemove{
+		[]RenderedElement{rm1},
+		[]outcomingMessage{},
+		[]renderActionType{
+			&renderActionRemove{
 				RenderedElement: rm1,
 			},
 		})
@@ -187,10 +186,10 @@ func TestGetRenderActionsBasic(t *testing.T) {
 }
 
 type MockRenderer struct {
-	OutcomingMessages []tgbot.OutcomingMessage
+	OutcomingMessages []outcomingMessage
 }
 
-func (mr *MockRenderer) Message(ctx context.Context, props *tgbot.ChatRendererMessageProps) (*models.Message, error) {
+func (mr *MockRenderer) Message(ctx context.Context, props *ChatRendererMessageProps) (*models.Message, error) {
 	return &models.Message{}, nil
 }
 
@@ -201,15 +200,15 @@ func (mr *MockRenderer) Delete(messageId int) error {
 func TestCreate(t *testing.T) {
 	re := &MockRenderer{}
 
-	m := tgbot.NewOutcomingTextMessage[int]("message 1")
-	b1 := tgbot.Button("button 1", func() int { return 1 }, "button 1", false, false)
+	m := newOutcomingTextMessage("message 1")
+	b1 := newButton("button 1", func() any { return 1 }, "button 1", false, false)
 	m.AddButton(b1)
 
-	tgbot.ExecuteRenderActions[int](
+	executeRenderActions(
 		context.Background(),
 		re,
-		[]tgbot.RenderActionType{
-			&tgbot.RenderActionCreate{
+		[]renderActionType{
+			&renderActionCreate{
 				NewElement: m,
 			},
 		},
