@@ -58,12 +58,10 @@ func NewHandler[S any, C any](app Application[S, C], tc *TelegramContext) *handl
 func (h *handler[S, C]) HandleUpdate(tc *TelegramContext) {
 	tc.Logger.Debug("HandleUpdate")
 
-	if tc.Update.Message != nil && tc.Update.Message.Text != "" {
+	if tc, ok := tc.AsTextMessage(); ok {
 		h.app.HandleMessage(h.appContext, tc)
 		return
-	}
-
-	if tc.Update.CallbackQuery != nil {
+	} else if tc, ok := tc.AsCallback(); ok {
 		h.app.HandleCallback(h.appContext, tc)
 		return
 	}

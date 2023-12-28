@@ -3,19 +3,19 @@ package tgbot
 import (
 	"context"
 
-	"github.com/go-telegram/bot/models"
+	"github.com/gotd/td/tg"
 )
 
 // Interface for rendering messages into some interface (telegram, emulator, console, etc)
 type ChatRenderer interface {
-	Message(context.Context, *ChatRendererMessageProps) (*models.Message, error)
+	Message(context.Context, *ChatRendererMessageProps) (*tg.Message, error)
 	Delete(messageId int) error
 }
 
 type ChatRendererMessageProps struct {
 	Text          string
-	ReplyMarkup   models.ReplyMarkup
-	TargetMessage *models.Message
+	ReplyMarkup   tg.ReplyMarkupClass
+	TargetMessage *tg.Message
 	RemoveTarget  bool
 }
 

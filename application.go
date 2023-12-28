@@ -20,8 +20,8 @@ type chatInputHandler func(string) any
 type chatCallbackHandler func(string) *callbackResult
 
 // User defined function
-type handleMessageFunc[S any, C any] func(*ApplicationContext[S, C], *TelegramContext)
-type handleCallbackFunc[S any, C any] func(*ApplicationContext[S, C], *TelegramContext)
+type handleMessageFunc[S any, C any] func(*ApplicationContext[S, C], *TelegramContextTextMessage)
+type handleCallbackFunc[S any, C any] func(*ApplicationContext[S, C], *TelegramContextCallback)
 
 type handleInitFunc[S any] func(*TelegramContext)
 
@@ -70,16 +70,6 @@ type NewApplicationProps[S any, C any] struct {
 	CreateGlobalContext func(*ChatState[S, C]) C
 }
 
-// type EmptyGlobalContext struct{}
-
-// func (egc EmptyGlobalContext) Get() any {
-// 	panic("EmptyGlobalContext")
-// }
-
-// func DefaultCreateContext[S any, C any](state *ChatState[S, C]) C {
-// 	return nil
-// }
-
 func DefaultHandleActionExternal[S any, C any](ac *ApplicationContext[S, C], tc *TelegramContext, action any) {
 	ac.Logger.Info("HandleActionExternal", zap.String("action", reflectStructName(action)))
 
@@ -114,15 +104,15 @@ func DefaultRenderFunc[S any, C any](ac *ApplicationContext[S, C]) error {
 	return nil
 }
 
-func DefaultHandlerCallback[S any, C any](ac *ApplicationContext[S, C], tc *TelegramContext) {
-	tc.Logger.Info("HandleCallback", zap.Any("data", tc.Update.CallbackQuery.Data))
+func DefaultHandlerCallback[S any, C any](ac *ApplicationContext[S, C], tc *TelegramContextCallback) {
+	tc.Logger.Info("HandleCallback", zap.Any("data", tc.UpdateBotCallbackQuery.QueryID))
 	tc.Logger.Debug("LocalStateTree", zap.String("tree", ac.State.treeState.LocalStateTree.String()))
 
 	ac.State.LockState(tc.Logger)
 	defer ac.State.UnlockState(tc.Logger)
 
 	if ac.State.callbackHandler != nil {
-		result := ac.State.callbackHandler(tc.Update.CallbackQuery.Data)
+		result := ac.State.callbackHandler(string(tc.UpdateBotCallbackQuery.Data))
 
 		ac.Logger.Debug("HandleCallback", zap.Any("action", result))
 
@@ -130,7 +120,7 @@ func DefaultHandlerCallback[S any, C any](ac *ApplicationContext[S, C], tc *Tele
 			return
 		}
 
-		internalHandleAction(ac, tc, result.action)
+		internalHandleAction(ac, &tc.TelegramContext, result.action)
 
 		if !result.noCallback {
 			tc.AnswerCallbackQuery()
@@ -148,9 +138,9 @@ func DefaultHandlerCallback[S any, C any](ac *ApplicationContext[S, C], tc *Tele
 
 }
 
-func DefaultHandleMessage[S any, C any](ac *ApplicationContext[S, C], tc *TelegramContext) {
+func DefaultHandleMessage[S any, C any](ac *ApplicationContext[S, C], tc *TelegramContextTextMessage) {
 
-	tc.Logger.Info("HandleMessage", zap.Any("text", tc.Update.Message.Text))
+	tc.Logger.Info("HandleMessage", zap.Any("text", tc.Text))
 	tc.Logger.Debug("LocalStateTree", zap.String("tree", ac.State.treeState.LocalStateTree.String()))
 
 	ac.State.LockState(tc.Logger)
@@ -159,12 +149,12 @@ func DefaultHandleMessage[S any, C any](ac *ApplicationContext[S, C], tc *Telegr
 	if ac.State.inputHandler != nil {
 
 		ac.State.renderedElements = append(
-			ac.State.renderedElements, newRenderedUserMessage(tc.Update.Message.ID),
+			ac.State.renderedElements, newRenderedUserMessage(tc.Message.ID),
 		)
 
-		action := ac.State.inputHandler(tc.Update.Message.Text)
+		action := ac.State.inputHandler(tc.Message.Message)
 
-		internalHandleAction(ac, tc, action)
+		internalHandleAction(ac, &tc.TelegramContext, action)
 
 	} else {
 		tc.Logger.Warn("Missing InputHandler")
@@ -223,10 +213,6 @@ func NewApplication[S any, C any](
 			return NewTelegramChatRenderer(tc.Bot, tc.ChatID)
 		}
 	}
-
-	// if createContext == nil {
-	// 	createContext = DefaultCreateContext[S, C]
-	// }
 
 	return &Application[S, C]{
 		CreateAppState:       createAppState,

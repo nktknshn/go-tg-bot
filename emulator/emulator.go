@@ -3,12 +3,11 @@ package emulator
 import (
 	"slices"
 
-	"github.com/go-telegram/bot/models"
 	tgbot "github.com/nktknshn/go-tg-bot"
 	"golang.org/x/exp/maps"
 )
 
-func InlineKeyboardToButtons(ik *models.InlineKeyboardMarkup) MessageButtons {
+func InlineKeyboardToButtons(ik *tg.InlineKeyboardMarkup) MessageButtons {
 	mb := MessageButtons{}
 
 	for _, row := range ik.InlineKeyboard {
@@ -31,7 +30,7 @@ func FakeServerToInput(fakeServer *FakeBot) *DrawInput {
 	result := &DrawInput{}
 	messages := maps.Values(fakeServer.Messages)
 
-	slices.SortFunc(messages, func(a, b *models.Message) int {
+	slices.SortFunc(messages, func(a, b *tg.Message) int {
 		return a.ID - b.ID
 	})
 

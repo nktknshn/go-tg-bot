@@ -106,7 +106,15 @@ func (app *App) Render(o tgbot.O) {
 var counterApp = tgbot.NewApplication[State, any](
 	func(tc *tgbot.TelegramContext) State {
 		// tc.Logger.Info("CreateAppState")
-		uname := fmt.Sprintf("%v (%v)", tc.Update.Message.From.Username, tc.Update.Message.From.ID)
+		// tc.Message.
+		// uname := fmt.Sprintf("%v (%v)", tc.Message.From.Username, tc.Update.Message.From.ID)
+		var uname string = "unknown"
+
+		if tc, ok := tc.AsTextMessage(); ok {
+			uname = fmt.Sprintf("%v", tc.Message.PeerID.String())
+		} else if tc, ok := tc.AsCallback(); ok {
+			uname = fmt.Sprintf("%v", tc.UpdateBotCallbackQuery.Peer.String())
+		}
 
 		return State{Counter: 0, Username: uname}
 	},

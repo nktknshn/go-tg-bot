@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/go-telegram/bot/models"
+	// "github.com/gotd/td/tg"
+	"github.com/gotd/td/bin"
+	"github.com/gotd/td/tg"
 	"go.uber.org/zap"
 )
 
@@ -26,7 +28,7 @@ type outcomingMessage interface {
 
 type outcomingFileMessage struct {
 	ElementFile elementFile
-	Message     *models.Message
+	Message     *tg.Message
 }
 
 func (m outcomingFileMessage) String() string {
@@ -115,18 +117,18 @@ func (t *outcomingTextMessage) String() string {
 	return fmt.Sprintf("OutcomingTextMessage{text: %s, buttons: %v, isComplete: %v}", text, t.Buttons, t.isComplete)
 }
 
-func equalReplyKeyboardMarkup(a models.ReplyKeyboardMarkup, b models.ReplyKeyboardMarkup) bool {
-	if len(a.Keyboard) != len(b.Keyboard) {
+func equalReplyKeyboardMarkup(a *tg.ReplyKeyboardMarkup, b *tg.ReplyKeyboardMarkup) bool {
+	if len(a.Rows) != len(b.Rows) {
 		return false
 	}
 
-	for i, row := range a.Keyboard {
-		if len(row) != len(b.Keyboard[i]) {
+	for i, row := range a.Rows {
+		if len(row.Buttons) != len(b.Rows[i].Buttons) {
 			return false
 		}
 
-		for j, button := range row {
-			if button.Text != b.Keyboard[i][j].Text {
+		for j, button := range row.Buttons {
+			if button.GetText() != b.Rows[i].Buttons[j].GetText() {
 				return false
 			}
 		}
@@ -135,22 +137,54 @@ func equalReplyKeyboardMarkup(a models.ReplyKeyboardMarkup, b models.ReplyKeyboa
 	return true
 }
 
-func equalInlineKeyboardMarkup(a models.InlineKeyboardMarkup, b models.InlineKeyboardMarkup) bool {
-	if len(a.InlineKeyboard) != len(b.InlineKeyboard) {
+func equalInlineKeyboardButtonClass(a tg.KeyboardButtonClass, b tg.KeyboardButtonClass) bool {
+	if a == nil && b == nil {
+		return true
+	}
+
+	if a == nil || b == nil {
 		return false
 	}
 
-	for i, row := range a.InlineKeyboard {
-		if len(row) != len(b.InlineKeyboard[i]) {
+	b1 := bin.Buffer{
+		Buf: make([]byte, 0),
+	}
+
+	b2 := bin.Buffer{
+		Buf: make([]byte, 0),
+	}
+
+	err := a.Encode(&b1)
+
+	if err != nil {
+		panic(err)
+	}
+
+	err = b.Encode(&b2)
+
+	if err != nil {
+		panic(err)
+	}
+
+	return string(b1.Buf) == string(b2.Buf)
+}
+
+func equalInlineKeyboardMarkup(a *tg.ReplyInlineMarkup, b *tg.ReplyInlineMarkup) bool {
+	if len(a.Rows) != len(b.Rows) {
+		return false
+	}
+
+	for i, row := range a.Rows {
+		if len(row.Buttons) != len(b.Rows[i].Buttons) {
 			return false
 		}
 
-		for j, button := range row {
-			if button.Text != b.InlineKeyboard[i][j].Text {
+		for j, button := range row.Buttons {
+			if button.GetText() != b.Rows[i].Buttons[j].GetText() {
 				return false
 			}
 
-			if button.CallbackData != b.InlineKeyboard[i][j].CallbackData {
+			if !equalInlineKeyboardButtonClass(button, b.Rows[i].Buttons[j]) {
 				return false
 			}
 		}
@@ -181,7 +215,9 @@ func (t *outcomingTextMessage) Equal(other outcomingMessage) bool {
 
 	oth := other.(*outcomingTextMessage)
 
-	return t.Text == oth.Text && equalInlineKeyboardMarkup(t.InlineKeyboardMarkup(), oth.InlineKeyboardMarkup()) && equalReplyKeyboardMarkup(t.ReplyKeyboardMarkup(), oth.ReplyKeyboardMarkup())
+	return t.Text == oth.Text &&
+		equalInlineKeyboardMarkup(t.InlineKeyboardMarkup(), oth.InlineKeyboardMarkup()) &&
+		equalReplyKeyboardMarkup(t.ReplyKeyboardMarkup(), oth.ReplyKeyboardMarkup())
 }
 
 func (t *outcomingTextMessage) ConcatText(text string) {
@@ -192,7 +228,7 @@ func (t *outcomingTextMessage) SetComplete() {
 	t.isComplete = true
 }
 
-func (t *outcomingTextMessage) ReplyMarkup() models.ReplyMarkup {
+func (t *outcomingTextMessage) ReplyMarkup() tg.ReplyMarkupClass {
 
 	if len(t.BottomButtons) > 0 {
 		return t.ReplyKeyboardMarkup()
@@ -201,43 +237,56 @@ func (t *outcomingTextMessage) ReplyMarkup() models.ReplyMarkup {
 	return t.InlineKeyboardMarkup()
 }
 
-func (t *outcomingTextMessage) ReplyKeyboardMarkup() models.ReplyKeyboardMarkup {
-	res := models.ReplyKeyboardMarkup{}
+func (t *outcomingTextMessage) ReplyKeyboardMarkup() *tg.ReplyKeyboardMarkup {
+	res := tg.ReplyKeyboardMarkup{}
 
 	if len(t.BottomButtons) > 0 {
 
 		for _, b := range t.BottomButtons {
 			if len(b.Texts) > 0 {
-				br := make([]models.KeyboardButton, 0)
+				// br := make([]tg.KeyboardButton, 0)
+				br := tg.KeyboardButtonRow{}
+
 				for _, t := range b.Texts {
-					br = append(br, models.KeyboardButton{Text: t})
+					br.Buttons = append(br.Buttons, &tg.KeyboardButton{Text: t})
 				}
-				res.Keyboard = append(res.Keyboard, br)
+				res.Rows = append(res.Rows, br)
 			} else {
-				res.Keyboard = append(res.Keyboard, []models.KeyboardButton{{Text: b.Text}})
+				res.Rows = append(res.Rows, tg.KeyboardButtonRow{
+					Buttons: []tg.KeyboardButtonClass{
+						&tg.KeyboardButton{Text: b.Text},
+					},
+				})
 			}
 		}
 
 	}
-	return res
+	return &res
 }
 
-func (t *outcomingTextMessage) InlineKeyboardMarkup() models.InlineKeyboardMarkup {
+func (t *outcomingTextMessage) InlineKeyboardMarkup() *tg.ReplyInlineMarkup {
 	// ReplyKeyboardRemove
-	res := models.InlineKeyboardMarkup{}
+	res := tg.ReplyInlineMarkup{}
 
 	for _, row := range t.Buttons {
-		br := make([]models.InlineKeyboardButton, 0)
+		// br := make([]tg.InlineKeyboardButton, 0)
+
+		br := tg.KeyboardButtonRow{}
+
 		for _, b := range row {
-			br = append(br, models.InlineKeyboardButton{
-				Text:         b.Text,
-				CallbackData: b.CallbackData(),
+			br.Buttons = append(br.Buttons, &tg.KeyboardButtonCallback{
+				Text: b.Text,
+				Data: []byte(b.CallbackData()),
 			})
+			// br = append(br, tg.InlineKeyboardButton{
+			// 	Text:         b.Text,
+			// 	CallbackData: b.CallbackData(),
+			// })
 		}
-		res.InlineKeyboard = append(res.InlineKeyboard, br)
+		res.Rows = append(res.Rows, br)
 	}
 
-	return res
+	return &res
 }
 
 func (t *outcomingTextMessage) AddButton(button *elementButton) {
@@ -254,7 +303,7 @@ func (t *outcomingTextMessage) AddButtonsRow(buttonsRow *elementButtonsRow) {
 	t.Buttons = append(t.Buttons, buttonsRow.Buttons())
 }
 
-func equalReplyMarkup(a *models.ReplyMarkup, b *models.ReplyMarkup) bool {
+func equalReplyMarkup(a tg.ReplyMarkupClass, b tg.ReplyMarkupClass) bool {
 	logger := GetLogger()
 
 	if a == nil && b == nil {

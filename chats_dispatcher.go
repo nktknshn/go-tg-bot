@@ -3,8 +3,9 @@ package tgbot
 import (
 	"context"
 
-	"github.com/go-telegram/bot/models"
 	"go.uber.org/zap"
+
+	"github.com/gotd/td/tg"
 )
 
 type ChatHandlerFactory func(*TelegramContext) chatHandler
@@ -29,24 +30,26 @@ func NewChatsDispatcher(props *ChatsDispatcherProps) *ChatsDispatcher {
 	}
 }
 
-func (cd *ChatsDispatcher) newTelegramContextLogger(bot TelegramBot, chatID int64, update *models.Update) *zap.Logger {
+func (cd *ChatsDispatcher) newTelegramContextLogger(bot TelegramBot, chatID int64, update tg.UpdateClass) *zap.Logger {
+
 	return GetLogger().With(
 		zap.Int64("chatID", chatID),
-		zap.Int64("updateID", update.ID),
+		// zap.Int64("updateID", update.ID),
 	)
 }
 
-func (cd *ChatsDispatcher) HandleUpdate(ctx context.Context, bot TelegramBot, update *models.Update) {
+func (cd *ChatsDispatcher) HandleUpdate(ctx context.Context, bot TelegramBot, update tg.UpdateClass) error {
 
 	cd.Logger.Debug("HandleUpdate", zap.Any("update", update))
 
-	logger := cd.Logger.With(zap.Int64("updateID", update.ID))
+	// logger := cd.Logger.With(zap.Int64("updateID", update.ID))
+	logger := cd.Logger
 
 	chatID := getUpdateChatId(update)
 
 	if chatID == 0 {
 		logger.Debug("Update has no chat id, skipping.")
-		return
+		return nil
 	}
 
 	chat, ok := cd.ChatHandlers[chatID]
@@ -67,4 +70,6 @@ func (cd *ChatsDispatcher) HandleUpdate(ctx context.Context, bot TelegramBot, up
 
 	logger.Debug("Handling update")
 	chat.HandleUpdate(tc)
+
+	return nil
 }

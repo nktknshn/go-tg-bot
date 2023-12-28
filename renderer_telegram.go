@@ -4,8 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-telegram/bot"
-	"github.com/go-telegram/bot/models"
+	"github.com/gotd/td/tg"
 )
 
 type telegramChatRenderer struct {
@@ -14,7 +13,7 @@ type telegramChatRenderer struct {
 }
 
 func (r *telegramChatRenderer) Delete(messageId int) error {
-	removed, err := r.Bot.DeleteMessage(context.Background(), &bot.DeleteMessageParams{
+	removed, err := r.Bot.DeleteMessage(context.Background(), DeleteMessageParams{
 		ChatID:    r.ChatID,
 		MessageID: messageId,
 	})
@@ -30,7 +29,7 @@ func (r *telegramChatRenderer) Delete(messageId int) error {
 	return nil
 }
 
-func (r *telegramChatRenderer) Message(ctx context.Context, props *ChatRendererMessageProps) (*models.Message, error) {
+func (r *telegramChatRenderer) Message(ctx context.Context, props *ChatRendererMessageProps) (*tg.Message, error) {
 	if props.TargetMessage != nil {
 
 		// the message must be removed
@@ -41,7 +40,7 @@ func (r *telegramChatRenderer) Message(ctx context.Context, props *ChatRendererM
 				return nil, err
 			}
 		} else {
-			editedMessage, err := r.Bot.EditMessageText(ctx, &bot.EditMessageTextParams{
+			editedMessage, err := r.Bot.EditMessageText(ctx, EditMessageTextParams{
 				ChatID:                r.ChatID,
 				MessageID:             props.TargetMessage.ID,
 				Text:                  props.Text,
@@ -58,12 +57,12 @@ func (r *telegramChatRenderer) Message(ctx context.Context, props *ChatRendererM
 
 	}
 
-	message, err := r.Bot.SendMessage(ctx, &bot.SendMessageParams{
+	message, err := r.Bot.SendMessage(ctx, SendMessageParams{
 		ChatID:                r.ChatID,
 		Text:                  props.Text,
 		ReplyMarkup:           props.ReplyMarkup,
 		DisableWebPagePreview: true,
-		// ParseMode:             models.ParseModeMarkdown,
+		// ParseMode:             tg.ParseModeMarkdown,
 	})
 
 	if err != nil {

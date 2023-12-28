@@ -5,14 +5,13 @@ import (
 	"math/rand"
 
 	"github.com/go-telegram/bot"
-	"github.com/go-telegram/bot/models"
 
 	tgbot "github.com/nktknshn/go-tg-bot"
 )
 
 type FakeBot struct {
 	lastID         int
-	Messages       map[int]*models.Message
+	Messages       map[int]*tg.Message
 	updateCallback func()
 	replyCallback  func()
 	dispatcher     *tgbot.ChatsDispatcher
@@ -30,7 +29,7 @@ func (fb *FakeBot) NewUser() *FakeBotUser {
 	}
 }
 
-func (fb *FakeBot) AddUserMessage(update *models.Update) {
+func (fb *FakeBot) AddUserMessage(update *tg.Update) {
 	fb.Messages[update.Message.ID] = update.Message
 }
 
@@ -47,7 +46,7 @@ func (fb *FakeBot) AnswerCallbackQuery(ctx context.Context, params *bot.AnswerCa
 	return true, nil
 }
 
-func (fb *FakeBot) SendMessage(ctx context.Context, params *bot.SendMessageParams) (*models.Message, error) {
+func (fb *FakeBot) SendMessage(ctx context.Context, params *bot.SendMessageParams) (*tg.Message, error) {
 
 	m := fb.createMessage(&tgbot.ChatRendererMessageProps{
 		Text:        params.Text,
@@ -59,14 +58,14 @@ func (fb *FakeBot) SendMessage(ctx context.Context, params *bot.SendMessageParam
 	return m, nil
 }
 
-func tryInlineKeyboard(v models.ReplyMarkup) *models.InlineKeyboardMarkup {
-	if e, ok := v.(models.InlineKeyboardMarkup); ok {
+func tryInlineKeyboard(v tg.ReplyMarkup) *tg.InlineKeyboardMarkup {
+	if e, ok := v.(tg.InlineKeyboardMarkup); ok {
 		return &e
 	}
 	return nil
 }
 
-func (fb *FakeBot) EditMessageText(ctx context.Context, params *bot.EditMessageTextParams) (*models.Message, error) {
+func (fb *FakeBot) EditMessageText(ctx context.Context, params *bot.EditMessageTextParams) (*tg.Message, error) {
 
 	if message, ok := fb.Messages[params.MessageID]; ok {
 		message.Text = params.Text
@@ -107,9 +106,9 @@ func (fs *FakeBot) getNewID() int {
 	return fs.lastID
 }
 
-func (fs *FakeBot) createMessage(props *tgbot.ChatRendererMessageProps) *models.Message {
+func (fs *FakeBot) createMessage(props *tgbot.ChatRendererMessageProps) *tg.Message {
 
-	botMessage := &models.Message{
+	botMessage := &tg.Message{
 		ID:          fs.getNewID(),
 		Text:        props.Text,
 		ReplyMarkup: *tryInlineKeyboard(props.ReplyMarkup),
@@ -122,7 +121,7 @@ func (fs *FakeBot) createMessage(props *tgbot.ChatRendererMessageProps) *models.
 
 func NewFakeBot() *FakeBot {
 	return &FakeBot{
-		Messages: make(map[int]*models.Message),
+		Messages: make(map[int]*tg.Message),
 	}
 }
 
@@ -132,7 +131,7 @@ type FakeBotUser struct {
 	Bot    *FakeBot
 }
 
-func (u *FakeBotUser) SendTextMessage(text string) *models.Update {
+func (u *FakeBotUser) SendTextMessage(text string) *tg.Update {
 	update := NewTextMessageUpdate(TextMessageUpdate{
 		Text: text,
 		UpdateProps: UpdateProps{
@@ -147,7 +146,7 @@ func (u *FakeBotUser) SendTextMessage(text string) *models.Update {
 	return update
 }
 
-func (u *FakeBotUser) SendCallbackQuery(data string) *models.Update {
+func (u *FakeBotUser) SendCallbackQuery(data string) *tg.Update {
 	update := NewCallbackQueryUpdate(CallbackQueryUpdate{
 		Data: data,
 		UpdateProps: UpdateProps{
@@ -171,17 +170,17 @@ type CallbackQueryUpdate struct {
 	UpdateProps
 }
 
-func NewCallbackQueryUpdate(props CallbackQueryUpdate) *models.Update {
-	return &models.Update{
+func NewCallbackQueryUpdate(props CallbackQueryUpdate) *tg.Update {
+	return &tg.Update{
 		ID: int64(rand.Int()),
-		CallbackQuery: &models.CallbackQuery{
+		CallbackQuery: &tg.CallbackQuery{
 			Data: props.Data,
-			Message: &models.Message{
+			Message: &tg.Message{
 				ID: rand.Int(),
-				Chat: models.Chat{
+				Chat: tg.Chat{
 					ID: props.ChatID,
 				},
-				From: &models.User{
+				From: &tg.User{
 					ID:       int64(props.UserID),
 					Username: "username",
 				},
@@ -195,20 +194,20 @@ type TextMessageUpdate struct {
 	UpdateProps
 }
 
-// func NewTextMessageUpdateHelper(text string) *models.Update {
+// func NewTextMessageUpdateHelper(text string) *tg.Update {
 
 // }
 
-func NewTextMessageUpdate(props TextMessageUpdate) *models.Update {
-	return &models.Update{
+func NewTextMessageUpdate(props TextMessageUpdate) *tg.Update {
+	return &tg.Update{
 		ID: int64(rand.Int()),
-		Message: &models.Message{
+		Message: &tg.Message{
 			ID:   rand.Int(),
 			Text: props.Text,
-			Chat: models.Chat{
+			Chat: tg.Chat{
 				ID: props.ChatID,
 			},
-			From: &models.User{
+			From: &tg.User{
 				ID:       int64(props.UserID),
 				Username: "username",
 			},

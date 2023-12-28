@@ -3,7 +3,7 @@ package tgbot
 import (
 	"fmt"
 
-	"github.com/go-telegram/bot/models"
+	"github.com/gotd/td/tg"
 )
 
 const (
@@ -63,7 +63,7 @@ func (r renderedUserMessage) String() string {
 
 type renderedBotMessage struct {
 	OutcomingTextMessage *outcomingTextMessage
-	Message              *models.Message
+	Message              *tg.Message
 }
 
 func (rbm renderedBotMessage) String() string {
@@ -138,7 +138,7 @@ func (r *renderedBotDocumentMessage) Equal(other RenderedElement) bool {
 
 type renderedPhotoGroup struct {
 	OutcomingPhotoGroupMessage *outcomingPhotoGroupMessage
-	Message                    *models.Message
+	Message                    *tg.Message
 }
 
 func (r *renderedPhotoGroup) ID() int {

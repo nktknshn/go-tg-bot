@@ -4,20 +4,39 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-telegram/bot"
-	"github.com/go-telegram/bot/models"
+	"github.com/gotd/td/tg"
 )
 
 var ErrMessageNotFound = fmt.Errorf("message not found")
 
-type messageDeleter interface {
-	DeleteMessage(ctx context.Context, params *bot.DeleteMessageParams) (bool, error)
+type DeleteMessageParams struct {
+	ChatID    int64
+	MessageID int
 }
 
-type messageEditor interface {
-	EditMessageText(ctx context.Context, params *bot.EditMessageTextParams) (*models.Message, error)
+type EditMessageTextParams struct {
+	ChatID                int64
+	MessageID             int
+	Text                  string
+	ReplyMarkup           tg.ReplyMarkupClass
+	DisableWebPagePreview bool
 }
 
-type messageSender interface {
-	SendMessage(ctx context.Context, params *bot.SendMessageParams) (*models.Message, error)
+type SendMessageParams struct {
+	ChatID                int64
+	Text                  string
+	ReplyMarkup           tg.ReplyMarkupClass
+	DisableWebPagePreview bool
+}
+
+type MessageDeleter interface {
+	DeleteMessage(ctx context.Context, params DeleteMessageParams) (bool, error)
+}
+
+type MessageEditor interface {
+	EditMessageText(ctx context.Context, params EditMessageTextParams) (*tg.Message, error)
+}
+
+type MessageSender interface {
+	SendMessage(ctx context.Context, params SendMessageParams) (*tg.Message, error)
 }

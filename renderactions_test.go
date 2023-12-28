@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/go-telegram/bot/models"
+	"github.com/gotd/td/tg"
 )
 
 func Check(
@@ -83,19 +83,19 @@ var (
 
 	rm1 = &renderedBotMessage{
 		OutcomingTextMessage: m1,
-		Message:              &models.Message{},
+		Message:              &tg.Message{},
 	}
 	rm2 = &renderedBotMessage{
 		OutcomingTextMessage: m2,
-		Message:              &models.Message{},
+		Message:              &tg.Message{},
 	}
 	rm3 = &renderedBotMessage{
 		OutcomingTextMessage: m3,
-		Message:              &models.Message{},
+		Message:              &tg.Message{},
 	}
 	rm4 = &renderedBotMessage{
 		OutcomingTextMessage: m4,
-		Message:              &models.Message{},
+		Message:              &tg.Message{},
 	}
 )
 
@@ -189,8 +189,8 @@ type MockRenderer struct {
 	OutcomingMessages []outcomingMessage
 }
 
-func (mr *MockRenderer) Message(ctx context.Context, props *ChatRendererMessageProps) (*models.Message, error) {
-	return &models.Message{}, nil
+func (mr *MockRenderer) Message(ctx context.Context, props *ChatRendererMessageProps) (*tg.Message, error) {
+	return &tg.Message{}, nil
 }
 
 func (mr *MockRenderer) Delete(messageId int) error {

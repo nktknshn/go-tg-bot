@@ -3,35 +3,96 @@ package tgbot
 import (
 	"context"
 
-	"github.com/go-telegram/bot"
-	"github.com/go-telegram/bot/models"
+	"github.com/gotd/td/tg"
 
 	"go.uber.org/zap"
 )
 
-type callbackAnswerer interface {
-	AnswerCallbackQuery(context.Context, *bot.AnswerCallbackQueryParams) (bool, error)
+type AnswerCallbackQueryParams struct {
+	QueryID int64
+}
+
+type CallbackAnswerer interface {
+	AnswerCallbackQuery(context.Context, AnswerCallbackQueryParams) (bool, error)
 }
 
 // Interface for rendering messages into some interface (telegram, emulator, console, etc)
 type TelegramBot interface {
-	messageDeleter
-	messageEditor
-	messageSender
-	callbackAnswerer
+	MessageDeleter
+	MessageEditor
+	MessageSender
+	CallbackAnswerer
 }
 
+// TelegramContext is a context related to a specific update
 type TelegramContext struct {
+	Ctx context.Context
+
+	Bot TelegramBot
+
 	ChatID int64
-	Bot    TelegramBot
-	Ctx    context.Context
-	Update *models.Update
+	Update tg.UpdateClass
+
 	Logger *zap.Logger
 }
 
+func (tc TelegramContext) AsTextMessage() (*TelegramContextTextMessage, bool) {
+	u, ok := tc.Update.(*tg.UpdateNewMessage)
+
+	if !ok {
+		return nil, false
+	}
+
+	if u.Message == nil {
+		return nil, false
+	}
+
+	m, ok := u.Message.(*tg.Message)
+
+	if !ok {
+		return nil, false
+	}
+
+	return &TelegramContextTextMessage{
+		TelegramContext: tc,
+		Text:            m.Message,
+	}, true
+}
+
+func (tc TelegramContext) AsCallback() (*TelegramContextCallback, bool) {
+	u, ok := tc.Update.(*tg.UpdateBotCallbackQuery)
+
+	if !ok {
+		return nil, false
+	}
+
+	return &TelegramContextCallback{
+		TelegramContext:        tc,
+		UpdateBotCallbackQuery: u,
+	}, true
+}
+
+type TelegramContextTextMessage struct {
+	TelegramContext
+	Text    string
+	Message *tg.Message
+}
+
+type TelegramContextCallback struct {
+	TelegramContext
+	UpdateBotCallbackQuery *tg.UpdateBotCallbackQuery
+}
+
 func (tc TelegramContext) AnswerCallbackQuery() {
-	tc.Bot.AnswerCallbackQuery(tc.Ctx, &bot.AnswerCallbackQueryParams{
-		CallbackQueryID: tc.Update.CallbackQuery.ID,
-		ShowAlert:       false,
+
+	u, ok := tc.Update.(*tg.UpdateBotCallbackQuery)
+
+	if !ok {
+		tc.Logger.Error("Update is not a callback query")
+		return
+	}
+
+	tc.Bot.AnswerCallbackQuery(tc.Ctx, AnswerCallbackQueryParams{
+		QueryID: u.QueryID,
 	})
 }
