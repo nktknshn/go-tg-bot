@@ -6,16 +6,16 @@ import (
 	"go.uber.org/zap"
 )
 
-type chatHandler interface {
+type ChatHandler interface {
 	HandleUpdate(*TelegramContext)
 }
 
-type handler[S any, C any] struct {
+type ChatHandlerImpl[S any, C any] struct {
 	app        Application[S, C]
 	appContext *ApplicationContext[S, C]
 }
 
-func NewHandler[S any, C any](app Application[S, C], tc *TelegramContext) *handler[S, C] {
+func NewHandler[S any, C any](app Application[S, C], tc *TelegramContext) *ChatHandlerImpl[S, C] {
 	tc.Logger.Debug("NewHandler")
 
 	tc.Logger.Debug("CreateAppState")
@@ -45,7 +45,7 @@ func NewHandler[S any, C any](app Application[S, C], tc *TelegramContext) *handl
 
 	tc.Logger.Debug("New handler has been created.")
 
-	return &handler[S, C]{
+	return &ChatHandlerImpl[S, C]{
 		app: app,
 		appContext: &ApplicationContext[S, C]{
 			App:    &app,
@@ -55,27 +55,32 @@ func NewHandler[S any, C any](app Application[S, C], tc *TelegramContext) *handl
 	}
 }
 
-func (h *handler[S, C]) HandleUpdate(tc *TelegramContext) {
-	tc.Logger.Debug("HandleUpdate")
+func (h *ChatHandlerImpl[S, C]) HandleUpdate(tc *TelegramContext) {
+	tc.Logger.Debug("HandleUpdate", zap.Any("update", tc))
 
-	if tc, ok := tc.AsTextMessage(); ok {
-		h.app.HandleMessage(h.appContext, tc)
+	if tcm, ok := tc.AsTextMessage(); ok {
+		h.app.HandleMessage(h.appContext, tcm)
 		return
-	} else if tc, ok := tc.AsCallback(); ok {
-		h.app.HandleCallback(h.appContext, tc)
+	}
+
+	if tccb, ok := tc.AsCallback(); ok {
+		h.app.HandleCallback(
+			h.appContext,
+			tccb,
+		)
 		return
 	}
 
 	tc.Logger.Debug("Unkown update (neither message nor callback)")
 }
 
-func (a *Application[S, C]) NewHandler(tc *TelegramContext) *handler[S, C] {
+func (a *Application[S, C]) NewHandler(tc *TelegramContext) *ChatHandlerImpl[S, C] {
 	return NewHandler[S, C](*a, tc)
 }
 
 func (a *Application[S, C]) ChatsDispatcher() *ChatsDispatcher {
 	return NewChatsDispatcher(&ChatsDispatcherProps{
-		ChatFactory: func(tc *TelegramContext) chatHandler {
+		ChatFactory: func(tc *TelegramContext) ChatHandler {
 			return a.NewHandler(tc)
 		},
 	})

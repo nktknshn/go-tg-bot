@@ -112,7 +112,7 @@ type outcomingTextMessage struct {
 
 func (t *outcomingTextMessage) String() string {
 	// maximum 20 chars from t.Text
-	text := t.Text[:20]
+	text := t.Text[:min(20, len(t.Text))]
 
 	return fmt.Sprintf("OutcomingTextMessage{text: %s, buttons: %v, isComplete: %v}", text, t.Buttons, t.isComplete)
 }
@@ -170,6 +170,15 @@ func equalInlineKeyboardButtonClass(a tg.KeyboardButtonClass, b tg.KeyboardButto
 }
 
 func equalInlineKeyboardMarkup(a *tg.ReplyInlineMarkup, b *tg.ReplyInlineMarkup) bool {
+
+	if a == nil && b == nil {
+		return true
+	}
+
+	if a == nil || b == nil {
+		return false
+	}
+
 	if len(a.Rows) != len(b.Rows) {
 		return false
 	}
@@ -268,12 +277,15 @@ func (t *outcomingTextMessage) InlineKeyboardMarkup() *tg.ReplyInlineMarkup {
 	// ReplyKeyboardRemove
 	res := tg.ReplyInlineMarkup{}
 
+	count := 0
+
 	for _, row := range t.Buttons {
 		// br := make([]tg.InlineKeyboardButton, 0)
 
 		br := tg.KeyboardButtonRow{}
 
 		for _, b := range row {
+			count++
 			br.Buttons = append(br.Buttons, &tg.KeyboardButtonCallback{
 				Text: b.Text,
 				Data: []byte(b.CallbackData()),
@@ -284,6 +296,10 @@ func (t *outcomingTextMessage) InlineKeyboardMarkup() *tg.ReplyInlineMarkup {
 			// })
 		}
 		res.Rows = append(res.Rows, br)
+	}
+
+	if count == 0 {
+		return nil
 	}
 
 	return &res

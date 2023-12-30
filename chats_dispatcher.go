@@ -6,7 +6,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type ChatHandlerFactory func(*TelegramContext) chatHandler
+type ChatHandlerFactory func(*TelegramContext) ChatHandler
 
 type ChatsDispatcherProps struct {
 	ChatFactory ChatHandlerFactory
@@ -15,14 +15,14 @@ type ChatsDispatcherProps struct {
 // ChatsDispatcher is a map of chats
 // dispatches updates to chats
 type ChatsDispatcher struct {
-	ChatHandlers       map[int64]chatHandler
+	ChatHandlers       map[int64]ChatHandler
 	ChatHandlerFactory ChatHandlerFactory
 	Logger             *zap.Logger
 }
 
 func NewChatsDispatcher(props *ChatsDispatcherProps) *ChatsDispatcher {
 	return &ChatsDispatcher{
-		ChatHandlers:       make(map[int64]chatHandler),
+		ChatHandlers:       make(map[int64]ChatHandler),
 		ChatHandlerFactory: props.ChatFactory,
 		Logger:             GetLogger(),
 	}

@@ -28,21 +28,20 @@ func runComponent(
 
 	logger.Debug("Component rendered", zap.Any("comp", comp))
 
+	if !reflectHasState(comp) {
+		logger.Debug("Component doesn't have state")
+		return o.Result, *state.LocalStateClosure, usedContextValue
+	}
+
 	ls := reflectDerefValue(reflect.ValueOf(comp)).
-		FieldByName("State").
+		FieldByName("State")
+
+	ls = ls.
 		FieldByName(localStateClosureName).
 		Elem()
 
 	vi := ls.FieldByName("Initialized")
 	vv := ls.FieldByName("Value")
-
-	// fmt.Println("Initialized", vi)
-	// fmt.Println("Value", vv)
-
-	if !reflectHasState(comp) {
-		logger.Debug("Component doesn't have state")
-		return o.Result, *state.LocalStateClosure, usedContextValue
-	}
 
 	return o.Result, localStateClosure[any]{
 		Initialized: vi.Bool(),

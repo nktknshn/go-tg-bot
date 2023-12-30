@@ -10,12 +10,15 @@ import (
 var ErrMessageNotFound = fmt.Errorf("message not found")
 
 type DeleteMessageParams struct {
-	ChatID    int64
-	MessageID int
+	ChatID     int64
+	AccessHash int64
+	MessageID  int
 }
 
 type EditMessageTextParams struct {
-	ChatID                int64
+	ChatID     int64
+	AccessHash int64
+
 	MessageID             int
 	Text                  string
 	ReplyMarkup           tg.ReplyMarkupClass
@@ -23,7 +26,9 @@ type EditMessageTextParams struct {
 }
 
 type SendMessageParams struct {
-	ChatID                int64
+	ChatID     int64
+	AccessHash int64
+
 	Text                  string
 	ReplyMarkup           tg.ReplyMarkupClass
 	DisableWebPagePreview bool

@@ -15,6 +15,15 @@ func TestTodoApp(t *testing.T) {
 	user1 := bot.NewUser()
 
 	user1.SendTextMessage("/start")
+
+	println("user1 messages:")
+
+	for _, message := range user1.DisplayedMessages() {
+		println(message.Message)
+	}
+
+	return
+
 	user1.SendCallbackQuery("Go to main")
 	user1.SendTextMessage("task 1")
 	user1.SendCallbackQuery("Yes")

@@ -20,6 +20,10 @@ func (fbu *FakeBotUser) GetUser() *tg.User {
 	}
 }
 
+func (u *FakeBotUser) DisplayedMessages() []*tg.Message {
+	return u.Bot.DisplayedMessages(u.ChatID)
+}
+
 // construct BotUpdate
 func (u *FakeBotUser) SendTextMessage(text string) tg.UpdateClass {
 
@@ -27,11 +31,14 @@ func (u *FakeBotUser) SendTextMessage(text string) tg.UpdateClass {
 
 	textMessage := &tg.Message{
 		Message: text,
+		PeerID:  &tg.PeerUser{UserID: u.UserID},
 	}
 
 	bu.UpdateClass = &tg.UpdateNewMessage{
 		Message: textMessage,
 	}
+
+	u.Bot.AddUserMessage(textMessage)
 
 	bu.User = u.GetUser()
 

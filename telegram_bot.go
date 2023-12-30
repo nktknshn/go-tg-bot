@@ -2,10 +2,13 @@ package tgbot
 
 import (
 	"context"
+	"crypto/rand"
+	"io"
 
 	"github.com/gotd/td/telegram/message"
 	"github.com/gotd/td/telegram/message/unpack"
 	"github.com/gotd/td/tg"
+	"github.com/nktknshn/go-tg-bot/gogotd"
 	"github.com/nktknshn/go-tg-bot/helpers"
 	"go.uber.org/multierr"
 )
@@ -14,6 +17,11 @@ import (
 type GotdBot struct {
 	sender *message.Sender
 	client *tg.Client
+	rand   io.Reader
+}
+
+func NewGotdBot(sender *message.Sender, client *tg.Client) *GotdBot {
+	return &GotdBot{sender: sender, client: client, rand: rand.Reader}
 }
 
 func (b *GotdBot) DeleteMessage(ctx context.Context, params DeleteMessageParams) (bool, error) {
@@ -32,14 +40,21 @@ func (b *GotdBot) DeleteMessage(ctx context.Context, params DeleteMessageParams)
 
 func (b *GotdBot) EditMessageText(ctx context.Context, params EditMessageTextParams) (*tg.Message, error) {
 
-	msg, err := unpack.Message(
-		b.client.MessagesEditMessage(ctx, &tg.MessagesEditMessageRequest{
-			Peer:        &tg.InputPeerChat{ChatID: params.ChatID},
-			ID:          params.MessageID,
-			Message:     params.Text,
-			ReplyMarkup: params.ReplyMarkup,
-			NoWebpage:   params.DisableWebPagePreview,
-		}),
+	outputMsg := &tg.MessagesEditMessageRequest{
+		Peer:      &tg.InputPeerUser{UserID: params.ChatID, AccessHash: params.AccessHash},
+		ID:        params.MessageID,
+		Message:   params.Text,
+		NoWebpage: params.DisableWebPagePreview,
+	}
+
+	println("params.ReplyMarkup", params.ReplyMarkup.TypeName())
+
+	if !params.ReplyMarkup.Zero() {
+		outputMsg.SetReplyMarkup(params.ReplyMarkup)
+	}
+
+	msg, err := gogotd.UnpackEditMessage(
+		b.client.MessagesEditMessage(ctx, outputMsg),
 	)
 
 	if err != nil {
@@ -51,11 +66,23 @@ func (b *GotdBot) EditMessageText(ctx context.Context, params EditMessageTextPar
 
 func (b *GotdBot) SendMessage(ctx context.Context, params SendMessageParams) (*tg.Message, error) {
 
-	msg, err := unpack.Message(b.client.MessagesSendMessage(ctx, &tg.MessagesSendMessageRequest{
-		Peer:        &tg.InputPeerChat{ChatID: params.ChatID},
-		Message:     params.Text,
-		ReplyMarkup: params.ReplyMarkup,
-	}))
+	id, err := RandInt64(b.rand)
+
+	if err != nil {
+		return nil, err
+	}
+
+	outcoming := &tg.MessagesSendMessageRequest{
+		Peer:     &tg.InputPeerUser{UserID: params.ChatID, AccessHash: params.AccessHash},
+		Message:  params.Text,
+		RandomID: id,
+	}
+
+	if !params.ReplyMarkup.Zero() {
+		outcoming.SetReplyMarkup(params.ReplyMarkup)
+	}
+
+	msg, err := unpack.Message(b.client.MessagesSendMessage(ctx, outcoming))
 
 	if err != nil {
 		return nil, err
@@ -86,7 +113,7 @@ type Handler struct {
 }
 
 func (h *Handler) Bot() TelegramBot {
-	return &GotdBot{sender: h.sender, client: h.client}
+	return NewGotdBot(h.sender, h.client)
 }
 
 func (h *Handler) Handle(ctx context.Context, updates tg.UpdatesClass) error {

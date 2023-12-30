@@ -148,8 +148,11 @@ func DefaultHandleMessage[S any, C any](ac *ApplicationContext[S, C], tc *Telegr
 
 	if ac.State.inputHandler != nil {
 
+		tc.Logger.Debug("HandleMessage", zap.Any("message", tc.Message))
+
 		ac.State.renderedElements = append(
-			ac.State.renderedElements, newRenderedUserMessage(tc.Message.ID),
+			ac.State.renderedElements,
+			newRenderedUserMessage(tc.Message.ID),
 		)
 
 		action := ac.State.inputHandler(tc.Message.Message)
@@ -210,7 +213,7 @@ func NewApplication[S any, C any](
 
 	if createRenderer == nil {
 		createRenderer = func(tc *TelegramContext) ChatRenderer {
-			return NewTelegramChatRenderer(tc.Bot, tc.ChatID)
+			return NewTelegramChatRenderer(tc.Bot, tc.Update.User)
 		}
 	}
 

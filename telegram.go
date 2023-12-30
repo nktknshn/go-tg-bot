@@ -56,6 +56,7 @@ func (tc TelegramContext) AsTextMessage() (*TelegramContextTextMessage, bool) {
 	return &TelegramContextTextMessage{
 		TelegramContext: tc,
 		Text:            m.Message,
+		Message:         m,
 	}, true
 }
 

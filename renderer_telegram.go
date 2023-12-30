@@ -8,14 +8,15 @@ import (
 )
 
 type telegramChatRenderer struct {
-	Bot    TelegramBot
-	ChatID int64
+	Bot  TelegramBot
+	User *tg.User
 }
 
 func (r *telegramChatRenderer) Delete(messageId int) error {
 	removed, err := r.Bot.DeleteMessage(context.Background(), DeleteMessageParams{
-		ChatID:    r.ChatID,
-		MessageID: messageId,
+		ChatID:     r.User.ID,
+		AccessHash: r.User.AccessHash,
+		MessageID:  messageId,
 	})
 
 	if err != nil {
@@ -41,7 +42,8 @@ func (r *telegramChatRenderer) Message(ctx context.Context, props *ChatRendererM
 			}
 		} else {
 			editedMessage, err := r.Bot.EditMessageText(ctx, EditMessageTextParams{
-				ChatID:                r.ChatID,
+				ChatID:                r.User.ID,
+				AccessHash:            r.User.AccessHash,
 				MessageID:             props.TargetMessage.ID,
 				Text:                  props.Text,
 				ReplyMarkup:           props.ReplyMarkup,
@@ -58,7 +60,8 @@ func (r *telegramChatRenderer) Message(ctx context.Context, props *ChatRendererM
 	}
 
 	message, err := r.Bot.SendMessage(ctx, SendMessageParams{
-		ChatID:                r.ChatID,
+		ChatID:                r.User.ID,
+		AccessHash:            r.User.AccessHash,
 		Text:                  props.Text,
 		ReplyMarkup:           props.ReplyMarkup,
 		DisableWebPagePreview: true,
@@ -72,9 +75,9 @@ func (r *telegramChatRenderer) Message(ctx context.Context, props *ChatRendererM
 	return message, nil
 }
 
-func NewTelegramChatRenderer(bot TelegramBot, chatID int64) *telegramChatRenderer {
+func NewTelegramChatRenderer(bot TelegramBot, user *tg.User) *telegramChatRenderer {
 	return &telegramChatRenderer{
-		Bot:    bot,
-		ChatID: chatID,
+		Bot:  bot,
+		User: user,
 	}
 }

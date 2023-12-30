@@ -3,11 +3,14 @@ package tgbot
 import (
 	"sync"
 
+	"github.com/gotd/td/tg"
 	"go.uber.org/zap"
 )
 
 type ChatState[S any, C any] struct {
 	ChatID int64
+
+	User *tg.User
 
 	// state of the application
 	AppState S
@@ -29,9 +32,10 @@ type ChatState[S any, C any] struct {
 	lock *sync.Mutex
 }
 
-func NewChatState[S any, C any](chatID int64, appState S) *ChatState[S, C] {
+func NewChatState[S any, C any](user *tg.User, appState S) *ChatState[S, C] {
 	return &ChatState[S, C]{
-		ChatID:           chatID,
+		ChatID:           user.ID,
+		User:             user,
 		AppState:         appState,
 		renderedElements: []RenderedElement{},
 		lock:             &sync.Mutex{},

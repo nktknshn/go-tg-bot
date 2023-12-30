@@ -34,16 +34,32 @@ func (fb *FakeBot) NewUser() *FakeBotUser {
 }
 
 func (fb *FakeBot) AddUserMessage(message *tg.Message) {
-	fb.Messages[message.ID] = message
+	fb.Messages[message.ID] = &tg.Message{
+		ID:      fb.getNewID(),
+		Message: message.Message,
+		PeerID:  message.PeerID,
+	}
 }
 
 func (fb *FakeBot) SetDispatcher(d *tgbot.ChatsDispatcher) {
 	fb.dispatcher = d
 }
 
+func (fb *FakeBot) DisplayedMessages(chatID int64) []*tg.Message {
+	var messages []*tg.Message
+
+	for _, message := range fb.Messages {
+		if message.PeerID.(*tg.PeerUser).UserID == chatID {
+			messages = append(messages, message)
+		}
+	}
+
+	return messages
+}
+
 func (fb *FakeBot) SendMessage(ctx context.Context, params tgbot.SendMessageParams) (*tg.Message, error) {
 
-	m := fb.createMessage(&tgbot.ChatRendererMessageProps{
+	m := fb.createMessage(params.ChatID, &tgbot.ChatRendererMessageProps{
 		Text:        params.Text,
 		ReplyMarkup: params.ReplyMarkup,
 	})
@@ -100,11 +116,12 @@ func (fs *FakeBot) getNewID() int {
 	return fs.lastMessageID
 }
 
-func (fs *FakeBot) createMessage(props *tgbot.ChatRendererMessageProps) *tg.Message {
+func (fs *FakeBot) createMessage(chatID int64, props *tgbot.ChatRendererMessageProps) *tg.Message {
 	botMessage := &tg.Message{
 		ID:          fs.getNewID(),
 		Message:     props.Text,
 		ReplyMarkup: props.ReplyMarkup,
+		PeerID:      &tg.PeerUser{UserID: chatID},
 	}
 
 	fs.Messages[botMessage.ID] = botMessage
