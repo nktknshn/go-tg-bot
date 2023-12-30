@@ -31,13 +31,13 @@ type TelegramContext struct {
 	Bot TelegramBot
 
 	ChatID int64
-	Update tg.UpdateClass
+	Update BotUpdate
 
 	Logger *zap.Logger
 }
 
 func (tc TelegramContext) AsTextMessage() (*TelegramContextTextMessage, bool) {
-	u, ok := tc.Update.(*tg.UpdateNewMessage)
+	u, ok := tc.Update.UpdateClass.(*tg.UpdateNewMessage)
 
 	if !ok {
 		return nil, false
@@ -60,7 +60,7 @@ func (tc TelegramContext) AsTextMessage() (*TelegramContextTextMessage, bool) {
 }
 
 func (tc TelegramContext) AsCallback() (*TelegramContextCallback, bool) {
-	u, ok := tc.Update.(*tg.UpdateBotCallbackQuery)
+	u, ok := tc.Update.UpdateClass.(*tg.UpdateBotCallbackQuery)
 
 	if !ok {
 		return nil, false
@@ -70,6 +70,11 @@ func (tc TelegramContext) AsCallback() (*TelegramContextCallback, bool) {
 		TelegramContext:        tc,
 		UpdateBotCallbackQuery: u,
 	}, true
+}
+
+type TelegramUserChat struct {
+	ChatID int64
+	Chat   *tg.Chat
 }
 
 type TelegramContextTextMessage struct {
@@ -85,7 +90,7 @@ type TelegramContextCallback struct {
 
 func (tc TelegramContext) AnswerCallbackQuery() {
 
-	u, ok := tc.Update.(*tg.UpdateBotCallbackQuery)
+	u, ok := tc.Update.UpdateClass.(*tg.UpdateBotCallbackQuery)
 
 	if !ok {
 		tc.Logger.Error("Update is not a callback query")

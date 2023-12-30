@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -142,6 +143,7 @@ func main() {
 	// if first argument is "emulator", run emulator
 	flag.Parse()
 
+	ctx := context.Background()
 	logger.Debug("Starting bot", zap.Any("args", flag.Args()))
 
 	dispatcher := counterApp.ChatsDispatcher()
@@ -149,7 +151,7 @@ func main() {
 	if len(flag.Args()) > 0 && flag.Args()[0] == "emulator" {
 		emulator.Run(logger, dispatcher)
 	} else if len(flag.Args()) > 0 && flag.Args()[0] == "real" {
-		tgbot.Run(logger, dispatcher)
+		tgbot.Run(ctx, logger, dispatcher)
 	} else {
 		logger.Fatal("Unknown argument", zap.Any("args", flag.Args()))
 		fmt.Println("emulator or real")

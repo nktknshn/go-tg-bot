@@ -4,8 +4,6 @@ import (
 	"context"
 
 	"go.uber.org/zap"
-
-	"github.com/gotd/td/tg"
 )
 
 type ChatHandlerFactory func(*TelegramContext) chatHandler
@@ -30,7 +28,7 @@ func NewChatsDispatcher(props *ChatsDispatcherProps) *ChatsDispatcher {
 	}
 }
 
-func (cd *ChatsDispatcher) newTelegramContextLogger(bot TelegramBot, chatID int64, update tg.UpdateClass) *zap.Logger {
+func (cd *ChatsDispatcher) newTelegramContextLogger(bot TelegramBot, chatID int64, update BotUpdate) *zap.Logger {
 
 	return GetLogger().With(
 		zap.Int64("chatID", chatID),
@@ -38,14 +36,14 @@ func (cd *ChatsDispatcher) newTelegramContextLogger(bot TelegramBot, chatID int6
 	)
 }
 
-func (cd *ChatsDispatcher) HandleUpdate(ctx context.Context, bot TelegramBot, update tg.UpdateClass) error {
+func (cd *ChatsDispatcher) HandleUpdate(ctx context.Context, bot TelegramBot, update BotUpdate) error {
 
 	cd.Logger.Debug("HandleUpdate", zap.Any("update", update))
 
 	// logger := cd.Logger.With(zap.Int64("updateID", update.ID))
 	logger := cd.Logger
 
-	chatID := getUpdateChatId(update)
+	chatID := update.User.ID
 
 	if chatID == 0 {
 		logger.Debug("Update has no chat id, skipping.")

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 
 	tgbot "github.com/nktknshn/go-tg-bot"
@@ -21,6 +22,7 @@ func main() {
 		)
 	} else {
 		tgbot.Run(
+			context.Background(),
 			tgbot.GetLogger(),
 			dispatcher,
 		)

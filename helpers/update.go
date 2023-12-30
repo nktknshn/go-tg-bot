@@ -1,132 +1,100 @@
 package helpers
 
-// func GetUpdateID(update tg.UpdateClass) int64 {
-// 	switch u := update.(type) {
-// 	case *tg.UpdateNewMessage: // updateNewMessage#1f2b0afd
-// 		// return u.
-// 	case *tg.UpdateMessageID: // updateMessageID#4e90bfd6
-// 		return int64(u.ID)
-// 	case *tg.UpdateDeleteMessages: // updateDeleteMessages#a20db0e5
-// 	case *tg.UpdateUserTyping: // updateUserTyping#c01e857f
-// 	case *tg.UpdateChatUserTyping: // updateChatUserTyping#83487af0
-// 	case *tg.UpdateChatParticipants: // updateChatParticipants#7761198
-// 	case *tg.UpdateUserStatus: // updateUserStatus#e5bdf8de
-// 	case *tg.UpdateUserName: // updateUserName#a7848924
-// 	case *tg.UpdateNewAuthorization: // updateNewAuthorization#8951abef
-// 	case *tg.UpdateNewEncryptedMessage: // updateNewEncryptedMessage#12bcbd9a
-// 	case *tg.UpdateEncryptedChatTyping: // updateEncryptedChatTyping#1710f156
-// 	case *tg.UpdateEncryption: // updateEncryption#b4a2e88d
-// 	case *tg.UpdateEncryptedMessagesRead: // updateEncryptedMessagesRead#38fe25b7
-// 	case *tg.UpdateChatParticipantAdd: // updateChatParticipantAdd#3dda5451
-// 	case *tg.UpdateChatParticipantDelete: // updateChatParticipantDelete#e32f3d77
-// 	case *tg.UpdateDCOptions: // updateDcOptions#8e5e9873
-// 	case *tg.UpdateNotifySettings: // updateNotifySettings#bec268ef
-// 	case *tg.UpdateServiceNotification: // updateServiceNotification#ebe46819
-// 	case *tg.UpdatePrivacy: // updatePrivacy#ee3b272a
-// 	case *tg.UpdateUserPhone: // updateUserPhone#5492a13
-// 	case *tg.UpdateReadHistoryInbox: // updateReadHistoryInbox#9c974fdf
-// 	case *tg.UpdateReadHistoryOutbox: // updateReadHistoryOutbox#2f2f21bf
-// 	case *tg.UpdateWebPage: // updateWebPage#7f891213
-// 	case *tg.UpdateReadMessagesContents: // updateReadMessagesContents#f8227181
-// 	case *tg.UpdateChannelTooLong: // updateChannelTooLong#108d941f
-// 	case *tg.UpdateChannel: // updateChannel#635b4c09
-// 	case *tg.UpdateNewChannelMessage: // updateNewChannelMessage#62ba04d9
-// 	case *tg.UpdateReadChannelInbox: // updateReadChannelInbox#922e6e10
-// 	case *tg.UpdateDeleteChannelMessages: // updateDeleteChannelMessages#c32d5b12
-// 	case *tg.UpdateChannelMessageViews: // updateChannelMessageViews#f226ac08
-// 	case *tg.UpdateChatParticipantAdmin: // updateChatParticipantAdmin#d7ca61a2
-// 	case *tg.UpdateNewStickerSet: // updateNewStickerSet#688a30aa
-// 	case *tg.UpdateStickerSetsOrder: // updateStickerSetsOrder#bb2d201
-// 	case *tg.UpdateStickerSets: // updateStickerSets#31c24808
-// 	case *tg.UpdateSavedGifs: // updateSavedGifs#9375341e
-// 	case *tg.UpdateBotInlineQuery: // updateBotInlineQuery#496f379c
-// 	case *tg.UpdateBotInlineSend: // updateBotInlineSend#12f12a07
-// 	case *tg.UpdateEditChannelMessage: // updateEditChannelMessage#1b3f4df7
-// 	case *tg.UpdateBotCallbackQuery: // updateBotCallbackQuery#b9cfc48d
-// 	case *tg.UpdateEditMessage: // updateEditMessage#e40370a3
-// 	case *tg.UpdateInlineBotCallbackQuery: // updateInlineBotCallbackQuery#691e9052
-// 	case *tg.UpdateReadChannelOutbox: // updateReadChannelOutbox#b75f99a9
-// 	case *tg.UpdateDraftMessage: // updateDraftMessage#1b49ec6d
-// 	case *tg.UpdateReadFeaturedStickers: // updateReadFeaturedStickers#571d2742
-// 	case *tg.UpdateRecentStickers: // updateRecentStickers#9a422c20
-// 	case *tg.UpdateConfig: // updateConfig#a229dd06
-// 	case *tg.UpdatePtsChanged: // updatePtsChanged#3354678f
-// 	case *tg.UpdateChannelWebPage: // updateChannelWebPage#2f2ba99f
-// 	case *tg.UpdateDialogPinned: // updateDialogPinned#6e6fe51c
-// 	case *tg.UpdatePinnedDialogs: // updatePinnedDialogs#fa0f3ca2
-// 	case *tg.UpdateBotWebhookJSON: // updateBotWebhookJSON#8317c0c3
-// 	case *tg.UpdateBotWebhookJSONQuery: // updateBotWebhookJSONQuery#9b9240a6
-// 	case *tg.UpdateBotShippingQuery: // updateBotShippingQuery#b5aefd7d
-// 	case *tg.UpdateBotPrecheckoutQuery: // updateBotPrecheckoutQuery#8caa9a96
-// 	case *tg.UpdatePhoneCall: // updatePhoneCall#ab0f6b1e
-// 	case *tg.UpdateLangPackTooLong: // updateLangPackTooLong#46560264
-// 	case *tg.UpdateLangPack: // updateLangPack#56022f4d
-// 	case *tg.UpdateFavedStickers: // updateFavedStickers#e511996d
-// 	case *tg.UpdateChannelReadMessagesContents: // updateChannelReadMessagesContents#ea29055d
-// 	case *tg.UpdateContactsReset: // updateContactsReset#7084a7be
-// 	case *tg.UpdateChannelAvailableMessages: // updateChannelAvailableMessages#b23fc698
-// 	case *tg.UpdateDialogUnreadMark: // updateDialogUnreadMark#e16459c3
-// 	case *tg.UpdateMessagePoll: // updateMessagePoll#aca1657b
-// 	case *tg.UpdateChatDefaultBannedRights: // updateChatDefaultBannedRights#54c01850
-// 	case *tg.UpdateFolderPeers: // updateFolderPeers#19360dc0
-// 	case *tg.UpdatePeerSettings: // updatePeerSettings#6a7e7366
-// 	case *tg.UpdatePeerLocated: // updatePeerLocated#b4afcfb0
-// 	case *tg.UpdateNewScheduledMessage: // updateNewScheduledMessage#39a51dfb
-// 	case *tg.UpdateDeleteScheduledMessages: // updateDeleteScheduledMessages#90866cee
-// 	case *tg.UpdateTheme: // updateTheme#8216fba3
-// 	case *tg.UpdateGeoLiveViewed: // updateGeoLiveViewed#871fb939
-// 	case *tg.UpdateLoginToken: // updateLoginToken#564fe691
-// 	case *tg.UpdateMessagePollVote: // updateMessagePollVote#24f40e77
-// 	case *tg.UpdateDialogFilter: // updateDialogFilter#26ffde7d
-// 	case *tg.UpdateDialogFilterOrder: // updateDialogFilterOrder#a5d72105
-// 	case *tg.UpdateDialogFilters: // updateDialogFilters#3504914f
-// 	case *tg.UpdatePhoneCallSignalingData: // updatePhoneCallSignalingData#2661bf09
-// 	case *tg.UpdateChannelMessageForwards: // updateChannelMessageForwards#d29a27f4
-// 	case *tg.UpdateReadChannelDiscussionInbox: // updateReadChannelDiscussionInbox#d6b19546
-// 	case *tg.UpdateReadChannelDiscussionOutbox: // updateReadChannelDiscussionOutbox#695c9e7c
-// 	case *tg.UpdatePeerBlocked: // updatePeerBlocked#ebe07752
-// 	case *tg.UpdateChannelUserTyping: // updateChannelUserTyping#8c88c923
-// 	case *tg.UpdatePinnedMessages: // updatePinnedMessages#ed85eab5
-// 	case *tg.UpdatePinnedChannelMessages: // updatePinnedChannelMessages#5bb98608
-// 	case *tg.UpdateChat: // updateChat#f89a6a4e
-// 	case *tg.UpdateGroupCallParticipants: // updateGroupCallParticipants#f2ebdb4e
-// 	case *tg.UpdateGroupCall: // updateGroupCall#14b24500
-// 	case *tg.UpdatePeerHistoryTTL: // updatePeerHistoryTTL#bb9bb9a5
-// 	case *tg.UpdateChatParticipant: // updateChatParticipant#d087663a
-// 	case *tg.UpdateChannelParticipant: // updateChannelParticipant#985d3abb
-// 	case *tg.UpdateBotStopped: // updateBotStopped#c4870a49
-// 	case *tg.UpdateGroupCallConnection: // updateGroupCallConnection#b783982
-// 	case *tg.UpdateBotCommands: // updateBotCommands#4d712f2e
-// 	case *tg.UpdatePendingJoinRequests: // updatePendingJoinRequests#7063c3db
-// 	case *tg.UpdateBotChatInviteRequester: // updateBotChatInviteRequester#11dfa986
-// 	case *tg.UpdateMessageReactions: // updateMessageReactions#5e1b3cb8
-// 	case *tg.UpdateAttachMenuBots: // updateAttachMenuBots#17b7a20b
-// 	case *tg.UpdateWebViewResultSent: // updateWebViewResultSent#1592b79d
-// 	case *tg.UpdateBotMenuButton: // updateBotMenuButton#14b85813
-// 	case *tg.UpdateSavedRingtones: // updateSavedRingtones#74d8be99
-// 	case *tg.UpdateTranscribedAudio: // updateTranscribedAudio#84cd5a
-// 	case *tg.UpdateReadFeaturedEmojiStickers: // updateReadFeaturedEmojiStickers#fb4c496c
-// 	case *tg.UpdateUserEmojiStatus: // updateUserEmojiStatus#28373599
-// 	case *tg.UpdateRecentEmojiStatuses: // updateRecentEmojiStatuses#30f443db
-// 	case *tg.UpdateRecentReactions: // updateRecentReactions#6f7863f4
-// 	case *tg.UpdateMoveStickerSetToTop: // updateMoveStickerSetToTop#86fccf85
-// 	case *tg.UpdateMessageExtendedMedia: // updateMessageExtendedMedia#5a73a98c
-// 	case *tg.UpdateChannelPinnedTopic: // updateChannelPinnedTopic#192efbe3
-// 	case *tg.UpdateChannelPinnedTopics: // updateChannelPinnedTopics#fe198602
-// 	case *tg.UpdateUser: // updateUser#20529438
-// 	case *tg.UpdateAutoSaveSettings: // updateAutoSaveSettings#ec05b097
-// 	case *tg.UpdateGroupInvitePrivacyForbidden: // updateGroupInvitePrivacyForbidden#ccf08ad6
-// 	case *tg.UpdateStory: // updateStory#75b3b798
-// 	case *tg.UpdateReadStories: // updateReadStories#f74e932b
-// 	case *tg.UpdateStoryID: // updateStoryID#1bf335b9
-// 	case *tg.UpdateStoriesStealthMode: // updateStoriesStealthMode#2c084dc1
-// 	case *tg.UpdateSentStoryReaction: // updateSentStoryReaction#7d627683
-// 	case *tg.UpdateBotChatBoost: // updateBotChatBoost#904dd49c
-// 	case *tg.UpdateChannelViewForumAsMessages: // updateChannelViewForumAsMessages#7b68920
-// 	case *tg.UpdatePeerWallpaper: // updatePeerWallpaper#ae3f101d
-// 	case *tg.UpdateBotMessageReaction: // updateBotMessageReaction#ac21d3ce
-// 	case *tg.UpdateBotMessageReactions: // updateBotMessageReactions#9cb7759
-// 	default:
-// 		panic(v)
-// 	}
-// }
+import (
+	"fmt"
+
+	"github.com/gotd/td/tg"
+)
+
+type UpdatesExtract struct {
+	Entities tg.Entities
+	Updates  []tg.UpdateClass
+}
+
+func ExtractUpdates(updates tg.UpdatesClass) (UpdatesExtract, error) {
+	var (
+		e    tg.Entities
+		upds []tg.UpdateClass
+	)
+
+	switch u := updates.(type) {
+	case *tg.Updates:
+		upds = u.Updates
+		e.Users = u.MapUsers().NotEmptyToMap()
+		chats := u.MapChats()
+		e.Chats = chats.ChatToMap()
+		e.Channels = chats.ChannelToMap()
+	case *tg.UpdatesCombined:
+		upds = u.Updates
+		e.Users = u.MapUsers().NotEmptyToMap()
+		chats := u.MapChats()
+		e.Chats = chats.ChatToMap()
+		e.Channels = chats.ChannelToMap()
+	case *tg.UpdateShort:
+		upds = []tg.UpdateClass{u.Update}
+	default:
+		// *UpdateShortMessage
+		// *UpdateShortChatMessage
+		// *UpdateShortSentMessage
+		// *UpdatesTooLong
+		return UpdatesExtract{}, fmt.Errorf("unsupported update type %T", updates)
+	}
+
+	return UpdatesExtract{
+		Entities: e,
+		Updates:  upds,
+	}, nil
+}
+
+func GetChat(u tg.UpdateClass) (*tg.PeerChat, bool) {
+	switch u := u.(type) {
+	case *tg.UpdateNewMessage:
+		println("UpdateNewMessage")
+		if m, ok := u.Message.(*tg.Message); ok {
+			chat, ok := m.PeerID.(*tg.PeerChat)
+			return chat, ok
+		}
+		return nil, false
+	case *tg.UpdateBotCallbackQuery:
+		chat, ok := u.Peer.(*tg.PeerChat)
+		if !ok {
+			return nil, false
+		}
+		return chat, true
+	}
+	return nil, false
+}
+
+func GetPeerUser(u tg.UpdateClass) (*tg.PeerUser, bool) {
+	switch u := u.(type) {
+	case *tg.UpdateNewMessage:
+		if m, ok := u.Message.(*tg.Message); ok {
+			chat, ok := m.PeerID.(*tg.PeerUser)
+			return chat, ok
+		}
+		return nil, false
+	case *tg.UpdateBotCallbackQuery:
+		chat, ok := u.Peer.(*tg.PeerUser)
+		if !ok {
+			return nil, false
+		}
+		return chat, true
+	}
+	return nil, false
+}
+
+func GetUser(entities tg.Entities, u tg.UpdateClass) (*tg.User, bool) {
+	peer, ok := GetPeerUser(u)
+
+	if !ok {
+		return nil, false
+	}
+
+	user, ok := entities.Users[peer.UserID]
+
+	if !ok {
+		return nil, false
+	}
+
+	return user, true
+}

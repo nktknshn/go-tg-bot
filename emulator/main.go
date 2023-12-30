@@ -1,7 +1,6 @@
 package emulator
 
 import (
-	"context"
 	"image/color"
 
 	fyne "fyne.io/fyne/v2"
@@ -21,40 +20,31 @@ func EmulatorMain(
 
 	emul := NewEmulator()
 
-	chatID := int64(1)
+	// chatID := int64(1)
 
 	handlers := ActionsHandler{
 		CallbackHandlers: func(s string) {
 			logger.Info("user callback handler", zap.String("input", s))
 
-			dispatcher.HandleUpdate(
-				context.Background(),
-				bot,
-				NewCallbackQueryUpdate(CallbackQueryUpdate{
-					Data: s,
-					UpdateProps: UpdateProps{
-						ChatID: chatID,
-					},
-				}))
+			// dispatcher.HandleUpdate(
+			// 	context.Background(),
+			// 	bot,
+			// 	NewCallbackQueryUpdate(CallbackQueryUpdate{
+			// 		Data: s,
+			// 		UpdateProps: UpdateProps{
+			// 			ChatID: chatID,
+			// 		},
+			// 	}))
 
 		},
 		UserInputHandler: func(s string) {
 			logger.Info("user input handler", zap.String("input", s))
 			// bot.AddUserMessage
 
-			userMessageUpdate := NewTextMessageUpdate(TextMessageUpdate{
-				Text: s,
-				UpdateProps: UpdateProps{
-					ChatID: chatID,
-				},
-			})
-
-			bot.AddUserMessage(userMessageUpdate)
-
-			dispatcher.HandleUpdate(
-				context.Background(),
-				bot,
-				userMessageUpdate)
+			// dispatcher.HandleUpdate(
+			// 	context.Background(),
+			// 	bot,
+			// 	userMessageUpdate)
 		},
 	}
 
@@ -84,9 +74,9 @@ func EmulatorMain(
 		go updateInterface()
 	})
 
-	bot.SetReplyCallback(func() {
-		emul.SetCallbackReceived()
-	})
+	// bot.SetReplyCallback(func() {
+	// 	emul.SetCallbackReceived()
+	// })
 
 	emul.SetEmulatorStateUpdatedCallback(func() {
 		logger.Info("emulator state updated")

@@ -26,7 +26,12 @@ func runComponent(
 	o := newOutput()
 	comp.Render(o)
 
-	ls := reflectDerefValue(reflect.ValueOf(comp)).FieldByName("State").FieldByName(localStateClosureName).Elem()
+	logger.Debug("Component rendered", zap.Any("comp", comp))
+
+	ls := reflectDerefValue(reflect.ValueOf(comp)).
+		FieldByName("State").
+		FieldByName(localStateClosureName).
+		Elem()
 
 	vi := ls.FieldByName("Initialized")
 	vv := ls.FieldByName("Value")

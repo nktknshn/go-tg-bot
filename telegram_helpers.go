@@ -1,6 +1,7 @@
 package tgbot
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/gotd/td/tg"
@@ -16,49 +17,9 @@ func TryReadBotTokenFile() (string, error) {
 	return string(res), nil
 }
 
-func UpdateGetUsername(update tg.UpdateClass) string {
-	username := "Username"
+func UpdateGetUsername(update BotUpdate) string {
 
-	// if update.Message != nil {
-	// 	username = update.Message.From.Username
-	// }
-
-	return username
-}
-
-func getUpdateChatId(update tg.UpdateClass) int64 {
-
-	switch u := update.(type) {
-	case *tg.UpdateNewMessage:
-		// return u.Message.
-
-	}
-
-	// if update.Message != nil {
-	// 	return update.Message.Chat.ID
-	// }
-
-	// if update.CallbackQuery != nil {
-	// 	return update.CallbackQuery.Message.Chat.ID
-	// }
-
-	// if update.InlineQuery != nil {
-	// 	return update.InlineQuery.From.ID
-	// }
-
-	// if update.ChosenInlineResult != nil {
-	// 	return update.ChosenInlineResult.From.ID
-	// }
-
-	// if update.ShippingQuery != nil {
-	// 	return update.ShippingQuery.From.ID
-	// }
-
-	// if update.EditedMessage != nil {
-	// 	return update.EditedMessage.Chat.ID
-	// }
-
-	return 0
+	return fmt.Sprintf("%v %v %v", update.User.FirstName, update.User.LastName, update.User.Username)
 }
 
 func UpdateToString(update tg.UpdateClass) string {
