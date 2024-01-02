@@ -1,9 +1,14 @@
 package tgbot
 
 // Return to move to the next input handler
-type Next struct{}
 
-func (n Next) String() string {
+type ActionNext struct{}
+
+func Next() ActionNext {
+	return ActionNext{}
+}
+
+func (n ActionNext) String() string {
 	return "Next"
 }
 

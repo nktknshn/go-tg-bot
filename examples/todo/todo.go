@@ -13,7 +13,13 @@ func main() {
 	flag.Parse()
 	runEmul := len(flag.Args()) > 0 && flag.Args()[0] == "e"
 
-	dispatcher := todo.TodoApp.ChatsDispatcher()
+	userService := todo.NewUserServiceJson("/tmp/users.json")
+
+	app := todo.TodoApp(todo.TodoAppDeps{
+		UserService: userService,
+	})
+
+	dispatcher := app.ChatsDispatcher()
 
 	if runEmul {
 		emulator.Run(

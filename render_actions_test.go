@@ -126,10 +126,6 @@ func TestGetRenderActionsInsertedFirst(t *testing.T) {
 }
 
 func TestGetRenderActionsBasic(t *testing.T) {
-	// r := make([]RenderedElement, 0)
-	// r = append(r, &RenderedUserMessage{})
-	// n := make([]OutcomingMessageType, 0)
-
 	Check(t,
 		[]RenderedElement{},
 		[]outcomingMessage{m1},

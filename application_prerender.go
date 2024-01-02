@@ -12,7 +12,6 @@ type preRenderData[S any, C any] struct {
 }
 
 func (a *Application[S, C]) PreRender(ac *ApplicationContext[S, C]) *preRenderData[S, C] {
-	// /	logger := ac.Logger
 	logger := zap.NewNop()
 
 	comp := ac.App.StateToComp(ac.State.AppState)
@@ -20,7 +19,8 @@ func (a *Application[S, C]) PreRender(ac *ApplicationContext[S, C]) *preRenderDa
 	var globalContext globalContext[C]
 
 	if ac.App.CreateGlobalContext != nil {
-		globalContext = newGlobalContextTyped[C](ac.App.CreateGlobalContext(ac.State))
+		ctxValue := ac.App.CreateGlobalContext(ac.State)
+		globalContext = newGlobalContextTyped[C](ctxValue)
 	} else {
 		globalContext = newEmptyGlobalContext()
 	}
@@ -57,14 +57,14 @@ func (a *Application[S, C]) PreRender(ac *ApplicationContext[S, C]) *preRenderDa
 					zap.Any("res", reflectStructName(res)),
 				)
 
-				_, goNext := res.(Next)
+				_, goNext := res.(ActionNext)
 
 				if !goNext {
 					return res
 				}
 
 			}
-			return Next{}
+			return ActionNext{}
 		}
 	}
 
@@ -103,7 +103,7 @@ func (a *Application[S, C]) PreRender(ac *ApplicationContext[S, C]) *preRenderDa
 
 			if err != nil {
 				logger.Error("Error rendering", zap.Error(err))
-				return []RenderedElement{}, err
+				return nil, err
 			}
 
 			for _, r := range rendered {

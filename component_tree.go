@@ -214,11 +214,6 @@ func extractFromRunResults(results []runResult) []anyElement {
 
 // holds the inputs and outputs of the previous render
 // and the extracted local states tree
-// type ComponentsTreeState struct {
-// 	runResult      RunResultComponent
-// 	localStateTree *LocalStateTree[any]
-// }
-
 type runContext struct {
 	logger *zap.Logger
 

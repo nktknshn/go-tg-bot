@@ -33,7 +33,7 @@ func (a *RootComponent) Render(o tgbot.O) {
 			return &tgbot.ActionReload{}
 		}
 
-		return tgbot.Next{}
+		return tgbot.ActionNext{}
 	})
 
 	switch a.CurrentPage {

@@ -8,7 +8,13 @@ import (
 )
 
 func TestTodoApp(t *testing.T) {
-	d := todo.TodoApp.ChatsDispatcher()
+
+	d := todo.TodoApp(
+		todo.TodoAppDeps{
+			UserService: todo.NewUserServiceJson("/tmp/users.json"),
+		},
+	).ChatsDispatcher()
+
 	bot := emulator.NewFakeBot()
 	bot.SetDispatcher(d)
 

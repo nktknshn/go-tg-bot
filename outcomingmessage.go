@@ -11,8 +11,6 @@ import (
 )
 
 // Messages that are going to be sent to user
-// export type OutcomingMessageType = (OutcomingTextMessage<any> | OutcomingFileMessage) | OutcomingPhotoGroupMessage | OutcomingUserMessage
-
 const (
 	kindOutcomingFileMessage       = "OutcomingFileMessage"
 	kindOutcomingUserMessage       = "OutcomingUserMessage"

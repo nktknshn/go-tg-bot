@@ -10,7 +10,13 @@ import (
 func TestTodo(t *testing.T) {
 	_ = tgbot.ActionReload{}
 
-	dispatcher := TodoApp.ChatsDispatcher()
+	userService := NewUserServiceJson("/tmp/users.json")
+
+	app := TodoApp(TodoAppDeps{
+		userService,
+	})
+
+	dispatcher := app.ChatsDispatcher()
 	bot := emulator.NewFakeBot()
 
 	bot.SetDispatcher(dispatcher)

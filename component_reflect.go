@@ -192,9 +192,9 @@ func reflectHasState(comp Comp) bool {
 }
 
 // Try to find `Context` field.
-// If found fill it with the global context values returning a new component.
-// Returns the new component and a pointer to the used context value (if any).
-// If the component has a `Selector` method, it will be called to get the context value.
+// If found, populate it with the global context values and return a new component.
+// Also return a pointer to the context value used.
+// If the component has a `Selector` method, it will be invoked to map the context value.
 func reflectTypedContext[C any](comp Comp, globalContext C) (Comp, *usedContextValue) {
 	var wasapointer = false
 

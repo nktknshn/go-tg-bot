@@ -26,13 +26,10 @@ type TelegramBot interface {
 
 // TelegramContext is a context related to a specific update
 type TelegramContext struct {
-	Ctx context.Context
-
-	Bot TelegramBot
-
 	ChatID int64
+	Ctx    context.Context
+	Bot    TelegramBot
 	Update BotUpdate
-
 	Logger *zap.Logger
 }
 

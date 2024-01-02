@@ -47,7 +47,7 @@ func (a *PageTodoList) Render(o tgbot.O) {
 	o.InputHandler(func(s string) any {
 
 		if hasCandidateItem {
-			return tgbot.Next{}
+			return tgbot.Next()
 		}
 
 		if rexItemIdex.Match([]byte(s)) {

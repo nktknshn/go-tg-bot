@@ -52,11 +52,13 @@ type Application[S any, C any] struct {
 
 	CreateGlobalContext func(state *ChatState[S, C]) C
 
+	// not used currently
 	HandleInit handleInitFunc[S]
 
-	// use state to render bot interface to the user
-	RenderFunc  renderFuncType[S, C]
 	StateToComp stateToCompFuncType[S, C]
+
+	// use state to render bot interface to the user
+	RenderFunc renderFuncType[S, C]
 
 	CreateChatRenderer func(*TelegramContext) ChatRenderer
 }
@@ -76,7 +78,7 @@ func DefaultHandleActionExternal[S any, C any](ac *ApplicationContext[S, C], tc 
 	ac.State.LockState(tc.Logger)
 	defer ac.State.UnlockState(tc.Logger)
 
-	internalHandleAction(ac, tc, action)
+	internalActionHandle(ac, tc, action)
 
 	err := ac.App.RenderFunc(ac)
 
@@ -120,7 +122,7 @@ func DefaultHandlerCallback[S any, C any](ac *ApplicationContext[S, C], tc *Tele
 			return
 		}
 
-		internalHandleAction(ac, &tc.TelegramContext, result.action)
+		internalActionHandle(ac, &tc.TelegramContext, result.action)
 
 		if !result.noCallback {
 			tc.AnswerCallbackQuery()
@@ -157,7 +159,7 @@ func DefaultHandleMessage[S any, C any](ac *ApplicationContext[S, C], tc *Telegr
 
 		action := ac.State.inputHandler(tc.Message.Message)
 
-		internalHandleAction(ac, &tc.TelegramContext, action)
+		internalActionHandle(ac, &tc.TelegramContext, action)
 
 	} else {
 		tc.Logger.Warn("Missing InputHandler")
@@ -218,12 +220,12 @@ func NewApplication[S any, C any](
 	}
 
 	return &Application[S, C]{
+		HandleInit:           handleInit,
 		CreateAppState:       createAppState,
 		StateToComp:          stateToComp,
 		HandleAction:         handleAction,
 		HandleMessage:        handleMessage,
 		HandleCallback:       handleCallback,
-		HandleInit:           handleInit,
 		RenderFunc:           renderFunc,
 		CreateChatRenderer:   createRenderer,
 		CreateGlobalContext:  createContext,

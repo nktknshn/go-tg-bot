@@ -10,7 +10,6 @@ import (
 	"github.com/gotd/td/tg"
 	"github.com/nktknshn/go-tg-bot/gogotd"
 	"github.com/nktknshn/go-tg-bot/helpers"
-	"go.uber.org/multierr"
 )
 
 // implements TelegramBot
@@ -138,7 +137,8 @@ func (h *Handler) Handle(ctx context.Context, updates tg.UpdatesClass) error {
 			Entities:    extract.Entities,
 		}
 
-		multierr.AppendInto(&err, h.dispatcher.HandleUpdate(ctx, h.Bot(), u))
+		h.dispatcher.HandleUpdate(ctx, h.Bot(), u)
+		// multierr.AppendInto(&err, )
 	}
 
 	return err

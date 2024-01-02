@@ -14,12 +14,11 @@ const (
 	// KindRenderedMediaMessage       = "RenderedMediaMessage"
 )
 
-// ta ne
-// type R = RenderedUserMessage | RenderedBotMessage
+// Messages that have been sent to user
 
 type renderedUserMessage struct {
 	OutcomingUserMessage *outcomingUserMessage
-	MessageId            int
+	MessageID            int
 }
 
 func newRenderedUserMessage(messageID int) *renderedUserMessage {
@@ -29,7 +28,7 @@ func newRenderedUserMessage(messageID int) *renderedUserMessage {
 				MessageID: messageID,
 			},
 		},
-		MessageId: messageID,
+		MessageID: messageID,
 	}
 }
 
@@ -42,7 +41,7 @@ func (r *renderedUserMessage) canReplace(outcoming outcomingMessage) bool {
 }
 
 func (r *renderedUserMessage) ID() int {
-	return r.MessageId
+	return r.MessageID
 }
 
 // Equal
@@ -51,13 +50,13 @@ func (r *renderedUserMessage) Equal(other RenderedElement) bool {
 		return false
 	}
 	otherUserMessage := other.(*renderedUserMessage)
-	return r.MessageId == otherUserMessage.MessageId
+	return r.MessageID == otherUserMessage.MessageID
 }
 
 func (r renderedUserMessage) String() string {
 	return fmt.Sprintf(
 		"RenderedUserMessage{MessageId: %v, OutcomingUserMessage: %v}",
-		r.MessageId, r.OutcomingUserMessage,
+		r.MessageID, r.OutcomingUserMessage,
 	)
 }
 

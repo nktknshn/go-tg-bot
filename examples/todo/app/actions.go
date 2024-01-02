@@ -21,7 +21,7 @@ type ActionItemDelete struct {
 	ItemIndex int
 }
 
-var actionsReducer = func(ac *ApplicationContext, tc *tgbot.TelegramContext, a any) {
+var actionsReducer = func(ac *AppContext, tc *tgbot.TelegramContext, a any) {
 	appState := &ac.State.AppState
 
 	switch a := a.(type) {

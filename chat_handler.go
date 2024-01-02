@@ -6,19 +6,21 @@ import (
 	"go.uber.org/zap"
 )
 
+// handle a certain chat update
 type ChatHandler interface {
 	HandleUpdate(*TelegramContext)
 }
 
+// updates must be put into the queue
 type ChatHandlerImpl[S any, C any] struct {
 	app        Application[S, C]
 	appContext *ApplicationContext[S, C]
 }
 
+// Creates a new chat handler from an update
 func NewHandler[S any, C any](app Application[S, C], tc *TelegramContext) *ChatHandlerImpl[S, C] {
 	tc.Logger.Debug("NewHandler")
 
-	tc.Logger.Debug("CreateAppState")
 	appState := app.CreateAppState(tc)
 
 	chatState := ChatState[S, C]{
@@ -27,8 +29,8 @@ func NewHandler[S any, C any](app Application[S, C], tc *TelegramContext) *ChatH
 		renderedElements: []RenderedElement{},
 		inputHandler:     nil,
 		callbackHandler:  nil,
-		Renderer:         app.CreateChatRenderer(tc),
 		treeState:        nil,
+		Renderer:         app.CreateChatRenderer(tc),
 		lock:             &sync.Mutex{},
 	}
 
@@ -79,9 +81,20 @@ func (a *Application[S, C]) NewHandler(tc *TelegramContext) *ChatHandlerImpl[S, 
 }
 
 func (a *Application[S, C]) ChatsDispatcher() *ChatsDispatcher {
+
 	return NewChatsDispatcher(&ChatsDispatcherProps{
-		ChatFactory: func(tc *TelegramContext) ChatHandler {
-			return a.NewHandler(tc)
+		ChatFactory: &factoryFunc{
+			f: func(tc *TelegramContext) ChatHandler {
+				return a.NewHandler(tc)
+			},
 		},
 	})
+}
+
+type factoryFunc struct {
+	f func(*TelegramContext) ChatHandler
+}
+
+func (f *factoryFunc) CreateChatHandler(tc *TelegramContext) ChatHandler {
+	return f.f(tc)
 }

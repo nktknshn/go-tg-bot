@@ -4,10 +4,11 @@ import (
 	"go.uber.org/zap"
 )
 
-func internalHandleAction[S any, C any](ac *ApplicationContext[S, C], tc *TelegramContext, a any) {
-	tc.Logger.Debug("HandleAction", zap.Any("action", reflectStructName(a)))
+// Handles some internal actions sent from handlers
+func internalActionHandle[S any, C any](ac *ApplicationContext[S, C], tc *TelegramContext, action any) {
+	tc.Logger.Debug("HandleAction", zap.Any("action", reflectStructName(action)))
 
-	switch a := a.(type) {
+	switch a := action.(type) {
 	case ActionReload:
 		ac.State.ResetRenderedElements()
 		return
@@ -27,10 +28,10 @@ func internalHandleAction[S any, C any](ac *ApplicationContext[S, C], tc *Telegr
 		tc.Logger.Debug("A list of actions was caught")
 
 		for _, a := range a {
-			internalHandleAction[S, C](ac, tc, a)
+			internalActionHandle[S, C](ac, tc, a)
 		}
 		return
 	}
 
-	ac.App.HandleAction(ac, tc, a)
+	ac.App.HandleAction(ac, tc, action)
 }
