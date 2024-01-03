@@ -1,4 +1,4 @@
-package tgbot
+package component
 
 import (
 	"reflect"
@@ -9,9 +9,9 @@ import (
 func runComponent(
 	logger *zap.Logger,
 	comp Comp,
-	gc globalContext[any],
+	gc GlobalContext[any],
 	state CompState[any],
-) ([]anyElement, localStateClosure[any], *usedContextValue) {
+) ([]AnyElement, localStateClosure[any], *usedContextValue) {
 
 	logger.Debug("RunComponent",
 		zap.String("compId", reflectCompId(comp)),

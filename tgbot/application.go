@@ -1,21 +1,16 @@
 package tgbot
 
-import "context"
+import (
+	"context"
 
-type callbackResult struct {
-	action any
-
-	//
-	noAnswer bool
-}
+	"github.com/nktknshn/go-tg-bot/tgbot/component"
+	"github.com/nktknshn/go-tg-bot/tgbot/logging"
+)
 
 // Handles text input from the user
 // Returnes action that is going to be dispatched to the application
-// Returns Next if no action is needed
-type chatInputHandler func(string) any
 
 // Handle inline button click. Returns nil if no action has matched the callback data
-type chatCallbackHandler func(string) *callbackResult
 
 // User defined function
 type handleMessageFunc[S any, C any] func(*ApplicationChat[S, C], *TelegramContextTextMessage)
@@ -27,7 +22,7 @@ type handleActionFunc[S any, C any] func(*ApplicationChat[S, C], *TelegramUpdate
 
 type renderFuncType[S any, C any] func(context.Context, *ApplicationChat[S, C]) error
 
-type stateToCompFuncType[S any, C any] func(S) Comp
+type stateToCompFuncType[S any, C any] func(S) component.Comp
 
 type createAppStateFunc[S any] func(*TelegramUpdateContext) S
 
@@ -56,7 +51,7 @@ type Application[S any, C any] struct {
 
 	CreateChatRenderer func(*TelegramUpdateContext) ChatRenderer
 
-	Loggers TgbotLoggers
+	Loggers logging.TgbotLoggers
 }
 
 type ApplicationProps[S any, C any] struct {
@@ -115,7 +110,7 @@ func NewApplication[S any, C any](
 		}
 	}
 
-	loggers := DefaultLoggers
+	loggers := logging.DefaultLoggers
 
 	return &Application[S, C]{
 		HandleInit:           handleInit,
@@ -132,12 +127,12 @@ func NewApplication[S any, C any](
 	}
 }
 
-func (app *Application[S, C]) globalContext(chatState *ChatState[S, C]) globalContext[C] {
+func (app *Application[S, C]) globalContext(chatState *ChatState[S, C]) component.GlobalContext[C] {
 	if app.CreateGlobalContext != nil {
 		ctxValue := app.CreateGlobalContext(chatState)
-		return newGlobalContextTyped[C](ctxValue)
+		return component.NewGlobalContextTyped[C](ctxValue)
 	} else {
-		return newEmptyGlobalContext()
+		return component.NewEmptyGlobalContext()
 	}
 }
 

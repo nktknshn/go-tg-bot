@@ -1,4 +1,4 @@
-package tgbot
+package component
 
 import (
 	"fmt"
@@ -39,7 +39,7 @@ func TestReflectTypedContext1(t *testing.T) {
 	o := newOutput()
 	comp.Render(o)
 
-	if o.Result[0].(*elementMessage).Text != "1 true" {
+	if o.Result[0].(*ElementMessage).Text != "1 true" {
 		t.Fatal("Expected 1 true")
 	}
 }

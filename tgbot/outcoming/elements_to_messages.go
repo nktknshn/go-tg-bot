@@ -1,23 +1,27 @@
-package tgbot
+package outcoming
 
 import (
 	"fmt"
+
+	"github.com/nktknshn/go-tg-bot/tgbot/common"
+	"github.com/nktknshn/go-tg-bot/tgbot/component"
+	"github.com/nktknshn/go-tg-bot/tgbot/logging"
 )
 
-type inputHandlersType []elementInputHandler
+type inputHandlersType []component.ElementInputHandler
 
 type processElementsResult struct {
-	OutcomingMessages []outcomingMessage
+	OutcomingMessages []OutcomingMessage
 	InputHandlers     inputHandlersType
 	CallbackMap       callbackMap
-	BottomButtons     []elementBottomButton
+	BottomButtons     []component.ElementBottomButton
 	isComplete        bool
 
-	CallbackHandler chatCallbackHandler
-	InputHandler    chatInputHandler
+	CallbackHandler common.ChatCallbackHandler
+	InputHandler    common.ChatInputHandler
 }
 
-func inputHandler(ihs inputHandlersType) chatInputHandler {
+func inputHandler(ihs inputHandlersType) common.ChatInputHandler {
 
 	if len(ihs) == 0 {
 		return nil
@@ -28,20 +32,20 @@ func inputHandler(ihs inputHandlersType) chatInputHandler {
 		for _, h := range ihs {
 			res := h.Handler(text)
 
-			_, goNext := res.(ActionNext)
+			_, goNext := res.(common.ActionNext)
 
 			if !goNext {
 				return res
 			}
 
 		}
-		return ActionNext{}
+		return common.ActionNext{}
 	}
 }
-func (per *processElementsResult) lastTextMessage() *outcomingTextMessage {
+func (per *processElementsResult) lastTextMessage() *OutcomingTextMessage {
 	for i := len(per.OutcomingMessages) - 1; i >= 0; i-- {
-		if per.OutcomingMessages[i].OutcomingKind() == kindOutcomingTextMessage {
-			return per.OutcomingMessages[i].(*outcomingTextMessage)
+		if per.OutcomingMessages[i].OutcomingKind() == KindOutcomingTextMessage {
+			return per.OutcomingMessages[i].(*OutcomingTextMessage)
 		}
 	}
 	return nil
@@ -51,7 +55,7 @@ func (per *processElementsResult) lastTextMessage() *outcomingTextMessage {
 func (per *processElementsResult) Complete() {
 
 	if per.isComplete {
-		globalLogger.Error("ProcessElementsResult.Complete: already complete")
+		logging.Logger().Error("ProcessElementsResult.Complete: already complete")
 		return
 	}
 
@@ -62,7 +66,7 @@ func (per *processElementsResult) Complete() {
 	}
 
 	if lastMessage == nil {
-		globalLogger.Error("ProcessElementsResult.Complete: no text messages")
+		logging.Logger().Error("ProcessElementsResult.Complete: no text messages")
 		return
 	}
 
@@ -88,27 +92,27 @@ func (per *processElementsResult) String() string {
 	)
 }
 
-func elementsToMessagesAndHandlers(elements []anyElement) *processElementsResult {
-	messages := make([]outcomingMessage, 0)
-	inputHandlers := make([]elementInputHandler, 0)
-	bottomButtons := make([]elementBottomButton, 0)
+func ElementsToMessagesAndHandlers(elements []component.AnyElement) *processElementsResult {
+	messages := make([]OutcomingMessage, 0)
+	inputHandlers := make([]component.ElementInputHandler, 0)
+	bottomButtons := make([]component.ElementBottomButton, 0)
 	// callbackHandlers := make(map[string]func() A)
 
-	var lastMessage *outcomingTextMessage
+	var lastMessage *OutcomingTextMessage
 
-	getLastMessage := func() *outcomingTextMessage {
+	getLastMessage := func() *OutcomingTextMessage {
 		if lastMessage != nil {
 			return lastMessage
 		}
 
 		for _, message := range messages {
-			if message.OutcomingKind() == kindOutcomingTextMessage {
-				lastMessage = message.(*outcomingTextMessage)
+			if message.OutcomingKind() == KindOutcomingTextMessage {
+				lastMessage = message.(*OutcomingTextMessage)
 			}
 		}
 
 		if lastMessage == nil {
-			lastMessage = newOutcomingTextMessage("")
+			lastMessage = NewOutcomingTextMessage("")
 			messages = append(messages, lastMessage)
 		}
 
@@ -118,43 +122,43 @@ func elementsToMessagesAndHandlers(elements []anyElement) *processElementsResult
 	for _, element := range elements {
 		switch el := element.(type) {
 
-		case *elementMessage:
+		case *component.ElementMessage:
 
-			outcoming := newOutcomingTextMessage(el.Text)
+			outcoming := NewOutcomingTextMessage(el.Text)
 			lastMessage = outcoming
 			messages = append(messages, outcoming)
 
-		case *elementMessagePart:
+		case *component.ElementMessagePart:
 			_lastMessage := getLastMessage()
 
-			text := element.(*elementMessagePart).Text
+			text := element.(*component.ElementMessagePart).Text
 
 			if _lastMessage.isComplete {
-				lastMessage = newOutcomingTextMessage(text)
+				lastMessage = NewOutcomingTextMessage(text)
 				messages = append(messages, lastMessage)
 			} else {
 				getLastMessage().ConcatText(text)
 			}
 
-		case *elementCompleteMessage:
+		case *component.ElementCompleteMessage:
 			if lastMessage != nil {
 				getLastMessage().SetComplete()
 			}
 
-		case *elementButton:
-			getLastMessage().AddButton(element.(*elementButton))
+		case *component.ElementButton:
+			getLastMessage().AddButton(element.(*component.ElementButton))
 
-		case *elementButtonsRow:
-			getLastMessage().AddButtonsRow(element.(*elementButtonsRow))
+		case *component.ElementButtonsRow:
+			getLastMessage().AddButtonsRow(element.(*component.ElementButtonsRow))
 
-		case *elementInputHandler:
+		case *component.ElementInputHandler:
 			inputHandlers = append(inputHandlers, *el)
 
-		case *elementBottomButton:
+		case *component.ElementBottomButton:
 			bottomButtons = append(bottomButtons, *el)
 
-		case *elementUserMessage:
-			messages = append(messages, &outcomingUserMessage{*el})
+		case *component.ElementUserMessage:
+			messages = append(messages, &OutcomingUserMessage{*el})
 		}
 	}
 

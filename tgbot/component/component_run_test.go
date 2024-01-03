@@ -1,8 +1,10 @@
-package tgbot
+package component
 
 import (
 	"fmt"
 	"testing"
+
+	"github.com/nktknshn/go-tg-bot/tgbot/logging"
 )
 
 type TestRunComponent1State struct {
@@ -36,7 +38,7 @@ func TestRunComponent1(t *testing.T) {
 	}
 
 	els, closure, ctx := runComponent(
-		DevLogger(), comp, newGlobalContextTyped(1), state,
+		logging.DevLogger(), comp, NewGlobalContextTyped(1), state,
 	)
 
 	fmt.Println("els", els)

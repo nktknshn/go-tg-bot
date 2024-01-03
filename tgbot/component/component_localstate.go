@@ -1,4 +1,4 @@
-package tgbot
+package component
 
 import (
 	"fmt"
@@ -104,7 +104,7 @@ func newLocalStateTree() *localStateTree {
 	}
 }
 
-type actionLocalState[S any] struct {
+type ActionLocalState[S any] struct {
 	Index []int
 	F     func(S) S
 }
@@ -136,7 +136,7 @@ func (g CompState[S]) Init(initialValue S) getSetStruct[S, any] {
 			return g.LocalStateClosure.Value
 		},
 		Set: func(f func(S) S) any {
-			return actionLocalState[any]{
+			return ActionLocalState[any]{
 				Index: g.Index,
 				F: func(a any) any {
 					return f(a.(S))

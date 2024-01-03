@@ -2,6 +2,8 @@ package tgbot
 
 import (
 	"github.com/BooleanCat/go-functional/iter"
+	"github.com/nktknshn/go-tg-bot/tgbot/component"
+	"github.com/nktknshn/go-tg-bot/tgbot/outcoming"
 	"go.uber.org/zap"
 )
 
@@ -24,14 +26,14 @@ func (app *Application[S, C]) ComputeNextState(chatState *ChatState[S, C], logge
 
 	globalContext := app.globalContext(chatState)
 
-	createElementsResult := createElements(
+	createElementsResult := component.CreateElements(
 		comp,
 		globalContext,
 		chatState.treeState,
 		logger,
 	)
 
-	res := elementsToMessagesAndHandlers(createElementsResult.Elements)
+	res := outcoming.ElementsToMessagesAndHandlers(createElementsResult.Elements)
 
 	nextChatState := ChatState[S, C]{
 		ChatID:           chatState.ChatID,

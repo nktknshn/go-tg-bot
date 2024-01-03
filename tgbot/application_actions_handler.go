@@ -1,18 +1,21 @@
 package tgbot
 
 import (
+	"github.com/nktknshn/go-tg-bot/tgbot/common"
+	"github.com/nktknshn/go-tg-bot/tgbot/component"
+	"github.com/nktknshn/go-tg-bot/tgbot/reflection"
 	"go.uber.org/zap"
 )
 
 // Handles some internal actions sent from handlers
 func internalActionHandle[S any, C any](ac *ApplicationChat[S, C], tc *TelegramUpdateContext, action any, logger *zap.Logger) {
-	logger.Debug("HandleAction", zap.Any("action", reflectStructName(action)))
+	logger.Debug("HandleAction", zap.Any("action", reflection.ReflectStructName(action)))
 
 	switch a := action.(type) {
-	case ActionReload:
+	case common.ActionReload:
 		ac.State.ResetRenderedElements()
 		return
-	case actionLocalState[any]:
+	case component.ActionLocalState[any]:
 		logger.Debug("ActionLocalState was caught. Applying it to the local state tree.",
 			zap.Any("index", a.Index),
 			zap.Any("LocalStateTree", ac.State.treeState.LocalStateTree),

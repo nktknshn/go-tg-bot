@@ -1,7 +1,9 @@
-package tgbot
+package component
 
 import (
 	"testing"
+
+	"github.com/nktknshn/go-tg-bot/tgbot/logging"
 )
 
 type App1State struct {
@@ -26,10 +28,10 @@ func (a *App1) Render(o O) {
 	o.Message("Hello")
 
 	if lsgs.Get().night {
-		DevLogger().Debug("night")
+		logging.DevLogger().Debug("night")
 		o.Messagef("Night: %v", lsgs.Get().hour)
 	} else {
-		DevLogger().Debug("day")
+		logging.DevLogger().Debug("day")
 		o.Messagef("Day: %v", lsgs.Get().hour)
 	}
 
@@ -47,10 +49,10 @@ type EmptyContext struct{}
 
 func TestRunComponent(t *testing.T) {
 	comp := App1{Counter: 1}
-	globalContext := newGlobalContextTyped[any](EmptyContext{})
+	globalContext := NewGlobalContextTyped[any](EmptyContext{})
 
 	runComponent(
-		DevLogger(),
+		logging.DevLogger(),
 		&comp,
 		globalContext,
 		CompState[any]{
@@ -65,18 +67,18 @@ func TestRunComponent(t *testing.T) {
 
 func TestRunCreateElements1(t *testing.T) {
 
-	logger := DevLogger()
-	globalContext := newGlobalContextTyped[any](EmptyContext{})
+	logger := logging.DevLogger()
+	globalContext := NewGlobalContextTyped[any](EmptyContext{})
 
 	comp := App1{Counter: 1}
 
-	res := createElements(&comp, globalContext, nil, logger)
+	res := CreateElements(&comp, globalContext, nil, logger)
 
 	if len(res.Elements) != 4 {
 		t.Fatal("len(res.Elements) != 4")
 	}
 
-	if res.Elements[1].(*elementMessage).Text != "Day: 3" {
+	if res.Elements[1].(*ElementMessage).Text != "Day: 3" {
 		t.Fatal("Day: 3 was expected")
 	}
 
@@ -90,13 +92,13 @@ func TestRunCreateElements1(t *testing.T) {
 		}
 	})
 
-	res = createElements(&comp, globalContext, &res.TreeState, logger)
+	res = CreateElements(&comp, globalContext, &res.TreeState, logger)
 
 	if len(res.Elements) != 4 {
 		t.Fatal("len(res.Elements) != 4")
 	}
 
-	if res.Elements[1].(*elementMessage).Text != "Night: 8" {
+	if res.Elements[1].(*ElementMessage).Text != "Night: 8" {
 		t.Fatal("Night: 8 was expected")
 	}
 
@@ -146,21 +148,21 @@ func (c *TestNestedComp3) Render(o O) {
 }
 
 func TestNestedComp(t *testing.T) {
-	logger := DevLogger()
+	logger := logging.DevLogger()
 
-	globalContext := newGlobalContextTyped[any](TestNestedCompContext{
+	globalContext := NewGlobalContextTyped[any](TestNestedCompContext{
 		Flag1: false,
 	})
 
 	t.Log("globalContext", globalContext)
 
-	res := createElements(&TestNestedCompApp{}, globalContext, nil, logger)
+	res := CreateElements(&TestNestedCompApp{}, globalContext, nil, logger)
 
-	globalContext = newGlobalContextTyped[any](TestNestedCompContext{
+	globalContext = NewGlobalContextTyped[any](TestNestedCompContext{
 		Flag1: true,
 	})
 
-	res = createElements(&TestNestedCompApp{}, globalContext, &res.TreeState, logger)
+	res = CreateElements(&TestNestedCompApp{}, globalContext, &res.TreeState, logger)
 
 	t.Log(res.Elements)
 }

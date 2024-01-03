@@ -1,4 +1,4 @@
-package tgbot
+package common
 
 // Return to move to the next input handler
 

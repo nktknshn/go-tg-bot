@@ -1,4 +1,4 @@
-package tgbot
+package component
 
 import (
 	"fmt"
@@ -8,34 +8,34 @@ import (
 
 // holds the inputs and outputs of the previous render
 // and the extracted local states tree
-type runResultWithStateTree struct {
+type RunResultWithStateTree struct {
 	RunResult      runResultComponent
 	LocalStateTree *localStateTree
 }
 
-type createElementsResult struct {
-	Elements       []anyElement
-	NewElements    []anyElement
-	RemoveElements []anyElement
-	TreeState      runResultWithStateTree
+type CreateElementsResult struct {
+	Elements       []AnyElement
+	NewElements    []AnyElement
+	RemoveElements []AnyElement
+	TreeState      RunResultWithStateTree
 }
 
-func (r createElementsResult) String() string {
+func (r CreateElementsResult) String() string {
 	result := ""
 
 	result += "CreateElementsResult"
-	result += fmt.Sprintf("Elements: %v", elementsList(r.Elements))
+	result += fmt.Sprintf("Elements: %v", ElementsList(r.Elements))
 
 	return result
 }
 
 // given
-func createElements(
+func CreateElements(
 	comp Comp,
-	gc globalContext[any],
-	stateTree *runResultWithStateTree,
+	gc GlobalContext[any],
+	stateTree *RunResultWithStateTree,
 	logger *zap.Logger,
-) *createElementsResult {
+) *CreateElementsResult {
 	// logger := GetLogger()
 	// logger := zap.NewNop()
 
@@ -55,7 +55,7 @@ func createElements(
 			globalContext:  gc,
 			localStateTree: nil,
 			componentIndex: []int{0},
-			parents:        make([]elementComponent, 0),
+			parents:        make([]ElementComponent, 0),
 		}, comp)
 
 		elements := runResult.ExtractElements()
@@ -63,11 +63,11 @@ func createElements(
 		logger.Debug("Extracting local state tree from the run")
 		localStateTree := runResult.ExtractLocalStateTree()
 
-		return &createElementsResult{
+		return &CreateElementsResult{
 			Elements:       elements,
 			NewElements:    elements,
-			RemoveElements: make([]anyElement, 0),
-			TreeState: runResultWithStateTree{
+			RemoveElements: make([]AnyElement, 0),
+			TreeState: RunResultWithStateTree{
 				RunResult:      runResult,
 				LocalStateTree: localStateTree,
 			},
@@ -84,7 +84,7 @@ func createElements(
 			prevRunResult:  stateTree.RunResult,
 			localStateTree: *stateTree.LocalStateTree,
 			componentIndex: []int{0},
-			parents:        make([]elementComponent, 0),
+			parents:        make([]ElementComponent, 0),
 		},
 		comp,
 	)
@@ -110,11 +110,11 @@ func createElements(
 
 	if rrr, ok := rr.(*runResultComponent); ok {
 
-		return &createElementsResult{
+		return &CreateElementsResult{
 			Elements:       aa.elements,
 			NewElements:    aa.newElements,
 			RemoveElements: aa.removedElements,
-			TreeState: runResultWithStateTree{
+			TreeState: RunResultWithStateTree{
 				RunResult:      *rrr,
 				LocalStateTree: localStateTree,
 			},

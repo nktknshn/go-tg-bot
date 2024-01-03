@@ -1,11 +1,11 @@
-package tgbot
+package component
 
 import (
 	"fmt"
 )
 
 type O interface {
-	Send(anyElement)
+	Send(AnyElement)
 	Comp(Comp)
 	Message(string)
 	Messagef(string, ...interface{})
@@ -23,7 +23,7 @@ type Comp interface {
 }
 
 type outputImpl struct {
-	Result []anyElement
+	Result []AnyElement
 }
 
 type noCallbackStruct struct{}
@@ -33,7 +33,7 @@ var BtnNoCallback = noCallbackStruct{}
 var BtnNextRow = nextRowStruct{}
 
 func newOutput() *outputImpl {
-	return &outputImpl{Result: make([]anyElement, 0)}
+	return &outputImpl{Result: make([]AnyElement, 0)}
 }
 
 func (o *outputImpl) Message(text string) {
@@ -71,7 +71,7 @@ func (o *outputImpl) Button(text string, handler func() any, options ...interfac
 		}
 	}
 
-	o.Result = append(o.Result, newButton(text, handler, text, nextRow, noCallback))
+	o.Result = append(o.Result, NewButton(text, handler, text, nextRow, noCallback))
 }
 
 func (o *outputImpl) ButtonsRow(texts []string, handler func(int, string) any) {
@@ -82,7 +82,7 @@ func (o *outputImpl) BottomButton(text string) {
 	o.Result = append(o.Result, newMessagePart(text))
 }
 
-func (o *outputImpl) Send(element anyElement) {
+func (o *outputImpl) Send(element AnyElement) {
 	o.Result = append(o.Result, element)
 }
 

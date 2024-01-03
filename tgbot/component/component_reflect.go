@@ -1,4 +1,4 @@
-package tgbot
+package component
 
 import (
 	"fmt"

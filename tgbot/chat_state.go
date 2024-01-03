@@ -5,6 +5,9 @@ import (
 
 	"github.com/BooleanCat/go-functional/iter"
 	"github.com/gotd/td/tg"
+	"github.com/nktknshn/go-tg-bot/tgbot/common"
+	"github.com/nktknshn/go-tg-bot/tgbot/component"
+	"github.com/nktknshn/go-tg-bot/tgbot/rendered"
 	"go.uber.org/zap"
 )
 
@@ -17,16 +20,16 @@ type ChatState[S any, C any] struct {
 	AppState S
 
 	// state of the application
-	treeState *runResultWithStateTree
+	treeState *component.RunResultWithStateTree
 
 	// elements visible to the user
-	renderedElements []RenderedElement
+	renderedElements []rendered.RenderedElement
 
 	// handler for text messages
-	inputHandler chatInputHandler
+	inputHandler common.ChatInputHandler
 
 	// handler for callback queries
-	callbackHandler chatCallbackHandler
+	callbackHandler common.ChatCallbackHandler
 
 	Renderer ChatRenderer
 
@@ -38,13 +41,13 @@ func NewChatState[S any, C any](user *tg.User, appState S) *ChatState[S, C] {
 		ChatID:           user.ID,
 		User:             user,
 		AppState:         appState,
-		renderedElements: []RenderedElement{},
+		renderedElements: []rendered.RenderedElement{},
 		lock:             &sync.Mutex{},
 	}
 }
 
 func (s *ChatState[S, C]) ResetRenderedElements() {
-	s.renderedElements = make([]RenderedElement, 0)
+	s.renderedElements = make([]rendered.RenderedElement, 0)
 }
 
 func (s *ChatState[S, C]) LockState(logger *zap.Logger) {
@@ -61,15 +64,15 @@ func (s *ChatState[S, C]) SetAppState(appState S) {
 	s.AppState = appState
 }
 
-func (s *ChatState[S, C]) SetTreeState(treeState *runResultWithStateTree) {
+func (s *ChatState[S, C]) SetTreeState(treeState *component.RunResultWithStateTree) {
 	s.treeState = treeState
 }
 
-func (s *ChatState[S, C]) SetInputHandler(inputHandler chatInputHandler) {
+func (s *ChatState[S, C]) SetInputHandler(inputHandler common.ChatInputHandler) {
 	s.inputHandler = inputHandler
 }
 
-func (s *ChatState[S, C]) SetCallbackHandler(callbackHandler chatCallbackHandler) {
+func (s *ChatState[S, C]) SetCallbackHandler(callbackHandler common.ChatCallbackHandler) {
 	s.callbackHandler = callbackHandler
 }
 
@@ -77,18 +80,18 @@ func (s *ChatState[S, C]) SetRenderer(renderer ChatRenderer) {
 	s.Renderer = renderer
 }
 
-func (s *ChatState[S, C]) SetRenderedElements(renderedElements []RenderedElement) {
+func (s *ChatState[S, C]) SetRenderedElements(renderedElements []rendered.RenderedElement) {
 	s.renderedElements = renderedElements
 }
 
 func (s *ChatState[S, C]) RenderedElementsKinds() []string {
-	return iter.Map(iter.Lift(s.renderedElements), func(e RenderedElement) string {
-		return e.renderedKind()
+	return iter.Map(iter.Lift(s.renderedElements), func(e rendered.RenderedElement) string {
+		return e.RenderedKind()
 	}).Collect()
 }
 
 func (s *ChatState[S, C]) RenderedElementsSimpl() []string {
-	return iter.Map(iter.Lift(s.renderedElements), func(e RenderedElement) string {
+	return iter.Map(iter.Lift(s.renderedElements), func(e rendered.RenderedElement) string {
 		return e.String()
 	}).Collect()
 }

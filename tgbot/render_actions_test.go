@@ -6,15 +6,19 @@ import (
 	"testing"
 
 	"github.com/gotd/td/tg"
+	"github.com/nktknshn/go-tg-bot/tgbot/component"
+	"github.com/nktknshn/go-tg-bot/tgbot/logging"
+	"github.com/nktknshn/go-tg-bot/tgbot/outcoming"
+	"github.com/nktknshn/go-tg-bot/tgbot/rendered"
 )
 
 func Check(
 	t *testing.T,
-	renderedElements []RenderedElement,
-	outcomingMessages []outcomingMessage,
+	renderedElements []rendered.RenderedElement,
+	outcomingMessages []outcoming.OutcomingMessage,
 	expected []renderActionType,
 ) {
-	res0 := getRenderActions(renderedElements, outcomingMessages, DevLogger())
+	res0 := getRenderActions(renderedElements, outcomingMessages, logging.Logger())
 
 	if len(res0) != len(expected) {
 		for i, v := range res0 {
@@ -76,24 +80,24 @@ func Check(
 }
 
 var (
-	m1 = newOutcomingTextMessage("message 1")
-	m2 = newOutcomingTextMessage("message 2")
-	m3 = newOutcomingTextMessage("message 3")
-	m4 = newOutcomingTextMessage("message 4")
+	m1 = outcoming.NewOutcomingTextMessage("message 1")
+	m2 = outcoming.NewOutcomingTextMessage("message 2")
+	m3 = outcoming.NewOutcomingTextMessage("message 3")
+	m4 = outcoming.NewOutcomingTextMessage("message 4")
 
-	rm1 = &renderedBotMessage{
+	rm1 = &rendered.RenderedBotMessage{
 		OutcomingTextMessage: m1,
 		Message:              &tg.Message{},
 	}
-	rm2 = &renderedBotMessage{
+	rm2 = &rendered.RenderedBotMessage{
 		OutcomingTextMessage: m2,
 		Message:              &tg.Message{},
 	}
-	rm3 = &renderedBotMessage{
+	rm3 = &rendered.RenderedBotMessage{
 		OutcomingTextMessage: m3,
 		Message:              &tg.Message{},
 	}
-	rm4 = &renderedBotMessage{
+	rm4 = &rendered.RenderedBotMessage{
 		OutcomingTextMessage: m4,
 		Message:              &tg.Message{},
 	}
@@ -101,8 +105,8 @@ var (
 
 func TestGetRenderActionsInsertedMiddle(t *testing.T) {
 	Check(t,
-		[]RenderedElement{rm1, rm2, rm3},
-		[]outcomingMessage{m1, m2, m4, m3},
+		[]rendered.RenderedElement{rm1, rm2, rm3},
+		[]outcoming.OutcomingMessage{m1, m2, m4, m3},
 		[]renderActionType{
 			&renderActionKeep{RenderedElement: rm1, NewElement: m1},
 			&renderActionKeep{RenderedElement: rm2, NewElement: m2},
@@ -114,8 +118,8 @@ func TestGetRenderActionsInsertedMiddle(t *testing.T) {
 
 func TestGetRenderActionsInsertedFirst(t *testing.T) {
 	Check(t,
-		[]RenderedElement{rm1, rm2, rm3},
-		[]outcomingMessage{m4, m1, m2, m3},
+		[]rendered.RenderedElement{rm1, rm2, rm3},
+		[]outcoming.OutcomingMessage{m4, m1, m2, m3},
 		[]renderActionType{
 			&renderActionReplace{RenderedElement: rm1, NewElement: m4},
 			&renderActionReplace{RenderedElement: rm2, NewElement: m1},
@@ -127,15 +131,15 @@ func TestGetRenderActionsInsertedFirst(t *testing.T) {
 
 func TestGetRenderActionsBasic(t *testing.T) {
 	Check(t,
-		[]RenderedElement{},
-		[]outcomingMessage{m1},
+		[]rendered.RenderedElement{},
+		[]outcoming.OutcomingMessage{m1},
 		[]renderActionType{
 			&renderActionCreate{NewElement: m1},
 		})
 
 	Check(t,
-		[]RenderedElement{},
-		[]outcomingMessage{m1, m2, m3},
+		[]rendered.RenderedElement{},
+		[]outcoming.OutcomingMessage{m1, m2, m3},
 		[]renderActionType{
 			&renderActionCreate{NewElement: m1},
 			&renderActionCreate{NewElement: m2},
@@ -143,15 +147,15 @@ func TestGetRenderActionsBasic(t *testing.T) {
 		})
 
 	Check(t,
-		[]RenderedElement{
-			&renderedBotMessage{
+		[]rendered.RenderedElement{
+			&rendered.RenderedBotMessage{
 				OutcomingTextMessage: m2,
 			},
 		},
-		[]outcomingMessage{m2},
+		[]outcoming.OutcomingMessage{m2},
 		[]renderActionType{
 			&renderActionKeep{
-				RenderedElement: &renderedBotMessage{
+				RenderedElement: &rendered.RenderedBotMessage{
 					OutcomingTextMessage: m2,
 				},
 				NewElement: m2,
@@ -160,8 +164,8 @@ func TestGetRenderActionsBasic(t *testing.T) {
 
 	// rm1 is supposed to be replaced with m2
 	Check(t,
-		[]RenderedElement{rm1},
-		[]outcomingMessage{m2},
+		[]rendered.RenderedElement{rm1},
+		[]outcoming.OutcomingMessage{m2},
 		[]renderActionType{
 			&renderActionReplace{
 				RenderedElement: rm1,
@@ -171,8 +175,8 @@ func TestGetRenderActionsBasic(t *testing.T) {
 
 	// rm1 is supposed to be removed
 	Check(t,
-		[]RenderedElement{rm1},
-		[]outcomingMessage{},
+		[]rendered.RenderedElement{rm1},
+		[]outcoming.OutcomingMessage{},
 		[]renderActionType{
 			&renderActionRemove{
 				RenderedElement: rm1,
@@ -182,7 +186,7 @@ func TestGetRenderActionsBasic(t *testing.T) {
 }
 
 type MockRenderer struct {
-	OutcomingMessages []outcomingMessage
+	OutcomingMessages []outcoming.OutcomingMessage
 }
 
 func (mr *MockRenderer) Message(ctx context.Context, props *ChatRendererMessageProps) (*tg.Message, error) {
@@ -196,8 +200,8 @@ func (mr *MockRenderer) Delete(messageId int) error {
 func TestCreate(t *testing.T) {
 	re := &MockRenderer{}
 
-	m := newOutcomingTextMessage("message 1")
-	b1 := newButton("button 1", func() any { return 1 }, "button 1", false, false)
+	m := outcoming.NewOutcomingTextMessage("message 1")
+	b1 := component.NewButton("button 1", func() any { return 1 }, "button 1", false, false)
 	m.AddButton(b1)
 
 	ExecuteRenderActions(
@@ -208,6 +212,6 @@ func TestCreate(t *testing.T) {
 				NewElement: m,
 			},
 		},
-		DevLogger(),
+		logging.DevLogger(),
 	)
 }

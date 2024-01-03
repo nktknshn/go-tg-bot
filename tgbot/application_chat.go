@@ -4,6 +4,8 @@ import (
 	"context"
 	"sync"
 
+	"github.com/nktknshn/go-tg-bot/tgbot/reflection"
+	"github.com/nktknshn/go-tg-bot/tgbot/rendered"
 	"go.uber.org/zap"
 )
 
@@ -34,7 +36,7 @@ func NewApplicationChat[S any, C any](app Application[S, C], tc *TelegramUpdateC
 	chatState := ChatState[S, C]{
 		ChatID:           tc.ChatID,
 		AppState:         appState,
-		renderedElements: []RenderedElement{},
+		renderedElements: []rendered.RenderedElement{},
 		inputHandler:     nil,
 		callbackHandler:  nil,
 		treeState:        nil,
@@ -114,9 +116,9 @@ func DefaultHandlerCallback[S any, C any](ac *ApplicationChat[S, C], tc *Telegra
 			return
 		}
 
-		internalActionHandle(ac, &tc.TelegramUpdateContext, result.action, logger.Named("Action"))
+		internalActionHandle(ac, &tc.TelegramUpdateContext, result.Action, logger.Named("Action"))
 
-		if !result.noAnswer {
+		if !result.NoAnswer {
 			tc.AnswerCallbackQuery()
 		}
 
@@ -147,7 +149,7 @@ func DefaultHandleMessage[S any, C any](ac *ApplicationChat[S, C], tc *TelegramC
 
 		ac.State.renderedElements = append(
 			ac.State.renderedElements,
-			newRenderedUserMessage(tc.Message.ID),
+			rendered.NewRenderedUserMessage(tc.Message.ID),
 		)
 
 		action := ac.State.inputHandler(tc.Message.Message)
@@ -168,7 +170,7 @@ func DefaultHandleMessage[S any, C any](ac *ApplicationChat[S, C], tc *TelegramC
 // Handle
 func DefaultHandleActionExternal[S any, C any](ac *ApplicationChat[S, C], tc *TelegramUpdateContext, action any) {
 
-	actionName := reflectStructName(action)
+	actionName := reflection.ReflectStructName(action)
 	logger := ac.Loggers.Action.With(zap.String("action", actionName))
 
 	logger.Info("HandleActionExternal")

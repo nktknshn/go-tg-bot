@@ -1,114 +1,115 @@
-package tgbot
+package outcoming
 
 import (
 	"encoding/json"
 	"fmt"
 
-	// "github.com/gotd/td/tg"
 	"github.com/gotd/td/bin"
 	"github.com/gotd/td/tg"
+	"github.com/nktknshn/go-tg-bot/tgbot/component"
+	"github.com/nktknshn/go-tg-bot/tgbot/logging"
 	"go.uber.org/zap"
 )
 
 // Messages that are going to be sent to user
 const (
-	kindOutcomingFileMessage       = "OutcomingFileMessage"
-	kindOutcomingUserMessage       = "OutcomingUserMessage"
-	kindOutcomingPhotoGroupMessage = "OutcomingPhotoGroupMessage"
-	kindOutcomingTextMessage       = "OutcomingTextMessage"
+	KindOutcomingFileMessage       = "OutcomingFileMessage"
+	KindOutcomingUserMessage       = "OutcomingUserMessage"
+	KindOutcomingPhotoGroupMessage = "OutcomingPhotoGroupMessage"
+	KindOutcomingTextMessage       = "OutcomingTextMessage"
 )
 
-type outcomingMessage interface {
+type OutcomingMessage interface {
 	String() string
 	OutcomingKind() string
-	Equal(other outcomingMessage) bool
+	Equal(other OutcomingMessage) bool
 }
 
-type outcomingFileMessage struct {
-	ElementFile elementFile
+type OutcomingFileMessage struct {
+	ElementFile component.ElementFile
 	Message     *tg.Message
 }
 
-func (m outcomingFileMessage) String() string {
+func (m OutcomingFileMessage) String() string {
 	return fmt.Sprintf(
 		"OutcomingFileMessage{ElementFile: %v, Message: %v}",
 		m.ElementFile, m.Message,
 	)
 }
 
-func (t *outcomingFileMessage) OutcomingKind() string {
-	return kindOutcomingFileMessage
+func (t *OutcomingFileMessage) OutcomingKind() string {
+	return KindOutcomingFileMessage
 }
 
-func (t *outcomingFileMessage) Equal(other outcomingMessage) bool {
-	if other.OutcomingKind() != kindOutcomingFileMessage {
+func (t *OutcomingFileMessage) Equal(other OutcomingMessage) bool {
+	if other.OutcomingKind() != KindOutcomingFileMessage {
 		return false
 	}
 
-	otherFileMessage := other.(*outcomingFileMessage)
+	otherFileMessage := other.(*OutcomingFileMessage)
 
 	return t.ElementFile.FileId == otherFileMessage.ElementFile.FileId
 }
 
-type outcomingUserMessage struct {
-	ElementUserMessage elementUserMessage
+type OutcomingUserMessage struct {
+	ElementUserMessage component.ElementUserMessage
 }
 
-func (m outcomingUserMessage) String() string {
+func (m OutcomingUserMessage) String() string {
 	return fmt.Sprintf(
 		"OutcomingUserMessage{ElementUserMessage: %v}",
 		m.ElementUserMessage,
 	)
 }
 
-func (t *outcomingUserMessage) OutcomingKind() string {
-	return kindOutcomingUserMessage
+func (t *OutcomingUserMessage) OutcomingKind() string {
+	return KindOutcomingUserMessage
 }
 
-func (t *outcomingUserMessage) Equal(other outcomingMessage) bool {
-	if other.OutcomingKind() != kindOutcomingUserMessage {
+func (t *OutcomingUserMessage) Equal(other OutcomingMessage) bool {
+	if other.OutcomingKind() != KindOutcomingUserMessage {
 		return false
 	}
 
-	otherUserMessage := other.(*outcomingUserMessage)
+	otherUserMessage := other.(*OutcomingUserMessage)
 
 	return t.ElementUserMessage.MessageID == otherUserMessage.ElementUserMessage.MessageID
 }
 
-type outcomingPhotoGroupMessage struct {
-	ElementPhotoGroup elementPhotoGroup
+type OutcomingPhotoGroupMessage struct {
+	ElementPhotoGroup component.ElementPhotoGroup
 }
 
-func (m outcomingPhotoGroupMessage) String() string {
+func (m OutcomingPhotoGroupMessage) String() string {
 	return fmt.Sprintf(
 		"OutcomingPhotoGroupMessage{ElementPhotoGroup: %v}",
 		m.ElementPhotoGroup,
 	)
 }
 
-func (t *outcomingPhotoGroupMessage) OutcomingKind() string {
-	return kindOutcomingPhotoGroupMessage
+func (t *OutcomingPhotoGroupMessage) OutcomingKind() string {
+	return KindOutcomingPhotoGroupMessage
 }
 
-func (t *outcomingPhotoGroupMessage) Equal(other outcomingMessage) bool {
-	if other.OutcomingKind() != kindOutcomingPhotoGroupMessage {
+func (t *OutcomingPhotoGroupMessage) Equal(other OutcomingMessage) bool {
+	if other.OutcomingKind() != KindOutcomingPhotoGroupMessage {
 		return false
 	}
 
-	otherPhotoGroupMessage := other.(*outcomingPhotoGroupMessage)
+	otherPhotoGroupMessage := other.(*OutcomingPhotoGroupMessage)
 
 	return otherPhotoGroupMessage.ElementPhotoGroup.Equal(&t.ElementPhotoGroup)
 }
 
-type outcomingTextMessage struct {
+type OutcomingTextMessage struct {
 	Text          string
-	Buttons       [][]elementButton
-	BottomButtons []elementBottomButton
+	Buttons       [][]component.ElementButton
+	BottomButtons []component.ElementBottomButton
 	isComplete    bool
 	// TODO RequestLocation
 }
 
-func (t *outcomingTextMessage) String() string {
+func (t *OutcomingTextMessage) String() string {
 	// maximum 20 chars from t.Text
 	text := t.Text[:min(20, len(t.Text))]
 
@@ -200,42 +201,42 @@ func equalInlineKeyboardMarkup(a *tg.ReplyInlineMarkup, b *tg.ReplyInlineMarkup)
 	return true
 }
 
-func newOutcomingTextMessage(text string) *outcomingTextMessage {
-	buttons := make([][]elementButton, 0)
-	buttons = append(buttons, make([]elementButton, 0))
+func NewOutcomingTextMessage(text string) *OutcomingTextMessage {
+	buttons := make([][]component.ElementButton, 0)
+	buttons = append(buttons, make([]component.ElementButton, 0))
 
-	return &outcomingTextMessage{
+	return &OutcomingTextMessage{
 		Text:       text,
 		Buttons:    buttons,
 		isComplete: false,
 	}
 }
 
-func (t *outcomingTextMessage) OutcomingKind() string {
-	return kindOutcomingTextMessage
+func (t *OutcomingTextMessage) OutcomingKind() string {
+	return KindOutcomingTextMessage
 }
 
-func (t *outcomingTextMessage) Equal(other outcomingMessage) bool {
-	if other.OutcomingKind() != kindOutcomingTextMessage {
+func (t *OutcomingTextMessage) Equal(other OutcomingMessage) bool {
+	if other.OutcomingKind() != KindOutcomingTextMessage {
 		return false
 	}
 
-	oth := other.(*outcomingTextMessage)
+	oth := other.(*OutcomingTextMessage)
 
 	return t.Text == oth.Text &&
 		equalInlineKeyboardMarkup(t.InlineKeyboardMarkup(), oth.InlineKeyboardMarkup()) &&
 		equalReplyKeyboardMarkup(t.ReplyKeyboardMarkup(), oth.ReplyKeyboardMarkup())
 }
 
-func (t *outcomingTextMessage) ConcatText(text string) {
+func (t *OutcomingTextMessage) ConcatText(text string) {
 	t.Text += "\n" + text
 }
 
-func (t *outcomingTextMessage) SetComplete() {
+func (t *OutcomingTextMessage) SetComplete() {
 	t.isComplete = true
 }
 
-func (t *outcomingTextMessage) ReplyMarkup() tg.ReplyMarkupClass {
+func (t *OutcomingTextMessage) ReplyMarkup() tg.ReplyMarkupClass {
 
 	if len(t.BottomButtons) > 0 {
 		return t.ReplyKeyboardMarkup()
@@ -244,7 +245,7 @@ func (t *outcomingTextMessage) ReplyMarkup() tg.ReplyMarkupClass {
 	return t.InlineKeyboardMarkup()
 }
 
-func (t *outcomingTextMessage) ReplyKeyboardMarkup() *tg.ReplyKeyboardMarkup {
+func (t *OutcomingTextMessage) ReplyKeyboardMarkup() *tg.ReplyKeyboardMarkup {
 	res := tg.ReplyKeyboardMarkup{}
 
 	if len(t.BottomButtons) > 0 {
@@ -271,7 +272,7 @@ func (t *outcomingTextMessage) ReplyKeyboardMarkup() *tg.ReplyKeyboardMarkup {
 	return &res
 }
 
-func (t *outcomingTextMessage) InlineKeyboardMarkup() *tg.ReplyInlineMarkup {
+func (t *OutcomingTextMessage) InlineKeyboardMarkup() *tg.ReplyInlineMarkup {
 	// ReplyKeyboardRemove
 	res := tg.ReplyInlineMarkup{}
 
@@ -303,22 +304,22 @@ func (t *outcomingTextMessage) InlineKeyboardMarkup() *tg.ReplyInlineMarkup {
 	return &res
 }
 
-func (t *outcomingTextMessage) AddButton(button *elementButton) {
+func (t *OutcomingTextMessage) AddButton(button *component.ElementButton) {
 	emptyButtons := len(t.Buttons) == 1 && len(t.Buttons[0]) == 0
 
 	if button.NextRow && !emptyButtons {
-		t.Buttons = append(t.Buttons, make([]elementButton, 0))
+		t.Buttons = append(t.Buttons, make([]component.ElementButton, 0))
 	}
 
 	t.Buttons[len(t.Buttons)-1] = append(t.Buttons[len(t.Buttons)-1], *button)
 }
 
-func (t *outcomingTextMessage) AddButtonsRow(buttonsRow *elementButtonsRow) {
+func (t *OutcomingTextMessage) AddButtonsRow(buttonsRow *component.ElementButtonsRow) {
 	t.Buttons = append(t.Buttons, buttonsRow.Buttons())
 }
 
 func equalReplyMarkup(a tg.ReplyMarkupClass, b tg.ReplyMarkupClass) bool {
-	logger := DevLogger()
+	logger := logging.Logger()
 
 	if a == nil && b == nil {
 		return true

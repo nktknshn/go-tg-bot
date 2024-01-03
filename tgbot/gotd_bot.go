@@ -66,7 +66,7 @@ func (b *GotdBot) EditMessageText(ctx context.Context, params EditMessageTextPar
 
 func (b *GotdBot) SendMessage(ctx context.Context, params SendMessageParams) (*tg.Message, error) {
 
-	id, err := RandInt64(b.rand)
+	id, err := helpers.RandInt64(b.rand)
 
 	if err != nil {
 		return nil, err

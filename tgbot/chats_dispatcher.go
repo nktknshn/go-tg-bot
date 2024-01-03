@@ -6,6 +6,8 @@ import (
 	"io"
 	"sync"
 
+	"github.com/nktknshn/go-tg-bot/helpers"
+	"github.com/nktknshn/go-tg-bot/tgbot/logging"
 	"go.uber.org/zap"
 )
 
@@ -37,7 +39,7 @@ func NewChatsDispatcher(props *ChatsDispatcherProps) *ChatsDispatcher {
 	return &ChatsDispatcher{
 		chatHandlers:       make(map[int64]ChatHandler),
 		chatHandlerFactory: props.ChatFactory,
-		logger:             DevLogger(),
+		logger:             logging.Logger(),
 		chatLocks:          make(map[int64]*sync.Mutex),
 		stateLock:          &sync.Mutex{},
 		randReader:         rand.Reader,
@@ -64,7 +66,7 @@ func (cd *ChatsDispatcher) SetLogger(logger *zap.Logger) {
 
 func (cd *ChatsDispatcher) newTelegramContextLogger(bot TelegramBot, chatID int64, update BotUpdate, updateID int64) *zap.Logger {
 
-	return DevLogger().
+	return logging.Logger().
 		Named("TelegramUpdateContext").
 		With(
 			zap.Int64("chatID", chatID),
@@ -81,7 +83,7 @@ func (cd *ChatsDispatcher) createChatHandler(tc *TelegramUpdateContext) ChatHand
 func (cd *ChatsDispatcher) createTelegramContext(ctx context.Context, bot TelegramBot, update BotUpdate) *TelegramUpdateContext {
 
 	chatID := update.User.ID
-	updateID, err := RandInt64(cd.randReader)
+	updateID, err := helpers.RandInt64(cd.randReader)
 	logger := cd.newTelegramContextLogger(bot, chatID, update, updateID)
 
 	if err != nil {

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/nktknshn/go-tg-bot/tgbot/outcoming"
+	"github.com/nktknshn/go-tg-bot/tgbot/rendered"
 	"go.uber.org/zap"
 )
 
@@ -21,8 +23,8 @@ type renderActionType interface {
 }
 
 type renderActionKeep struct {
-	RenderedElement RenderedElement
-	NewElement      outcomingMessage
+	RenderedElement rendered.RenderedElement
+	NewElement      outcoming.OutcomingMessage
 }
 
 func (a *renderActionKeep) RenderActionKind() string {
@@ -34,8 +36,8 @@ func (a renderActionKeep) String() string {
 }
 
 type renderActionReplace struct {
-	RenderedElement RenderedElement
-	NewElement      outcomingMessage
+	RenderedElement rendered.RenderedElement
+	NewElement      outcoming.OutcomingMessage
 }
 
 func (a *renderActionReplace) RenderActionKind() string {
@@ -47,7 +49,7 @@ func (a renderActionReplace) String() string {
 }
 
 type renderActionRemove struct {
-	RenderedElement RenderedElement
+	RenderedElement rendered.RenderedElement
 }
 
 func (a *renderActionRemove) RenderActionKind() string {
@@ -59,7 +61,7 @@ func (a renderActionRemove) String() string {
 }
 
 type renderActionCreate struct {
-	NewElement outcomingMessage
+	NewElement outcoming.OutcomingMessage
 }
 
 func (a *renderActionCreate) RenderActionKind() string {
@@ -70,30 +72,30 @@ func (a renderActionCreate) String() string {
 	return fmt.Sprintf("RenderActionCreate{NewElement: %v}", a.NewElement)
 }
 
-func areSame(a RenderedElement, b outcomingMessage) bool {
+func areSame(a rendered.RenderedElement, b outcoming.OutcomingMessage) bool {
 
 	if b == nil {
 		return false
 	}
 
-	if a.renderedKind() == kindRenderedUserMessage && b.OutcomingKind() == kindOutcomingUserMessage {
-		m := a.(*renderedUserMessage)
-		om := b.(*outcomingUserMessage)
+	if a.RenderedKind() == rendered.KindRenderedUserMessage && b.OutcomingKind() == outcoming.KindOutcomingUserMessage {
+		m := a.(*rendered.RenderedUserMessage)
+		om := b.(*outcoming.OutcomingUserMessage)
 
 		return m.MessageID == om.ElementUserMessage.MessageID
-	} else if a.renderedKind() == kindRenderedBotMessage && b.OutcomingKind() == kindOutcomingTextMessage {
-		m := a.(*renderedBotMessage)
-		om := b.(*outcomingTextMessage)
+	} else if a.RenderedKind() == rendered.KindRenderedBotMessage && b.OutcomingKind() == outcoming.KindOutcomingTextMessage {
+		m := a.(*rendered.RenderedBotMessage)
+		om := b.(*outcoming.OutcomingTextMessage)
 
 		return m.OutcomingTextMessage.Equal(om)
 
-	} else if a.renderedKind() == kindRenderedBotDocumentMessage && b.OutcomingKind() == kindOutcomingFileMessage {
-		m := a.(*renderedBotDocumentMessage)
-		om := b.(*outcomingFileMessage)
+	} else if a.RenderedKind() == rendered.KindRenderedBotDocumentMessage && b.OutcomingKind() == outcoming.KindOutcomingFileMessage {
+		m := a.(*rendered.RenderedBotDocumentMessage)
+		om := b.(*outcoming.OutcomingFileMessage)
 
 		return m.OutcomingFileMessage.ElementFile.FileId == om.ElementFile.FileId
 
-	} else if a.renderedKind() == kindRenderedPhotoGroup && b.OutcomingKind() == kindOutcomingPhotoGroupMessage {
+	} else if a.RenderedKind() == rendered.KindRenderedPhotoGroup && b.OutcomingKind() == outcoming.KindOutcomingPhotoGroupMessage {
 		// m := a.(*RenderedPhotoGroup)
 		// om := b.(*OutcomingPhotoGroupMessage)
 		// TODO: implement
@@ -105,9 +107,8 @@ func areSame(a RenderedElement, b outcomingMessage) bool {
 
 /*
 Rules are:
-1. never talk about the fight club
 */
-func getRenderActions(renderedElements []RenderedElement, nextElements []outcomingMessage, logger *zap.Logger) []renderActionType {
+func getRenderActions(renderedElements []rendered.RenderedElement, nextElements []outcoming.OutcomingMessage, logger *zap.Logger) []renderActionType {
 
 	logger.Debug("GetRenderActions",
 		zap.Any("renderedElements", len(renderedElements)),
@@ -119,7 +120,7 @@ func getRenderActions(renderedElements []RenderedElement, nextElements []outcomi
 	// renderedElements = append(make([]RenderedElement, 0), renderedElements...)
 	// nextElements = append(make([]OutcomingMessage, 0), nextElements...)
 
-	result := append(make([]RenderedElement, 0), renderedElements...)
+	result := append(make([]rendered.RenderedElement, 0), renderedElements...)
 	idx := 0
 
 	for {
@@ -132,8 +133,8 @@ func getRenderActions(renderedElements []RenderedElement, nextElements []outcomi
 			break
 		}
 
-		var r RenderedElement
-		var n outcomingMessage
+		var r rendered.RenderedElement
+		var n outcoming.OutcomingMessage
 
 		if len(result) > idx {
 			r = result[idx]
@@ -163,19 +164,19 @@ func getRenderActions(renderedElements []RenderedElement, nextElements []outcomi
 			continue
 		} else if areSame(r, n) {
 			actions = append(actions, &renderActionKeep{RenderedElement: r, NewElement: n})
-		} else if slices.IndexFunc(renderedElements, func(re RenderedElement) bool { return areSame(re, n) }) > idx {
+		} else if slices.IndexFunc(renderedElements, func(re rendered.RenderedElement) bool { return areSame(re, n) }) > idx {
 			// if we have the next outcoming element rendered somewhere else ahead of current rendered element
 			// we can delete current rendered element
 			result = slices.Delete(result, idx, idx+1)
-			nextElements = append([]outcomingMessage{n}, nextElements...)
+			nextElements = append([]outcoming.OutcomingMessage{n}, nextElements...)
 			idx -= 1
 			actions = append(actions, &renderActionRemove{RenderedElement: r})
 		} else {
-			if r.canReplace(n) {
+			if r.CanReplace(n) {
 				actions = append(actions, &renderActionReplace{RenderedElement: r, NewElement: n})
 			} else {
 				result = slices.Delete(result, idx, idx+1)
-				nextElements = append([]outcomingMessage{n}, nextElements...)
+				nextElements = append([]outcoming.OutcomingMessage{n}, nextElements...)
 				idx -= 1
 				actions = append(actions, &renderActionRemove{RenderedElement: r})
 			}
@@ -198,10 +199,10 @@ func getOrText(text string, fallback string) string {
 	return text
 }
 
-func create(ctx context.Context, renderer ChatRenderer, action *renderActionCreate, logger *zap.Logger) (RenderedElement, error) {
+func create(ctx context.Context, renderer ChatRenderer, action *renderActionCreate, logger *zap.Logger) (rendered.RenderedElement, error) {
 
 	switch a := action.NewElement.(type) {
-	case *outcomingTextMessage:
+	case *outcoming.OutcomingTextMessage:
 
 		message, err := renderer.Message(ctx, &ChatRendererMessageProps{
 			Text:        getOrText(a.Text, emptyString),
@@ -212,13 +213,13 @@ func create(ctx context.Context, renderer ChatRenderer, action *renderActionCrea
 			return nil, err
 		}
 
-		return &renderedBotMessage{
+		return &rendered.RenderedBotMessage{
 			Message:              message,
 			OutcomingTextMessage: a,
 		}, nil
 
-	case *outcomingUserMessage:
-		return &renderedUserMessage{
+	case *outcoming.OutcomingUserMessage:
+		return &rendered.RenderedUserMessage{
 			MessageID:            a.ElementUserMessage.MessageID,
 			OutcomingUserMessage: a,
 		}, nil
@@ -236,8 +237,8 @@ func create(ctx context.Context, renderer ChatRenderer, action *renderActionCrea
 }
 
 // Takes actions and applies them to the renderer
-func ExecuteRenderActions(ctx context.Context, renderer ChatRenderer, actions []renderActionType, logger *zap.Logger) ([]RenderedElement, error) {
-	result := make([]RenderedElement, 0)
+func ExecuteRenderActions(ctx context.Context, renderer ChatRenderer, actions []renderActionType, logger *zap.Logger) ([]rendered.RenderedElement, error) {
+	result := make([]rendered.RenderedElement, 0)
 	actionsRemove := make([]renderActionRemove, 0)
 	actionsRemoveBot := make([]renderActionRemove, 0)
 	actionsRemoveUser := make([]renderActionRemove, 0)
@@ -247,9 +248,9 @@ func ExecuteRenderActions(ctx context.Context, renderer ChatRenderer, actions []
 	for _, action := range actions {
 		switch a := action.(type) {
 		case *renderActionRemove:
-			if a.RenderedElement.renderedKind() == kindRenderedBotMessage {
+			if a.RenderedElement.RenderedKind() == rendered.KindRenderedBotMessage {
 				actionsRemoveBot = append(actionsRemoveBot, *a)
-			} else if a.RenderedElement.renderedKind() == kindRenderedUserMessage {
+			} else if a.RenderedElement.RenderedKind() == rendered.KindRenderedUserMessage {
 				actionsRemoveUser = append(actionsRemoveUser, *a)
 			}
 			actionsRemove = append(actionsRemove, *a)
@@ -283,22 +284,22 @@ func ExecuteRenderActions(ctx context.Context, renderer ChatRenderer, actions []
 		case *renderActionKeep:
 			logger.Debug("ExecuteRenderActions: keeping rendered element", zap.Any("a", a))
 
-			if a.RenderedElement.renderedKind() == kindRenderedBotMessage && a.NewElement.OutcomingKind() == kindOutcomingTextMessage {
-				rendereredMessage := &renderedBotMessage{
-					OutcomingTextMessage: a.NewElement.(*outcomingTextMessage),
-					Message:              a.RenderedElement.(*renderedBotMessage).Message,
+			if a.RenderedElement.RenderedKind() == rendered.KindRenderedBotMessage && a.NewElement.OutcomingKind() == outcoming.KindOutcomingTextMessage {
+				rendereredMessage := &rendered.RenderedBotMessage{
+					OutcomingTextMessage: a.NewElement.(*outcoming.OutcomingTextMessage),
+					Message:              a.RenderedElement.(*rendered.RenderedBotMessage).Message,
 				}
 
 				result = append(result, rendereredMessage)
 			}
 
 		case *renderActionReplace:
-			if a.RenderedElement.renderedKind() == kindRenderedBotMessage && a.NewElement.OutcomingKind() == kindOutcomingTextMessage {
+			if a.RenderedElement.RenderedKind() == rendered.KindRenderedBotMessage && a.NewElement.OutcomingKind() == outcoming.KindOutcomingTextMessage {
 
 				logger.Debug("ExecuteRenderActions: replacing rendered element", zap.Any("a", a.RenderedElement))
 
-				outcoming := a.NewElement.(*outcomingTextMessage)
-				renderedElement := a.RenderedElement.(*renderedBotMessage)
+				outcoming := a.NewElement.(*outcoming.OutcomingTextMessage)
+				renderedElement := a.RenderedElement.(*rendered.RenderedBotMessage)
 
 				logger.Debug("ExecuteRenderActions: replacing rendered element",
 					zap.Any("outcoming", outcoming), zap.Any("renderedElement", renderedElement),
@@ -315,7 +316,7 @@ func ExecuteRenderActions(ctx context.Context, renderer ChatRenderer, actions []
 					return nil, err
 				}
 
-				rendereredMessage := &renderedBotMessage{
+				rendereredMessage := &rendered.RenderedBotMessage{
 					OutcomingTextMessage: outcoming,
 					Message:              message,
 				}

@@ -1,4 +1,4 @@
-package tgbot
+package logging
 
 import "go.uber.org/zap"
 
@@ -34,6 +34,10 @@ var DefaultLoggers = TgbotLoggers{
 	ChatHandler:      DefaultChatHandlerLogger,
 	Component:        DefaultComponentLogger,
 	ApplicationChat:  DefaultApplicationChat,
+}
+
+func Logger() *zap.Logger {
+	return DevLogger()
 }
 
 func DevLogger() *zap.Logger {

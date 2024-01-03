@@ -1,4 +1,4 @@
-package tgbot
+package component
 
 import (
 	"reflect"
@@ -79,8 +79,8 @@ func (c *runResultComponent) ExtractLocalStateTree() *localStateTree {
 }
 
 // recursively extract elements from the component
-func (c *runResultComponent) ExtractElements() []anyElement {
-	result := make([]anyElement, 0)
+func (c *runResultComponent) ExtractElements() []AnyElement {
+	result := make([]AnyElement, 0)
 
 	for _, e := range c.output {
 		switch e := e.(type) {
@@ -95,7 +95,7 @@ func (c *runResultComponent) ExtractElements() []anyElement {
 }
 
 type runResultElement struct {
-	element anyElement
+	element AnyElement
 }
 
 func (c *runResultElement) RunResultKind() string {
@@ -147,8 +147,8 @@ func (c *reRunResultElement) RerunResultKind() string {
 	return "ReRunResultElement"
 }
 
-func (rr *rerunResultUnchanged) ExtractElements() []anyElement {
-	res := make([]anyElement, 0)
+func (rr *rerunResultUnchanged) ExtractElements() []AnyElement {
+	res := make([]AnyElement, 0)
 
 	for _, r := range rr.rerunOutput {
 		res = append(res, extractElementsFromRerun(r).elements...)
@@ -157,8 +157,8 @@ func (rr *rerunResultUnchanged) ExtractElements() []anyElement {
 	return res
 }
 
-func (rr *rerunResultUnchanged) ExtractNewElements() []anyElement {
-	res := make([]anyElement, 0)
+func (rr *rerunResultUnchanged) ExtractNewElements() []AnyElement {
+	res := make([]AnyElement, 0)
 
 	for _, r := range rr.rerunOutput {
 		res = append(res, extractElementsFromRerun(r).newElements...)
@@ -169,9 +169,9 @@ func (rr *rerunResultUnchanged) ExtractNewElements() []anyElement {
 
 type rerunExtractedElements struct {
 	// elements that were rendered
-	elements        []anyElement
-	newElements     []anyElement
-	removedElements []anyElement
+	elements        []AnyElement
+	newElements     []AnyElement
+	removedElements []AnyElement
 }
 
 func extractElementsFromRerun(rerun RerunResult) rerunExtractedElements {
@@ -190,15 +190,15 @@ func extractElementsFromRerun(rerun RerunResult) rerunExtractedElements {
 		}
 	case *reRunResultElement:
 		return rerunExtractedElements{
-			elements: []anyElement{r.element.element},
+			elements: []AnyElement{r.element.element},
 		}
 	}
 
 	return rerunExtractedElements{}
 }
 
-func extractFromRunResults(results []runResult) []anyElement {
-	resultsElements := make([]anyElement, 0)
+func extractFromRunResults(results []runResult) []AnyElement {
+	resultsElements := make([]AnyElement, 0)
 
 	for _, r := range results {
 		switch r := r.(type) {
@@ -219,11 +219,11 @@ type runContext struct {
 
 	localStateTree *localStateTree
 
-	globalContext globalContext[any]
+	globalContext GlobalContext[any]
 
 	// position of the component in the tree
 	componentIndex []int
-	parents        []elementComponent
+	parents        []ElementComponent
 }
 
 type rerunContext struct {
@@ -232,11 +232,11 @@ type rerunContext struct {
 
 	localStateTree localStateTree
 
-	globalContext globalContext[any]
+	globalContext GlobalContext[any]
 
 	// position of the component in the tree
 	componentIndex []int
-	parents        []elementComponent
+	parents        []ElementComponent
 }
 
 func runComponentTree(ctx *runContext, comp Comp) runResultComponent {
@@ -290,7 +290,7 @@ func runComponentTree(ctx *runContext, comp Comp) runResultComponent {
 
 	ctx.logger.Debug("Elements was rendered",
 		zap.Int("len", len(elements)),
-		elementsList(elements).ZapField("elements"),
+		ElementsList(elements).ZapField("elements"),
 	)
 
 	childrenState := ctx.localStateTree.Children
@@ -307,7 +307,7 @@ func runComponentTree(ctx *runContext, comp Comp) runResultComponent {
 		ctx.logger.Debug("Running element", zap.Int("idx", idx), zap.Any("element", e))
 
 		switch e := e.(type) {
-		case *elementComponent:
+		case *ElementComponent:
 
 			subcompres := runComponentTree(&runContext{
 				logger:         ctx.logger,
@@ -459,7 +459,7 @@ func rerunComponentTree(
 						localStateTree: *(*childrenState)[idx],
 						globalContext:  ctx.globalContext,
 						componentIndex: append(ctx.componentIndex, idx),
-						parents:        append(ctx.parents, elementComponent{e.comp}),
+						parents:        append(ctx.parents, ElementComponent{e.comp}),
 					},
 					e.comp,
 				)
