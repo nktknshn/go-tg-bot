@@ -2,7 +2,7 @@ package emulator
 
 import (
 	"github.com/gotd/td/tg"
-	tgbot "github.com/nktknshn/go-tg-bot"
+	tgbot "github.com/nktknshn/go-tg-bot/tgbot"
 )
 
 func InlineKeyboardToButtons(ik *tg.ReplyInlineMarkup) MessageButtons {

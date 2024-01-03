@@ -1,6 +1,7 @@
 package tgbot
 
 import (
+	"github.com/BooleanCat/go-functional/iter"
 	"go.uber.org/zap"
 )
 
@@ -8,6 +9,12 @@ type preRenderData[S any, C any] struct {
 	NextChatState ChatState[S, C]
 	RenderActions []renderActionType
 	// ExecuteRender func(ctx context.Context, renderer ChatRenderer) ([]RenderedElement, error)
+}
+
+func (d *preRenderData[S, C]) RenderActionsKinds() []string {
+	return iter.Map(iter.Lift(d.RenderActions), func(a renderActionType) string {
+		return a.RenderActionKind()
+	}).Collect()
 }
 
 // ComputeNextState computes the output based on the state
@@ -42,6 +49,7 @@ func (app *Application[S, C]) ComputeNextState(chatState *ChatState[S, C], logge
 		RenderActions: getRenderActions(
 			chatState.renderedElements,
 			res.OutcomingMessages,
+			logger,
 		),
 	}
 

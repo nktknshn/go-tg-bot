@@ -1,7 +1,7 @@
 package emulator
 
 import (
-	tgbot "github.com/nktknshn/go-tg-bot"
+	tgbot "github.com/nktknshn/go-tg-bot/tgbot"
 	"go.uber.org/zap"
 )
 

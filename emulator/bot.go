@@ -5,7 +5,7 @@ import (
 
 	"github.com/gotd/td/tg"
 
-	tgbot "github.com/nktknshn/go-tg-bot"
+	tgbot "github.com/nktknshn/go-tg-bot/tgbot"
 )
 
 type FakeBot struct {

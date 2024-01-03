@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	tgbot "github.com/nktknshn/go-tg-bot"
 	"github.com/nktknshn/go-tg-bot/btest"
 	emulator "github.com/nktknshn/go-tg-bot/emulator"
+	tgbot "github.com/nktknshn/go-tg-bot/tgbot"
 	"go.uber.org/zap"
 
 	"github.com/nktknshn/go-tg-bot/emulator/helpers"

@@ -3,8 +3,8 @@ package todo
 import (
 	"testing"
 
-	tgbot "github.com/nktknshn/go-tg-bot"
 	"github.com/nktknshn/go-tg-bot/emulator"
+	tgbot "github.com/nktknshn/go-tg-bot/tgbot"
 )
 
 func TestTodo(t *testing.T) {

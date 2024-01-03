@@ -7,8 +7,8 @@ import (
 	"os"
 	"strconv"
 
-	tgbot "github.com/nktknshn/go-tg-bot"
 	"github.com/nktknshn/go-tg-bot/emulator"
+	tgbot "github.com/nktknshn/go-tg-bot/tgbot"
 	"go.uber.org/zap"
 )
 

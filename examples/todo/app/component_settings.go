@@ -1,6 +1,6 @@
 package todo
 
-import tgbot "github.com/nktknshn/go-tg-bot"
+import tgbot "github.com/nktknshn/go-tg-bot/tgbot"
 
 type PageSettings struct {
 	Context TodoGlobalContext

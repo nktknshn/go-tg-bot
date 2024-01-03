@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strconv"
 
-	tgbot "github.com/nktknshn/go-tg-bot"
+	tgbot "github.com/nktknshn/go-tg-bot/tgbot"
 )
 
 var rexItemIdex = regexp.MustCompile(`^/(\d+)`)

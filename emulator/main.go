@@ -7,7 +7,7 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
-	tgbot "github.com/nktknshn/go-tg-bot"
+	tgbot "github.com/nktknshn/go-tg-bot/tgbot"
 	"go.uber.org/zap"
 )
 

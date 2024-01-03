@@ -14,6 +14,14 @@ const (
 	// KindRenderedMediaMessage       = "RenderedMediaMessage"
 )
 
+type RenderedElement interface {
+	String() string
+	renderedKind() string
+	canReplace(outcomingMessage) bool
+	Equal(RenderedElement) bool
+	ID() int
+}
+
 // Messages that have been sent to user
 
 type renderedUserMessage struct {

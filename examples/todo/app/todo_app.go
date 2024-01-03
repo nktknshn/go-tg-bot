@@ -3,7 +3,7 @@ package todo
 import (
 	"fmt"
 
-	tgbot "github.com/nktknshn/go-tg-bot"
+	tgbot "github.com/nktknshn/go-tg-bot/tgbot"
 	"go.uber.org/zap"
 )
 

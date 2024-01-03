@@ -14,7 +14,7 @@ func Check(
 	outcomingMessages []outcomingMessage,
 	expected []renderActionType,
 ) {
-	res0 := getRenderActions(renderedElements, outcomingMessages)
+	res0 := getRenderActions(renderedElements, outcomingMessages, DevLogger())
 
 	if len(res0) != len(expected) {
 		for i, v := range res0 {

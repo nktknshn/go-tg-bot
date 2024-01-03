@@ -10,7 +10,7 @@ import (
 type ApplicationChatLoggers struct {
 	Root      *zap.Logger
 	Component *zap.Logger
-	Update    *zap.Logger
+	Handle    *zap.Logger
 	Action    *zap.Logger
 	Render    *zap.Logger
 }
@@ -24,8 +24,8 @@ type ApplicationChat[S any, C any] struct {
 	Loggers *ApplicationChatLoggers
 }
 
-type ExecutionContext struct {
-	UpdateContext *TelegramUpdateContext
+func (ac *ApplicationChat[S, C]) SetChatState(chatState *ChatState[S, C]) {
+	ac.State = chatState
 }
 
 func NewApplicationChat[S any, C any](app Application[S, C], tc *TelegramUpdateContext) *ApplicationChat[S, C] {
@@ -52,7 +52,7 @@ func NewApplicationChat[S any, C any](app Application[S, C], tc *TelegramUpdateC
 		// Component: app.Loggers.Component(rootLogger),
 		Component: app.Loggers.Component(rootLogger),
 		// logger for updates
-		Update: rootLogger.Named("Update"),
+		Handle: rootLogger.Named("Handle"),
 		Action: rootLogger.Named("Action"),
 		Render: rootLogger.Named("Render"),
 	}
@@ -68,9 +68,18 @@ func NewApplicationChat[S any, C any](app Application[S, C], tc *TelegramUpdateC
 
 // Computes the output based on the state and renders it to the user
 func DefaultRenderFunc[S any, C any](ctx context.Context, ac *ApplicationChat[S, C]) error {
-	ac.Loggers.Render.Debug("RenderFunc called")
 
-	res := ac.App.ComputeNextState(ac.State, ac.Loggers.Component)
+	logger := ac.Loggers.Render
+
+	logger.Debug("RenderFunc called")
+
+	res := ac.App.ComputeNextState(ac.State, ac.App.Loggers.Component(logger))
+
+	logger.Debug("RenderFunc computed next state",
+
+		zap.Any("RenderActions", res.RenderActionsKinds()),
+	)
+
 	rendered, err := ExecuteRenderActions(ctx, ac.State.Renderer, res.RenderActions, ac.Loggers.Render)
 
 	if err != nil {
@@ -78,15 +87,15 @@ func DefaultRenderFunc[S any, C any](ctx context.Context, ac *ApplicationChat[S,
 		return err
 	}
 
-	ac.State = &res.NextChatState
-	ac.State.renderedElements = rendered
+	ac.SetChatState(&res.NextChatState)
+	ac.State.SetRenderedElements(rendered)
 
 	return nil
 }
 
 func DefaultHandlerCallback[S any, C any](ac *ApplicationChat[S, C], tc *TelegramContextCallback) {
 
-	logger := ac.Loggers.Update.With(zap.Int64("UpdateID", tc.UpdateID))
+	logger := ac.Loggers.Handle.With(zap.Int64("UpdateID", tc.UpdateID))
 
 	logger.Info("HandleCallback", zap.Any("data", tc.UpdateBotCallbackQuery.QueryID))
 
@@ -124,7 +133,7 @@ func DefaultHandlerCallback[S any, C any](ac *ApplicationChat[S, C], tc *Telegra
 }
 
 func DefaultHandleMessage[S any, C any](ac *ApplicationChat[S, C], tc *TelegramContextTextMessage) {
-	logger := ac.Loggers.Update.With(zap.Int64("UpdateID", tc.UpdateID))
+	logger := ac.Loggers.Handle.With(zap.Int64("UpdateID", tc.UpdateID))
 
 	logger.Info("HandleMessage", zap.Any("text", tc.Text))
 	// tc.Logger.Debug("LocalStateTree", zap.String("tree", ac.State.treeState.LocalStateTree.String()))
@@ -143,7 +152,7 @@ func DefaultHandleMessage[S any, C any](ac *ApplicationChat[S, C], tc *TelegramC
 
 		action := ac.State.inputHandler(tc.Message.Message)
 
-		internalActionHandle(ac, &tc.TelegramUpdateContext, action, logger)
+		internalActionHandle(ac, &tc.TelegramUpdateContext, action, logger.Named("Action"))
 
 	} else {
 		logger.Warn("Missing InputHandler")

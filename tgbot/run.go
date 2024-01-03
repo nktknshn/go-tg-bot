@@ -12,9 +12,7 @@ import (
 func Run(ctx context.Context, logger *zap.Logger, dispatcher *ChatsDispatcher) error {
 	logger.Debug("Starting real telegram bot")
 
-	handler := &Handler{
-		dispatcher: dispatcher,
-	}
+	handler := NewGotdHandler(dispatcher)
 
 	opts := telegram.Options{
 		Logger:        logger,
@@ -27,8 +25,8 @@ func Run(ctx context.Context, logger *zap.Logger, dispatcher *ChatsDispatcher) e
 			api := tg.NewClient(client)
 
 			sender := message.NewSender(api)
-			handler.sender = sender
-			handler.client = api
+			handler.SetSender(sender)
+			handler.SetClient(api)
 
 			return nil
 		},

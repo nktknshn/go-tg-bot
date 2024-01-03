@@ -3,6 +3,7 @@ package tgbot
 import (
 	"sync"
 
+	"github.com/BooleanCat/go-functional/iter"
 	"github.com/gotd/td/tg"
 	"go.uber.org/zap"
 )
@@ -54,4 +55,40 @@ func (s *ChatState[S, C]) LockState(logger *zap.Logger) {
 func (s *ChatState[S, C]) UnlockState(logger *zap.Logger) {
 	logger.Debug("UnlockState")
 	s.lock.Unlock()
+}
+
+func (s *ChatState[S, C]) SetAppState(appState S) {
+	s.AppState = appState
+}
+
+func (s *ChatState[S, C]) SetTreeState(treeState *runResultWithStateTree) {
+	s.treeState = treeState
+}
+
+func (s *ChatState[S, C]) SetInputHandler(inputHandler chatInputHandler) {
+	s.inputHandler = inputHandler
+}
+
+func (s *ChatState[S, C]) SetCallbackHandler(callbackHandler chatCallbackHandler) {
+	s.callbackHandler = callbackHandler
+}
+
+func (s *ChatState[S, C]) SetRenderer(renderer ChatRenderer) {
+	s.Renderer = renderer
+}
+
+func (s *ChatState[S, C]) SetRenderedElements(renderedElements []RenderedElement) {
+	s.renderedElements = renderedElements
+}
+
+func (s *ChatState[S, C]) RenderedElementsKinds() []string {
+	return iter.Map(iter.Lift(s.renderedElements), func(e RenderedElement) string {
+		return e.renderedKind()
+	}).Collect()
+}
+
+func (s *ChatState[S, C]) RenderedElementsSimpl() []string {
+	return iter.Map(iter.Lift(s.renderedElements), func(e RenderedElement) string {
+		return e.String()
+	}).Collect()
 }

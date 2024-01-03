@@ -107,9 +107,7 @@ func areSame(a RenderedElement, b outcomingMessage) bool {
 Rules are:
 1. never talk about the fight club
 */
-func getRenderActions(renderedElements []RenderedElement, nextElements []outcomingMessage) []renderActionType {
-
-	logger := DevLogger()
+func getRenderActions(renderedElements []RenderedElement, nextElements []outcomingMessage, logger *zap.Logger) []renderActionType {
 
 	logger.Debug("GetRenderActions",
 		zap.Any("renderedElements", len(renderedElements)),
@@ -200,7 +198,7 @@ func getOrText(text string, fallback string) string {
 	return text
 }
 
-func create(ctx context.Context, renderer ChatRenderer, action *renderActionCreate) (RenderedElement, error) {
+func create(ctx context.Context, renderer ChatRenderer, action *renderActionCreate, logger *zap.Logger) (RenderedElement, error) {
 
 	switch a := action.NewElement.(type) {
 	case *outcomingTextMessage:
@@ -230,7 +228,7 @@ func create(ctx context.Context, renderer ChatRenderer, action *renderActionCrea
 	// case *OutcomingPhotoGroupMessage:
 	// 	return renderer.PhotoGroup(a.ElementPhotoGroup)
 	default:
-		globalLogger.Error("create: unsupported outcoming message type", zap.Any("a", a))
+		logger.Error("create: unsupported outcoming message type", zap.Any("a", a))
 	}
 
 	return nil, nil
@@ -275,7 +273,7 @@ func ExecuteRenderActions(ctx context.Context, renderer ChatRenderer, actions []
 		case *renderActionCreate:
 			logger.Debug("ExecuteRenderActions: creating new element", zap.Any("a", a))
 
-			rendereredMessage, err := create(ctx, renderer, a)
+			rendereredMessage, err := create(ctx, renderer, a, logger)
 
 			if err != nil {
 				return nil, err
@@ -302,7 +300,7 @@ func ExecuteRenderActions(ctx context.Context, renderer ChatRenderer, actions []
 				outcoming := a.NewElement.(*outcomingTextMessage)
 				renderedElement := a.RenderedElement.(*renderedBotMessage)
 
-				globalLogger.Debug("ExecuteRenderActions: replacing rendered element",
+				logger.Debug("ExecuteRenderActions: replacing rendered element",
 					zap.Any("outcoming", outcoming), zap.Any("renderedElement", renderedElement),
 				)
 

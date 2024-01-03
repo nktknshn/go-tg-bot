@@ -42,10 +42,3 @@ type ChatRendererMessageProps struct {
 }
 
 // Telegram entities
-type RenderedElement interface {
-	String() string
-	renderedKind() string
-	canReplace(outcomingMessage) bool
-	Equal(RenderedElement) bool
-	ID() int
-}

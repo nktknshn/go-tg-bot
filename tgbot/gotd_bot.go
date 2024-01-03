@@ -8,6 +8,7 @@ import (
 	"github.com/gotd/td/telegram/message"
 	"github.com/gotd/td/telegram/message/unpack"
 	"github.com/gotd/td/tg"
+
 	"github.com/nktknshn/go-tg-bot/gogotd"
 	"github.com/nktknshn/go-tg-bot/helpers"
 )
@@ -105,17 +106,29 @@ func (b *GotdBot) AnswerCallbackQuery(ctx context.Context, params AnswerCallback
 }
 
 // Updates handler
-type Handler struct {
+type GotdHandler struct {
 	dispatcher *ChatsDispatcher
 	sender     *message.Sender
 	client     *tg.Client
 }
 
-func (h *Handler) Bot() TelegramBot {
+func NewGotdHandler(dispatcher *ChatsDispatcher) *GotdHandler {
+	return &GotdHandler{dispatcher: dispatcher}
+}
+
+func (h *GotdHandler) SetSender(sender *message.Sender) {
+	h.sender = sender
+}
+
+func (h *GotdHandler) SetClient(client *tg.Client) {
+	h.client = client
+}
+
+func (h *GotdHandler) Bot() TelegramBot {
 	return NewGotdBot(h.sender, h.client)
 }
 
-func (h *Handler) Handle(ctx context.Context, updates tg.UpdatesClass) error {
+func (h *GotdHandler) Handle(ctx context.Context, updates tg.UpdatesClass) error {
 
 	extract, err := helpers.ExtractUpdates(updates)
 

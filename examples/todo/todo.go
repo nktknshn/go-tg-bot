@@ -4,9 +4,9 @@ import (
 	"context"
 	"flag"
 
-	tgbot "github.com/nktknshn/go-tg-bot"
 	"github.com/nktknshn/go-tg-bot/emulator"
 	todo "github.com/nktknshn/go-tg-bot/examples/todo/app"
+	tgbot "github.com/nktknshn/go-tg-bot/tgbot"
 )
 
 func main() {
