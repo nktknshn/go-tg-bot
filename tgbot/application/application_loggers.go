@@ -1,4 +1,4 @@
-package tgbot
+package application
 
 import "github.com/nktknshn/go-tg-bot/tgbot/logging"
 

@@ -11,6 +11,7 @@ import (
 
 	"github.com/nktknshn/go-tg-bot/gogotd"
 	"github.com/nktknshn/go-tg-bot/helpers"
+	"github.com/nktknshn/go-tg-bot/tgbot/telegram"
 )
 
 // implements TelegramBot
@@ -24,7 +25,7 @@ func NewGotdBot(sender *message.Sender, client *tg.Client) *GotdBot {
 	return &GotdBot{sender: sender, client: client, rand: rand.Reader}
 }
 
-func (b *GotdBot) DeleteMessage(ctx context.Context, params DeleteMessageParams) (bool, error) {
+func (b *GotdBot) DeleteMessage(ctx context.Context, params telegram.DeleteMessageParams) (bool, error) {
 
 	affected, err := b.client.MessagesDeleteMessages(ctx, &tg.MessagesDeleteMessagesRequest{
 		ID:     []int{params.MessageID},
@@ -38,7 +39,7 @@ func (b *GotdBot) DeleteMessage(ctx context.Context, params DeleteMessageParams)
 	return affected.PtsCount > 0, nil
 }
 
-func (b *GotdBot) EditMessageText(ctx context.Context, params EditMessageTextParams) (*tg.Message, error) {
+func (b *GotdBot) EditMessageText(ctx context.Context, params telegram.EditMessageTextParams) (*tg.Message, error) {
 
 	outputMsg := &tg.MessagesEditMessageRequest{
 		Peer:      &tg.InputPeerUser{UserID: params.ChatID, AccessHash: params.AccessHash},
@@ -64,7 +65,7 @@ func (b *GotdBot) EditMessageText(ctx context.Context, params EditMessageTextPar
 	return msg, nil
 }
 
-func (b *GotdBot) SendMessage(ctx context.Context, params SendMessageParams) (*tg.Message, error) {
+func (b *GotdBot) SendMessage(ctx context.Context, params telegram.SendMessageParams) (*tg.Message, error) {
 
 	id, err := helpers.RandInt64(b.rand)
 
@@ -92,7 +93,7 @@ func (b *GotdBot) SendMessage(ctx context.Context, params SendMessageParams) (*t
 }
 
 // reply to use button press
-func (b *GotdBot) AnswerCallbackQuery(ctx context.Context, params AnswerCallbackQueryParams) (bool, error) {
+func (b *GotdBot) AnswerCallbackQuery(ctx context.Context, params telegram.AnswerCallbackQueryParams) (bool, error) {
 
 	w, err := b.client.MessagesSetBotCallbackAnswer(ctx, &tg.MessagesSetBotCallbackAnswerRequest{
 		QueryID: params.QueryID,
@@ -124,7 +125,7 @@ func (h *GotdHandler) SetClient(client *tg.Client) {
 	h.client = client
 }
 
-func (h *GotdHandler) Bot() TelegramBot {
+func (h *GotdHandler) Bot() telegram.TelegramBot {
 	return NewGotdBot(h.sender, h.client)
 }
 
@@ -144,7 +145,7 @@ func (h *GotdHandler) Handle(ctx context.Context, updates tg.UpdatesClass) error
 			continue
 		}
 
-		u := BotUpdate{
+		u := telegram.BotUpdate{
 			UpdateClass: update,
 			User:        peerUser,
 			Entities:    extract.Entities,

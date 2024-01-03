@@ -8,11 +8,12 @@ import (
 
 	"github.com/nktknshn/go-tg-bot/helpers"
 	"github.com/nktknshn/go-tg-bot/tgbot/logging"
+	"github.com/nktknshn/go-tg-bot/tgbot/telegram"
 	"go.uber.org/zap"
 )
 
 type ChatHandlerFactory interface {
-	CreateChatHandler(*TelegramUpdateContext) ChatHandler
+	CreateChatHandler(*telegram.TelegramUpdateContext) ChatHandler
 }
 
 type ChatsDispatcherProps struct {
@@ -64,7 +65,7 @@ func (cd *ChatsDispatcher) SetLogger(logger *zap.Logger) {
 	cd.logger = logger
 }
 
-func (cd *ChatsDispatcher) newTelegramContextLogger(bot TelegramBot, chatID int64, update BotUpdate, updateID int64) *zap.Logger {
+func (cd *ChatsDispatcher) newTelegramContextLogger(bot telegram.TelegramBot, chatID int64, update telegram.BotUpdate, updateID int64) *zap.Logger {
 
 	return logging.Logger().
 		Named("TelegramUpdateContext").
@@ -74,13 +75,13 @@ func (cd *ChatsDispatcher) newTelegramContextLogger(bot TelegramBot, chatID int6
 		)
 }
 
-func (cd *ChatsDispatcher) createChatHandler(tc *TelegramUpdateContext) ChatHandler {
+func (cd *ChatsDispatcher) createChatHandler(tc *telegram.TelegramUpdateContext) ChatHandler {
 	chat := cd.chatHandlerFactory.CreateChatHandler(tc)
 	cd.chatHandlers[tc.ChatID] = chat
 	return chat
 }
 
-func (cd *ChatsDispatcher) createTelegramContext(ctx context.Context, bot TelegramBot, update BotUpdate) *TelegramUpdateContext {
+func (cd *ChatsDispatcher) createTelegramContext(ctx context.Context, bot telegram.TelegramBot, update telegram.BotUpdate) *telegram.TelegramUpdateContext {
 
 	chatID := update.User.ID
 	updateID, err := helpers.RandInt64(cd.randReader)
@@ -90,7 +91,7 @@ func (cd *ChatsDispatcher) createTelegramContext(ctx context.Context, bot Telegr
 		cd.logger.Error("Failed to generate update id. UpdateID will be 0", zap.Error(err))
 	}
 
-	return &TelegramUpdateContext{
+	return &telegram.TelegramUpdateContext{
 		Ctx:          ctx,
 		Bot:          bot,
 		UpdateLogger: logger,
@@ -114,7 +115,7 @@ func (cd *ChatsDispatcher) GetChatHandler(chatID int64) (ChatHandler, bool) {
 	return chat, ok
 }
 
-func (cd *ChatsDispatcher) handle(ctx context.Context, bot TelegramBot, update BotUpdate, chatLock *sync.Mutex) {
+func (cd *ChatsDispatcher) handle(ctx context.Context, bot telegram.TelegramBot, update telegram.BotUpdate, chatLock *sync.Mutex) {
 
 	tc := cd.createTelegramContext(ctx, bot, update)
 
@@ -134,7 +135,7 @@ func (cd *ChatsDispatcher) handle(ctx context.Context, bot TelegramBot, update B
 
 }
 
-func (cd *ChatsDispatcher) HandleUpdate(ctx context.Context, bot TelegramBot, update BotUpdate) {
+func (cd *ChatsDispatcher) HandleUpdate(ctx context.Context, bot telegram.TelegramBot, update telegram.BotUpdate) {
 
 	logger := cd.logger
 	chatID := update.User.ID

@@ -1,10 +1,11 @@
-package tgbot
+package telegram
 
 import (
 	"context"
 	"fmt"
 
 	"github.com/gotd/td/tg"
+	"github.com/nktknshn/go-tg-bot/tgbot/render"
 )
 
 type telegramChatRenderer struct {
@@ -30,7 +31,7 @@ func (r *telegramChatRenderer) Delete(messageId int) error {
 	return nil
 }
 
-func (r *telegramChatRenderer) Message(ctx context.Context, props *ChatRendererMessageProps) (*tg.Message, error) {
+func (r *telegramChatRenderer) Message(ctx context.Context, props *render.ChatRendererMessageProps) (*tg.Message, error) {
 	if props.TargetMessage != nil {
 
 		// the message must be removed

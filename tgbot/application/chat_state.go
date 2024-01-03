@@ -1,4 +1,4 @@
-package tgbot
+package application
 
 import (
 	"sync"
@@ -7,7 +7,7 @@ import (
 	"github.com/gotd/td/tg"
 	"github.com/nktknshn/go-tg-bot/tgbot/common"
 	"github.com/nktknshn/go-tg-bot/tgbot/component"
-	"github.com/nktknshn/go-tg-bot/tgbot/rendered"
+	"github.com/nktknshn/go-tg-bot/tgbot/render"
 	"go.uber.org/zap"
 )
 
@@ -23,7 +23,7 @@ type ChatState[S any, C any] struct {
 	treeState *component.RunResultWithStateTree
 
 	// elements visible to the user
-	renderedElements []rendered.RenderedElement
+	renderedElements []render.RenderedElement
 
 	// handler for text messages
 	inputHandler common.ChatInputHandler
@@ -31,7 +31,7 @@ type ChatState[S any, C any] struct {
 	// handler for callback queries
 	callbackHandler common.ChatCallbackHandler
 
-	Renderer ChatRenderer
+	Renderer render.ChatRenderer
 
 	lock *sync.Mutex
 }
@@ -41,13 +41,13 @@ func NewChatState[S any, C any](user *tg.User, appState S) *ChatState[S, C] {
 		ChatID:           user.ID,
 		User:             user,
 		AppState:         appState,
-		renderedElements: []rendered.RenderedElement{},
+		renderedElements: []render.RenderedElement{},
 		lock:             &sync.Mutex{},
 	}
 }
 
 func (s *ChatState[S, C]) ResetRenderedElements() {
-	s.renderedElements = make([]rendered.RenderedElement, 0)
+	s.renderedElements = make([]render.RenderedElement, 0)
 }
 
 func (s *ChatState[S, C]) LockState(logger *zap.Logger) {
@@ -76,22 +76,22 @@ func (s *ChatState[S, C]) SetCallbackHandler(callbackHandler common.ChatCallback
 	s.callbackHandler = callbackHandler
 }
 
-func (s *ChatState[S, C]) SetRenderer(renderer ChatRenderer) {
+func (s *ChatState[S, C]) SetRenderer(renderer render.ChatRenderer) {
 	s.Renderer = renderer
 }
 
-func (s *ChatState[S, C]) SetRenderedElements(renderedElements []rendered.RenderedElement) {
+func (s *ChatState[S, C]) SetRenderedElements(renderedElements []render.RenderedElement) {
 	s.renderedElements = renderedElements
 }
 
 func (s *ChatState[S, C]) RenderedElementsKinds() []string {
-	return iter.Map(iter.Lift(s.renderedElements), func(e rendered.RenderedElement) string {
+	return iter.Map(iter.Lift(s.renderedElements), func(e render.RenderedElement) string {
 		return e.RenderedKind()
 	}).Collect()
 }
 
 func (s *ChatState[S, C]) RenderedElementsSimpl() []string {
-	return iter.Map(iter.Lift(s.renderedElements), func(e rendered.RenderedElement) string {
+	return iter.Map(iter.Lift(s.renderedElements), func(e render.RenderedElement) string {
 		return e.String()
 	}).Collect()
 }

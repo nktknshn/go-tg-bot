@@ -1,11 +1,12 @@
-package tgbot
+package application
 
 import (
 	"context"
 	"sync"
 
 	"github.com/nktknshn/go-tg-bot/tgbot/reflection"
-	"github.com/nktknshn/go-tg-bot/tgbot/rendered"
+	"github.com/nktknshn/go-tg-bot/tgbot/render"
+	"github.com/nktknshn/go-tg-bot/tgbot/telegram"
 	"go.uber.org/zap"
 )
 
@@ -30,13 +31,13 @@ func (ac *ApplicationChat[S, C]) SetChatState(chatState *ChatState[S, C]) {
 	ac.State = chatState
 }
 
-func NewApplicationChat[S any, C any](app Application[S, C], tc *TelegramUpdateContext) *ApplicationChat[S, C] {
+func NewApplicationChat[S any, C any](app Application[S, C], tc *telegram.TelegramUpdateContext) *ApplicationChat[S, C] {
 	appState := app.CreateAppState(tc)
 
 	chatState := ChatState[S, C]{
 		ChatID:           tc.ChatID,
 		AppState:         appState,
-		renderedElements: []rendered.RenderedElement{},
+		renderedElements: []render.RenderedElement{},
 		inputHandler:     nil,
 		callbackHandler:  nil,
 		treeState:        nil,
@@ -82,7 +83,7 @@ func DefaultRenderFunc[S any, C any](ctx context.Context, ac *ApplicationChat[S,
 		zap.Any("RenderActions", res.RenderActionsKinds()),
 	)
 
-	rendered, err := ExecuteRenderActions(ctx, ac.State.Renderer, res.RenderActions, ac.Loggers.Render)
+	rendered, err := render.ExecuteRenderActions(ctx, ac.State.Renderer, res.RenderActions, ac.Loggers.Render)
 
 	if err != nil {
 		ac.Loggers.Root.Error("Error in RenderFunc", zap.Error(err))
@@ -95,7 +96,7 @@ func DefaultRenderFunc[S any, C any](ctx context.Context, ac *ApplicationChat[S,
 	return nil
 }
 
-func DefaultHandlerCallback[S any, C any](ac *ApplicationChat[S, C], tc *TelegramContextCallback) {
+func DefaultHandlerCallback[S any, C any](ac *ApplicationChat[S, C], tc *telegram.TelegramContextCallback) {
 
 	logger := ac.Loggers.Handle.With(zap.Int64("UpdateID", tc.UpdateID))
 
@@ -134,7 +135,7 @@ func DefaultHandlerCallback[S any, C any](ac *ApplicationChat[S, C], tc *Telegra
 
 }
 
-func DefaultHandleMessage[S any, C any](ac *ApplicationChat[S, C], tc *TelegramContextTextMessage) {
+func DefaultHandleMessage[S any, C any](ac *ApplicationChat[S, C], tc *telegram.TelegramContextTextMessage) {
 	logger := ac.Loggers.Handle.With(zap.Int64("UpdateID", tc.UpdateID))
 
 	logger.Info("HandleMessage", zap.Any("text", tc.Text))
@@ -149,7 +150,7 @@ func DefaultHandleMessage[S any, C any](ac *ApplicationChat[S, C], tc *TelegramC
 
 		ac.State.renderedElements = append(
 			ac.State.renderedElements,
-			rendered.NewRenderedUserMessage(tc.Message.ID),
+			render.NewRenderedUserMessage(tc.Message.ID),
 		)
 
 		action := ac.State.inputHandler(tc.Message.Message)
@@ -168,7 +169,7 @@ func DefaultHandleMessage[S any, C any](ac *ApplicationChat[S, C], tc *TelegramC
 }
 
 // Handle
-func DefaultHandleActionExternal[S any, C any](ac *ApplicationChat[S, C], tc *TelegramUpdateContext, action any) {
+func DefaultHandleActionExternal[S any, C any](ac *ApplicationChat[S, C], tc *telegram.TelegramUpdateContext, action any) {
 
 	actionName := reflection.ReflectStructName(action)
 	logger := ac.Loggers.Action.With(zap.String("action", actionName))

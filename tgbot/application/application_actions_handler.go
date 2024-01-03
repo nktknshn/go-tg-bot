@@ -1,14 +1,15 @@
-package tgbot
+package application
 
 import (
 	"github.com/nktknshn/go-tg-bot/tgbot/common"
 	"github.com/nktknshn/go-tg-bot/tgbot/component"
 	"github.com/nktknshn/go-tg-bot/tgbot/reflection"
+	"github.com/nktknshn/go-tg-bot/tgbot/telegram"
 	"go.uber.org/zap"
 )
 
 // Handles some internal actions sent from handlers
-func internalActionHandle[S any, C any](ac *ApplicationChat[S, C], tc *TelegramUpdateContext, action any, logger *zap.Logger) {
+func internalActionHandle[S any, C any](ac *ApplicationChat[S, C], tc *telegram.TelegramUpdateContext, action any, logger *zap.Logger) {
 	logger.Debug("HandleAction", zap.Any("action", reflection.ReflectStructName(action)))
 
 	switch a := action.(type) {

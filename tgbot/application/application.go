@@ -1,10 +1,12 @@
-package tgbot
+package application
 
 import (
 	"context"
 
 	"github.com/nktknshn/go-tg-bot/tgbot/component"
 	"github.com/nktknshn/go-tg-bot/tgbot/logging"
+	"github.com/nktknshn/go-tg-bot/tgbot/render"
+	"github.com/nktknshn/go-tg-bot/tgbot/telegram"
 )
 
 // Handles text input from the user
@@ -13,18 +15,18 @@ import (
 // Handle inline button click. Returns nil if no action has matched the callback data
 
 // User defined function
-type handleMessageFunc[S any, C any] func(*ApplicationChat[S, C], *TelegramContextTextMessage)
-type handleCallbackFunc[S any, C any] func(*ApplicationChat[S, C], *TelegramContextCallback)
+type handleMessageFunc[S any, C any] func(*ApplicationChat[S, C], *telegram.TelegramContextTextMessage)
+type handleCallbackFunc[S any, C any] func(*ApplicationChat[S, C], *telegram.TelegramContextCallback)
 
-type handleInitFunc[S any] func(*TelegramUpdateContext)
+type handleInitFunc[S any] func(*telegram.TelegramUpdateContext)
 
-type handleActionFunc[S any, C any] func(*ApplicationChat[S, C], *TelegramUpdateContext, any)
+type handleActionFunc[S any, C any] func(*ApplicationChat[S, C], *telegram.TelegramUpdateContext, any)
 
 type renderFuncType[S any, C any] func(context.Context, *ApplicationChat[S, C]) error
 
 type stateToCompFuncType[S any, C any] func(S) component.Comp
 
-type createAppStateFunc[S any] func(*TelegramUpdateContext) S
+type createAppStateFunc[S any] func(*telegram.TelegramUpdateContext) S
 
 // Defines Application with state S
 type Application[S any, C any] struct {
@@ -49,7 +51,7 @@ type Application[S any, C any] struct {
 	// use state to render bot interface to the user
 	RenderFunc renderFuncType[S, C]
 
-	CreateChatRenderer func(*TelegramUpdateContext) ChatRenderer
+	CreateChatRenderer func(*telegram.TelegramUpdateContext) render.ChatRenderer
 
 	Loggers logging.TgbotLoggers
 }
@@ -59,13 +61,13 @@ type ApplicationProps[S any, C any] struct {
 	HandleCallback      handleCallbackFunc[S, C]
 	HandleInit          handleInitFunc[S]
 	RenderFunc          renderFuncType[S, C]
-	CreateRenderer      func(*TelegramUpdateContext) ChatRenderer
+	CreateRenderer      func(*telegram.TelegramUpdateContext) render.ChatRenderer
 	CreateGlobalContext func(*ChatState[S, C]) C
 }
 
 func NewApplication[S any, C any](
 	// Creates state
-	createAppState func(*TelegramUpdateContext) S,
+	createAppState func(*telegram.TelegramUpdateContext) S,
 	// turns state into basic elements
 	stateToComp stateToCompFuncType[S, C],
 	// handles action
@@ -97,7 +99,7 @@ func NewApplication[S any, C any](
 	}
 
 	if handleInit == nil {
-		handleInit = func(tc *TelegramUpdateContext) {}
+		handleInit = func(tc *telegram.TelegramUpdateContext) {}
 	}
 
 	if renderFunc == nil {
@@ -105,8 +107,8 @@ func NewApplication[S any, C any](
 	}
 
 	if createRenderer == nil {
-		createRenderer = func(tc *TelegramUpdateContext) ChatRenderer {
-			return NewTelegramChatRenderer(tc.Bot, tc.Update.User)
+		createRenderer = func(tc *telegram.TelegramUpdateContext) render.ChatRenderer {
+			return telegram.NewTelegramChatRenderer(tc.Bot, tc.Update.User)
 		}
 	}
 
@@ -134,27 +136,4 @@ func (app *Application[S, C]) globalContext(chatState *ChatState[S, C]) componen
 	} else {
 		return component.NewEmptyGlobalContext()
 	}
-}
-
-func (a *Application[S, C]) NewHandler(tc *TelegramUpdateContext) *ChatHandlerImpl[S, C] {
-	return NewChatHandler[S, C](*a, tc)
-}
-
-func (a *Application[S, C]) ChatsDispatcher() *ChatsDispatcher {
-
-	return NewChatsDispatcher(&ChatsDispatcherProps{
-		ChatFactory: &factoryFunc{
-			f: func(tc *TelegramUpdateContext) ChatHandler {
-				return a.NewHandler(tc)
-			},
-		},
-	})
-}
-
-type factoryFunc struct {
-	f func(*TelegramUpdateContext) ChatHandler
-}
-
-func (f *factoryFunc) CreateChatHandler(tc *TelegramUpdateContext) ChatHandler {
-	return f.f(tc)
 }

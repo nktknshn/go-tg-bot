@@ -1,4 +1,9 @@
-package tgbot
+package application
+
+import (
+	"github.com/nktknshn/go-tg-bot/tgbot/render"
+	"github.com/nktknshn/go-tg-bot/tgbot/telegram"
+)
 
 func (app *Application[S, C]) WithHandleActionExternal(f handleActionFunc[S, C]) *Application[S, C] {
 	app.HandleActionExternal = f
@@ -30,7 +35,7 @@ func (app *Application[S, C]) WithRenderFunc(f renderFuncType[S, C]) *Applicatio
 	return app
 }
 
-func (app *Application[S, C]) WithCreateRenderer(f func(*TelegramUpdateContext) ChatRenderer) *Application[S, C] {
+func (app *Application[S, C]) WithCreateRenderer(f func(*telegram.TelegramUpdateContext) render.ChatRenderer) *Application[S, C] {
 	app.CreateChatRenderer = f
 	return app
 }
@@ -45,7 +50,7 @@ func (app *Application[S, C]) WithStateToComp(f stateToCompFuncType[S, C]) *Appl
 	return app
 }
 
-func (app *Application[S, C]) WithCreateAppState(f func(*TelegramUpdateContext) S) *Application[S, C] {
+func (app *Application[S, C]) WithCreateAppState(f func(*telegram.TelegramUpdateContext) S) *Application[S, C] {
 	app.CreateAppState = f
 	return app
 }

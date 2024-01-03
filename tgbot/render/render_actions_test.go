@@ -1,4 +1,4 @@
-package tgbot
+package render
 
 import (
 	"context"
@@ -9,16 +9,15 @@ import (
 	"github.com/nktknshn/go-tg-bot/tgbot/component"
 	"github.com/nktknshn/go-tg-bot/tgbot/logging"
 	"github.com/nktknshn/go-tg-bot/tgbot/outcoming"
-	"github.com/nktknshn/go-tg-bot/tgbot/rendered"
 )
 
 func Check(
 	t *testing.T,
-	renderedElements []rendered.RenderedElement,
+	renderedElements []RenderedElement,
 	outcomingMessages []outcoming.OutcomingMessage,
-	expected []renderActionType,
+	expected []RenderActionType,
 ) {
-	res0 := getRenderActions(renderedElements, outcomingMessages, logging.Logger())
+	res0 := GetRenderActions(renderedElements, outcomingMessages, logging.Logger())
 
 	if len(res0) != len(expected) {
 		for i, v := range res0 {
@@ -85,19 +84,19 @@ var (
 	m3 = outcoming.NewOutcomingTextMessage("message 3")
 	m4 = outcoming.NewOutcomingTextMessage("message 4")
 
-	rm1 = &rendered.RenderedBotMessage{
+	rm1 = &RenderedBotMessage{
 		OutcomingTextMessage: m1,
 		Message:              &tg.Message{},
 	}
-	rm2 = &rendered.RenderedBotMessage{
+	rm2 = &RenderedBotMessage{
 		OutcomingTextMessage: m2,
 		Message:              &tg.Message{},
 	}
-	rm3 = &rendered.RenderedBotMessage{
+	rm3 = &RenderedBotMessage{
 		OutcomingTextMessage: m3,
 		Message:              &tg.Message{},
 	}
-	rm4 = &rendered.RenderedBotMessage{
+	rm4 = &RenderedBotMessage{
 		OutcomingTextMessage: m4,
 		Message:              &tg.Message{},
 	}
@@ -105,9 +104,9 @@ var (
 
 func TestGetRenderActionsInsertedMiddle(t *testing.T) {
 	Check(t,
-		[]rendered.RenderedElement{rm1, rm2, rm3},
+		[]RenderedElement{rm1, rm2, rm3},
 		[]outcoming.OutcomingMessage{m1, m2, m4, m3},
-		[]renderActionType{
+		[]RenderActionType{
 			&renderActionKeep{RenderedElement: rm1, NewElement: m1},
 			&renderActionKeep{RenderedElement: rm2, NewElement: m2},
 			&renderActionReplace{RenderedElement: rm3, NewElement: m4},
@@ -118,9 +117,9 @@ func TestGetRenderActionsInsertedMiddle(t *testing.T) {
 
 func TestGetRenderActionsInsertedFirst(t *testing.T) {
 	Check(t,
-		[]rendered.RenderedElement{rm1, rm2, rm3},
+		[]RenderedElement{rm1, rm2, rm3},
 		[]outcoming.OutcomingMessage{m4, m1, m2, m3},
-		[]renderActionType{
+		[]RenderActionType{
 			&renderActionReplace{RenderedElement: rm1, NewElement: m4},
 			&renderActionReplace{RenderedElement: rm2, NewElement: m1},
 			&renderActionReplace{RenderedElement: rm3, NewElement: m2},
@@ -131,31 +130,31 @@ func TestGetRenderActionsInsertedFirst(t *testing.T) {
 
 func TestGetRenderActionsBasic(t *testing.T) {
 	Check(t,
-		[]rendered.RenderedElement{},
+		[]RenderedElement{},
 		[]outcoming.OutcomingMessage{m1},
-		[]renderActionType{
+		[]RenderActionType{
 			&renderActionCreate{NewElement: m1},
 		})
 
 	Check(t,
-		[]rendered.RenderedElement{},
+		[]RenderedElement{},
 		[]outcoming.OutcomingMessage{m1, m2, m3},
-		[]renderActionType{
+		[]RenderActionType{
 			&renderActionCreate{NewElement: m1},
 			&renderActionCreate{NewElement: m2},
 			&renderActionCreate{NewElement: m3},
 		})
 
 	Check(t,
-		[]rendered.RenderedElement{
-			&rendered.RenderedBotMessage{
+		[]RenderedElement{
+			&RenderedBotMessage{
 				OutcomingTextMessage: m2,
 			},
 		},
 		[]outcoming.OutcomingMessage{m2},
-		[]renderActionType{
+		[]RenderActionType{
 			&renderActionKeep{
-				RenderedElement: &rendered.RenderedBotMessage{
+				RenderedElement: &RenderedBotMessage{
 					OutcomingTextMessage: m2,
 				},
 				NewElement: m2,
@@ -164,9 +163,9 @@ func TestGetRenderActionsBasic(t *testing.T) {
 
 	// rm1 is supposed to be replaced with m2
 	Check(t,
-		[]rendered.RenderedElement{rm1},
+		[]RenderedElement{rm1},
 		[]outcoming.OutcomingMessage{m2},
-		[]renderActionType{
+		[]RenderActionType{
 			&renderActionReplace{
 				RenderedElement: rm1,
 				NewElement:      m2,
@@ -175,9 +174,9 @@ func TestGetRenderActionsBasic(t *testing.T) {
 
 	// rm1 is supposed to be removed
 	Check(t,
-		[]rendered.RenderedElement{rm1},
+		[]RenderedElement{rm1},
 		[]outcoming.OutcomingMessage{},
-		[]renderActionType{
+		[]RenderActionType{
 			&renderActionRemove{
 				RenderedElement: rm1,
 			},
@@ -207,7 +206,7 @@ func TestCreate(t *testing.T) {
 	ExecuteRenderActions(
 		context.Background(),
 		re,
-		[]renderActionType{
+		[]RenderActionType{
 			&renderActionCreate{
 				NewElement: m,
 			},

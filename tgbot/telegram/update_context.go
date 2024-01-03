@@ -1,28 +1,11 @@
-package tgbot
+package telegram
 
 import (
 	"context"
 
 	"github.com/gotd/td/tg"
-
 	"go.uber.org/zap"
 )
-
-type AnswerCallbackQueryParams struct {
-	QueryID int64
-}
-
-type CallbackAnswerer interface {
-	AnswerCallbackQuery(context.Context, AnswerCallbackQueryParams) (bool, error)
-}
-
-// Interface for rendering messages into some interface (telegram, emulator, console, etc)
-type TelegramBot interface {
-	MessageDeleter
-	MessageEditor
-	MessageSender
-	CallbackAnswerer
-}
 
 // TelegramUpdateContext is a context related to a specific update
 type TelegramUpdateContext struct {
@@ -63,24 +46,6 @@ func (tc TelegramUpdateContext) AsTextMessage() (*TelegramContextTextMessage, bo
 	}, true
 }
 
-func (tc TelegramUpdateContext) AsCallback() (*TelegramContextCallback, bool) {
-	u, ok := tc.Update.UpdateClass.(*tg.UpdateBotCallbackQuery)
-
-	if !ok {
-		return nil, false
-	}
-
-	return &TelegramContextCallback{
-		TelegramUpdateContext:  tc,
-		UpdateBotCallbackQuery: u,
-	}, true
-}
-
-type TelegramUserChat struct {
-	ChatID int64
-	Chat   *tg.Chat
-}
-
 type TelegramContextTextMessage struct {
 	TelegramUpdateContext
 	Text    string
@@ -104,4 +69,17 @@ func (tc TelegramContextCallback) AnswerCallbackQuery() {
 	tc.Bot.AnswerCallbackQuery(tc.Ctx, AnswerCallbackQueryParams{
 		QueryID: u.QueryID,
 	})
+}
+
+func (tc TelegramUpdateContext) AsCallback() (*TelegramContextCallback, bool) {
+	u, ok := tc.Update.UpdateClass.(*tg.UpdateBotCallbackQuery)
+
+	if !ok {
+		return nil, false
+	}
+
+	return &TelegramContextCallback{
+		TelegramUpdateContext:  tc,
+		UpdateBotCallbackQuery: u,
+	}, true
 }
