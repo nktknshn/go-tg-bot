@@ -23,6 +23,7 @@ func TestTodoApp(t *testing.T) {
 	t.Log("TestTodoApp")
 
 	loggers := tgbot.TgbotLoggers{
+		Base: tgbot.DevLogger(),
 		ChatsDistpatcher: func(l *zap.Logger) *zap.Logger {
 			return l.Named("ChatsDistpatcher")
 		},
@@ -30,7 +31,11 @@ func TestTodoApp(t *testing.T) {
 			return l.Named("ChatHandler")
 		},
 		Component: func(l *zap.Logger) *zap.Logger {
-			return l.Named("Component")
+			// return l.Named("Component")
+			return zap.NewNop()
+		},
+		ApplicationChat: func(l *zap.Logger) *zap.Logger {
+			return l.Named("ApplicationChat")
 		},
 	}
 
@@ -44,7 +49,7 @@ func TestTodoApp(t *testing.T) {
 
 	d := app.ChatsDispatcher()
 
-	d.SetLogger(loggers.ChatsDistpatcher(tgbot.GetLogger()))
+	d.SetLogger(loggers.ChatsDistpatcher(loggers.Base))
 
 	bot := emulator.NewFakeBot()
 	bot.SetDispatcher(d)

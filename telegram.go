@@ -24,16 +24,22 @@ type TelegramBot interface {
 	CallbackAnswerer
 }
 
-// TelegramContext is a context related to a specific update
-type TelegramContext struct {
+// TelegramUpdateContext is a context related to a specific update
+type TelegramUpdateContext struct {
+	Ctx context.Context
+
 	ChatID int64
-	Ctx    context.Context
-	Bot    TelegramBot
-	Update BotUpdate
-	Logger *zap.Logger
+
+	// for tracking purposes
+	UpdateID int64
+	Update   BotUpdate
+
+	Bot TelegramBot
+
+	UpdateLogger *zap.Logger
 }
 
-func (tc TelegramContext) AsTextMessage() (*TelegramContextTextMessage, bool) {
+func (tc TelegramUpdateContext) AsTextMessage() (*TelegramContextTextMessage, bool) {
 	u, ok := tc.Update.UpdateClass.(*tg.UpdateNewMessage)
 
 	if !ok {
@@ -51,13 +57,13 @@ func (tc TelegramContext) AsTextMessage() (*TelegramContextTextMessage, bool) {
 	}
 
 	return &TelegramContextTextMessage{
-		TelegramContext: tc,
-		Text:            m.Message,
-		Message:         m,
+		TelegramUpdateContext: tc,
+		Text:                  m.Message,
+		Message:               m,
 	}, true
 }
 
-func (tc TelegramContext) AsCallback() (*TelegramContextCallback, bool) {
+func (tc TelegramUpdateContext) AsCallback() (*TelegramContextCallback, bool) {
 	u, ok := tc.Update.UpdateClass.(*tg.UpdateBotCallbackQuery)
 
 	if !ok {
@@ -65,7 +71,7 @@ func (tc TelegramContext) AsCallback() (*TelegramContextCallback, bool) {
 	}
 
 	return &TelegramContextCallback{
-		TelegramContext:        tc,
+		TelegramUpdateContext:  tc,
 		UpdateBotCallbackQuery: u,
 	}, true
 }
@@ -76,22 +82,22 @@ type TelegramUserChat struct {
 }
 
 type TelegramContextTextMessage struct {
-	TelegramContext
+	TelegramUpdateContext
 	Text    string
 	Message *tg.Message
 }
 
 type TelegramContextCallback struct {
-	TelegramContext
+	TelegramUpdateContext
 	UpdateBotCallbackQuery *tg.UpdateBotCallbackQuery
 }
 
-func (tc TelegramContext) AnswerCallbackQuery() {
+func (tc TelegramContextCallback) AnswerCallbackQuery() {
 
 	u, ok := tc.Update.UpdateClass.(*tg.UpdateBotCallbackQuery)
 
 	if !ok {
-		tc.Logger.Error("Update is not a callback query")
+		tc.UpdateLogger.Error("Update is not a callback query")
 		return
 	}
 

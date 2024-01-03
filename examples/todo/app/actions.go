@@ -21,7 +21,7 @@ type ActionItemDelete struct {
 	ItemIndex int
 }
 
-var actionsReducer = func(ac *AppContext, tc *tgbot.TelegramContext, a any) {
+var actionsReducer = func(ac *AppChat, tc *tgbot.TelegramUpdateContext, a any) {
 	appState := &ac.State.AppState
 
 	switch a := a.(type) {
@@ -29,7 +29,7 @@ var actionsReducer = func(ac *AppContext, tc *tgbot.TelegramContext, a any) {
 		appState.CurrentPage = a.Page
 
 	case ActionAddTodoItem:
-		ac.Logger.Info("adding item",
+		ac.Loggers.Root.Info("adding item",
 			zap.String("text", a.Text),
 			zap.Int("len", len(appState.List.Items)),
 		)

@@ -45,4 +45,4 @@ func FakeServerToInput(fakeServer *FakeBot) *DrawInput {
 	return result
 }
 
-var logger = tgbot.GetLogger()
+var logger = tgbot.DevLogger()

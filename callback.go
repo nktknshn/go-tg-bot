@@ -17,8 +17,8 @@ func getCallbackHandlersMap(outcomingMessages []outcomingMessage) callbackMap {
 						v := butt.OnClick()
 
 						return &callbackResult{
-							action:     v,
-							noCallback: butt.NoCallback,
+							action:   v,
+							noAnswer: butt.NoCallback,
 						}
 					}
 				}

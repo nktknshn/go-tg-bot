@@ -1,21 +1,34 @@
 package tgbot
 
 import (
+	"context"
 	"sync"
 
 	"go.uber.org/zap"
 )
+
+type ApplicationChatLoggers struct {
+	Root      *zap.Logger
+	Component *zap.Logger
+	Update    *zap.Logger
+	Action    *zap.Logger
+	Render    *zap.Logger
+}
 
 // tie together an application methods and a chat state
 type ApplicationChat[S any, C any] struct {
 	App   *Application[S, C]
 	State *ChatState[S, C]
 
-	// logger with attached chatID
-	Logger *zap.Logger
+	// loggers for different parts of the app
+	Loggers *ApplicationChatLoggers
 }
 
-func NewApplicationChat[S any, C any](app Application[S, C], tc *TelegramContext) *ApplicationChat[S, C] {
+type ExecutionContext struct {
+	UpdateContext *TelegramUpdateContext
+}
+
+func NewApplicationChat[S any, C any](app Application[S, C], tc *TelegramUpdateContext) *ApplicationChat[S, C] {
 	appState := app.CreateAppState(tc)
 
 	chatState := ChatState[S, C]{
@@ -29,80 +42,99 @@ func NewApplicationChat[S any, C any](app Application[S, C], tc *TelegramContext
 		lock:             &sync.Mutex{},
 	}
 
-	res := app.PreRender(&chatState)
+	rootLogger := app.Loggers.ApplicationChat(
+		app.Loggers.Base,
+	).With(zap.Int64("ChatID", tc.ChatID))
+
+	loggers := &ApplicationChatLoggers{
+		Root: rootLogger,
+		// logger for components rendering
+		// Component: app.Loggers.Component(rootLogger),
+		Component: app.Loggers.Component(rootLogger),
+		// logger for updates
+		Update: rootLogger.Named("Update"),
+		Action: rootLogger.Named("Action"),
+		Render: rootLogger.Named("Render"),
+	}
+
+	res := app.ComputeNextState(&chatState, loggers.Component)
 
 	return &ApplicationChat[S, C]{
-		App:   &app,
-		State: &res.InternalChatState,
-		Logger: app.Loggers.ApplicationChat(
-			GetLogger().With(zap.Int64("ChatID", tc.ChatID)),
-		),
+		App:     &app,
+		State:   &res.NextChatState,
+		Loggers: loggers,
 	}
 }
 
 // Computes the output based on the state and renders it to the user
-func DefaultRenderFunc[S any, C any](ac *ApplicationChat[S, C]) error {
-	ac.Logger.Info("RenderFunc")
+func DefaultRenderFunc[S any, C any](ctx context.Context, ac *ApplicationChat[S, C]) error {
+	ac.Loggers.Render.Debug("RenderFunc called")
 
-	res := ac.App.PreRender(ac.State)
-	rendered, err := res.ExecuteRender(ac.State.Renderer)
+	res := ac.App.ComputeNextState(ac.State, ac.Loggers.Component)
+	rendered, err := ExecuteRenderActions(ctx, ac.State.Renderer, res.RenderActions, ac.Loggers.Render)
 
 	if err != nil {
-		ac.Logger.Error("Error in RenderFunc", zap.Error(err))
+		ac.Loggers.Root.Error("Error in RenderFunc", zap.Error(err))
 		return err
 	}
 
-	ac.State = &res.InternalChatState
+	ac.State = &res.NextChatState
 	ac.State.renderedElements = rendered
 
 	return nil
 }
 
 func DefaultHandlerCallback[S any, C any](ac *ApplicationChat[S, C], tc *TelegramContextCallback) {
-	tc.Logger.Info("HandleCallback", zap.Any("data", tc.UpdateBotCallbackQuery.QueryID))
-	tc.Logger.Debug("LocalStateTree", zap.String("tree", ac.State.treeState.LocalStateTree.String()))
 
-	ac.State.LockState(tc.Logger)
-	defer ac.State.UnlockState(tc.Logger)
+	logger := ac.Loggers.Update.With(zap.Int64("UpdateID", tc.UpdateID))
+
+	logger.Info("HandleCallback", zap.Any("data", tc.UpdateBotCallbackQuery.QueryID))
+
+	// ac.Loggers.Root.Debug("LocalStateTree", zap.String("tree", ac.State.treeState.LocalStateTree.String()))
+
+	ac.State.LockState(logger.Named("LockState"))
+	defer ac.State.UnlockState(logger.Named("LockState"))
 
 	if ac.State.callbackHandler != nil {
 		result := ac.State.callbackHandler(string(tc.UpdateBotCallbackQuery.Data))
 
-		ac.Logger.Debug("HandleCallback", zap.Any("action", result))
+		// logger.Debug("HandleCallback", zap.Any("action", result))
 
 		if result == nil {
+			logger.Warn("CallbackHandler returned nil")
 			return
 		}
 
-		internalActionHandle(ac, &tc.TelegramContext, result.action)
+		internalActionHandle(ac, &tc.TelegramUpdateContext, result.action, logger.Named("Action"))
 
-		if !result.noCallback {
+		if !result.noAnswer {
 			tc.AnswerCallbackQuery()
 		}
 
 	} else {
-		tc.Logger.Warn("Missing CallbackHandler")
+		logger.Warn("Missing CallbackHandler")
 	}
 
-	err := ac.App.RenderFunc(ac)
+	err := ac.App.RenderFunc(tc.Ctx, ac)
 
 	if err != nil {
-		tc.Logger.Error("Error rendering state", zap.Error(err))
+		logger.Error("Error rendering state", zap.Error(err))
 	}
 
 }
 
 func DefaultHandleMessage[S any, C any](ac *ApplicationChat[S, C], tc *TelegramContextTextMessage) {
+	logger := ac.Loggers.Update.With(zap.Int64("UpdateID", tc.UpdateID))
 
-	tc.Logger.Info("HandleMessage", zap.Any("text", tc.Text))
-	tc.Logger.Debug("LocalStateTree", zap.String("tree", ac.State.treeState.LocalStateTree.String()))
+	logger.Info("HandleMessage", zap.Any("text", tc.Text))
+	// tc.Logger.Debug("LocalStateTree", zap.String("tree", ac.State.treeState.LocalStateTree.String()))
 
-	ac.State.LockState(tc.Logger)
-	defer ac.State.UnlockState(tc.Logger)
+	ac.State.LockState(logger.Named("LockState"))
+	defer ac.State.UnlockState(logger.Named("LockState"))
 
 	if ac.State.inputHandler != nil {
 
-		tc.Logger.Debug("HandleMessage", zap.Any("message", tc.Message))
+		// tc.Logger.Debug("HandleMessage", zap.Any("message", tc.Message))
 
 		ac.State.renderedElements = append(
 			ac.State.renderedElements,
@@ -111,31 +143,36 @@ func DefaultHandleMessage[S any, C any](ac *ApplicationChat[S, C], tc *TelegramC
 
 		action := ac.State.inputHandler(tc.Message.Message)
 
-		internalActionHandle(ac, &tc.TelegramContext, action)
+		internalActionHandle(ac, &tc.TelegramUpdateContext, action, logger)
 
 	} else {
-		tc.Logger.Warn("Missing InputHandler")
+		logger.Warn("Missing InputHandler")
 	}
 
-	err := ac.App.RenderFunc(ac)
+	err := ac.App.RenderFunc(tc.Ctx, ac)
 
 	if err != nil {
-		tc.Logger.Error("Error rendering state", zap.Error(err))
+		logger.Error("Error rendering state", zap.Error(err))
 	}
 }
 
-func DefaultHandleActionExternal[S any, C any](ac *ApplicationChat[S, C], tc *TelegramContext, action any) {
-	ac.Logger.Info("HandleActionExternal", zap.String("action", reflectStructName(action)))
+// Handle
+func DefaultHandleActionExternal[S any, C any](ac *ApplicationChat[S, C], tc *TelegramUpdateContext, action any) {
 
-	ac.State.LockState(tc.Logger)
-	defer ac.State.UnlockState(tc.Logger)
+	actionName := reflectStructName(action)
+	logger := ac.Loggers.Action.With(zap.String("action", actionName))
 
-	internalActionHandle(ac, tc, action)
+	logger.Info("HandleActionExternal")
 
-	err := ac.App.RenderFunc(ac)
+	ac.State.LockState(logger.Named("LockState"))
+	defer ac.State.UnlockState(logger.Named("LockState"))
+
+	internalActionHandle(ac, tc, action, logger)
+
+	err := ac.App.RenderFunc(tc.Ctx, ac)
 
 	if err != nil {
-		tc.Logger.Error("Error rendering state", zap.Error(err))
+		logger.Error("Error rendering state", zap.Error(err))
 	}
 
 }

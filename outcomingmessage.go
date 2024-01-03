@@ -318,7 +318,7 @@ func (t *outcomingTextMessage) AddButtonsRow(buttonsRow *elementButtonsRow) {
 }
 
 func equalReplyMarkup(a tg.ReplyMarkupClass, b tg.ReplyMarkupClass) bool {
-	logger := GetLogger()
+	logger := DevLogger()
 
 	if a == nil && b == nil {
 		return true

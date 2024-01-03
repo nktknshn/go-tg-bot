@@ -105,7 +105,7 @@ func (app *App) Render(o tgbot.O) {
 }
 
 var counterApp = tgbot.NewApplication[State, any](
-	func(tc *tgbot.TelegramContext) State {
+	func(tc *tgbot.TelegramUpdateContext) State {
 		// tc.Logger.Info("CreateAppState")
 		// tc.Message.
 		// uname := fmt.Sprintf("%v (%v)", tc.Message.From.Username, tc.Update.Message.From.ID)
@@ -124,7 +124,7 @@ var counterApp = tgbot.NewApplication[State, any](
 
 		return &app
 	},
-	func(ac *tgbot.ApplicationChat[State, any], tc *tgbot.TelegramContext, a any) {
+	func(ac *tgbot.ApplicationChat[State, any], tc *tgbot.TelegramUpdateContext, a any) {
 		// tc.Logger.Info("HandleAction", zap.Any("action", a))
 
 		switch a := a.(type) {
@@ -137,7 +137,7 @@ var counterApp = tgbot.NewApplication[State, any](
 	},
 )
 
-var logger = tgbot.GetLogger()
+var logger = tgbot.DevLogger()
 
 func main() {
 	// if first argument is "emulator", run emulator

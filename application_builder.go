@@ -30,7 +30,7 @@ func (app *Application[S, C]) WithRenderFunc(f renderFuncType[S, C]) *Applicatio
 	return app
 }
 
-func (app *Application[S, C]) WithCreateRenderer(f func(*TelegramContext) ChatRenderer) *Application[S, C] {
+func (app *Application[S, C]) WithCreateRenderer(f func(*TelegramUpdateContext) ChatRenderer) *Application[S, C] {
 	app.CreateChatRenderer = f
 	return app
 }
@@ -45,7 +45,7 @@ func (app *Application[S, C]) WithStateToComp(f stateToCompFuncType[S, C]) *Appl
 	return app
 }
 
-func (app *Application[S, C]) WithCreateAppState(f func(*TelegramContext) S) *Application[S, C] {
+func (app *Application[S, C]) WithCreateAppState(f func(*TelegramUpdateContext) S) *Application[S, C] {
 	app.CreateAppState = f
 	return app
 }

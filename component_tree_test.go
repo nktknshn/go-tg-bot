@@ -26,10 +26,10 @@ func (a *App1) Render(o O) {
 	o.Message("Hello")
 
 	if lsgs.Get().night {
-		GetLogger().Debug("night")
+		DevLogger().Debug("night")
 		o.Messagef("Night: %v", lsgs.Get().hour)
 	} else {
-		GetLogger().Debug("day")
+		DevLogger().Debug("day")
 		o.Messagef("Day: %v", lsgs.Get().hour)
 	}
 
@@ -50,7 +50,7 @@ func TestRunComponent(t *testing.T) {
 	globalContext := newGlobalContextTyped[any](EmptyContext{})
 
 	runComponent(
-		GetLogger(),
+		DevLogger(),
 		&comp,
 		globalContext,
 		CompState[any]{
@@ -65,11 +65,12 @@ func TestRunComponent(t *testing.T) {
 
 func TestRunCreateElements1(t *testing.T) {
 
+	logger := DevLogger()
 	globalContext := newGlobalContextTyped[any](EmptyContext{})
 
 	comp := App1{Counter: 1}
 
-	res := createElements(&comp, globalContext, nil)
+	res := createElements(&comp, globalContext, nil, logger)
 
 	if len(res.Elements) != 4 {
 		t.Fatal("len(res.Elements) != 4")
@@ -89,7 +90,7 @@ func TestRunCreateElements1(t *testing.T) {
 		}
 	})
 
-	res = createElements(&comp, globalContext, &res.TreeState)
+	res = createElements(&comp, globalContext, &res.TreeState, logger)
 
 	if len(res.Elements) != 4 {
 		t.Fatal("len(res.Elements) != 4")
@@ -145,6 +146,7 @@ func (c *TestNestedComp3) Render(o O) {
 }
 
 func TestNestedComp(t *testing.T) {
+	logger := DevLogger()
 
 	globalContext := newGlobalContextTyped[any](TestNestedCompContext{
 		Flag1: false,
@@ -152,13 +154,13 @@ func TestNestedComp(t *testing.T) {
 
 	t.Log("globalContext", globalContext)
 
-	res := createElements(&TestNestedCompApp{}, globalContext, nil)
+	res := createElements(&TestNestedCompApp{}, globalContext, nil, logger)
 
 	globalContext = newGlobalContextTyped[any](TestNestedCompContext{
 		Flag1: true,
 	})
 
-	res = createElements(&TestNestedCompApp{}, globalContext, &res.TreeState)
+	res = createElements(&TestNestedCompApp{}, globalContext, &res.TreeState, logger)
 
 	t.Log(res.Elements)
 }

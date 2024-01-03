@@ -36,7 +36,7 @@ func TestRunComponent1(t *testing.T) {
 	}
 
 	els, closure, ctx := runComponent(
-		GetLogger(), comp, newGlobalContextTyped(1), state,
+		DevLogger(), comp, newGlobalContextTyped(1), state,
 	)
 
 	fmt.Println("els", els)

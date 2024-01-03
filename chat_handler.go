@@ -6,27 +6,33 @@ import (
 
 // handle a certain chat update
 type ChatHandler interface {
-	HandleUpdate(*TelegramContext)
+	HandleUpdate(*TelegramUpdateContext)
 }
 
 // updates must be put into the queue
 type ChatHandlerImpl[S any, C any] struct {
 	app     Application[S, C]
 	appChat *ApplicationChat[S, C]
+	logger  *zap.Logger
 }
 
 // Creates a new chat handler from an update
-func NewChatHandler[S any, C any](app Application[S, C], tc *TelegramContext) *ChatHandlerImpl[S, C] {
-	tc.Logger.Debug("New handler has been created.")
+func NewChatHandler[S any, C any](app Application[S, C], tc *TelegramUpdateContext) *ChatHandlerImpl[S, C] {
 
 	return &ChatHandlerImpl[S, C]{
 		app:     app,
 		appChat: NewApplicationChat[S, C](app, tc),
+		logger: app.Loggers.
+			ChatHandler(app.Loggers.Base).
+			With(zap.Int64("ChatID", tc.ChatID)),
 	}
 }
 
-func (h *ChatHandlerImpl[S, C]) HandleUpdate(tc *TelegramContext) {
-	tc.Logger.Debug("HandleUpdate", zap.Any("update", tc))
+func (h *ChatHandlerImpl[S, C]) HandleUpdate(tc *TelegramUpdateContext) {
+	h.logger.Debug("HandleUpdate",
+		zap.Any("UpdateType", tc.Update.UpdateClass.TypeName()),
+		zap.Any("UpdateID", tc.UpdateID),
+	)
 
 	if tcm, ok := tc.AsTextMessage(); ok {
 		h.app.HandleMessage(h.appChat, tcm)
@@ -34,12 +40,9 @@ func (h *ChatHandlerImpl[S, C]) HandleUpdate(tc *TelegramContext) {
 	}
 
 	if tccb, ok := tc.AsCallback(); ok {
-		h.app.HandleCallback(
-			h.appChat,
-			tccb,
-		)
+		h.app.HandleCallback(h.appChat, tccb)
 		return
 	}
 
-	tc.Logger.Debug("Unkown update (neither message nor callback)")
+	h.logger.Debug("Unkown update (neither message nor callback)")
 }

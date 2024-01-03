@@ -1,10 +1,12 @@
 package tgbot
 
+import "context"
+
 type callbackResult struct {
 	action any
 
 	//
-	noCallback bool
+	noAnswer bool
 }
 
 // Handles text input from the user
@@ -19,17 +21,19 @@ type chatCallbackHandler func(string) *callbackResult
 type handleMessageFunc[S any, C any] func(*ApplicationChat[S, C], *TelegramContextTextMessage)
 type handleCallbackFunc[S any, C any] func(*ApplicationChat[S, C], *TelegramContextCallback)
 
-type handleInitFunc[S any] func(*TelegramContext)
+type handleInitFunc[S any] func(*TelegramUpdateContext)
 
-type handleActionFunc[S any, C any] func(*ApplicationChat[S, C], *TelegramContext, any)
+type handleActionFunc[S any, C any] func(*ApplicationChat[S, C], *TelegramUpdateContext, any)
 
-type renderFuncType[S any, C any] func(*ApplicationChat[S, C]) error
+type renderFuncType[S any, C any] func(context.Context, *ApplicationChat[S, C]) error
 
 type stateToCompFuncType[S any, C any] func(S) Comp
 
+type createAppStateFunc[S any] func(*TelegramUpdateContext) S
+
 // Defines Application with state S
 type Application[S any, C any] struct {
-	CreateAppState func(*TelegramContext) S
+	CreateAppState createAppStateFunc[S]
 
 	HandleActionExternal handleActionFunc[S, C]
 
@@ -50,7 +54,7 @@ type Application[S any, C any] struct {
 	// use state to render bot interface to the user
 	RenderFunc renderFuncType[S, C]
 
-	CreateChatRenderer func(*TelegramContext) ChatRenderer
+	CreateChatRenderer func(*TelegramUpdateContext) ChatRenderer
 
 	Loggers TgbotLoggers
 }
@@ -60,13 +64,13 @@ type ApplicationProps[S any, C any] struct {
 	HandleCallback      handleCallbackFunc[S, C]
 	HandleInit          handleInitFunc[S]
 	RenderFunc          renderFuncType[S, C]
-	CreateRenderer      func(*TelegramContext) ChatRenderer
+	CreateRenderer      func(*TelegramUpdateContext) ChatRenderer
 	CreateGlobalContext func(*ChatState[S, C]) C
 }
 
 func NewApplication[S any, C any](
 	// Creates state
-	createAppState func(*TelegramContext) S,
+	createAppState func(*TelegramUpdateContext) S,
 	// turns state into basic elements
 	stateToComp stateToCompFuncType[S, C],
 	// handles action
@@ -98,7 +102,7 @@ func NewApplication[S any, C any](
 	}
 
 	if handleInit == nil {
-		handleInit = func(tc *TelegramContext) {}
+		handleInit = func(tc *TelegramUpdateContext) {}
 	}
 
 	if renderFunc == nil {
@@ -106,10 +110,12 @@ func NewApplication[S any, C any](
 	}
 
 	if createRenderer == nil {
-		createRenderer = func(tc *TelegramContext) ChatRenderer {
+		createRenderer = func(tc *TelegramUpdateContext) ChatRenderer {
 			return NewTelegramChatRenderer(tc.Bot, tc.Update.User)
 		}
 	}
+
+	loggers := DefaultLoggers
 
 	return &Application[S, C]{
 		HandleInit:           handleInit,
@@ -122,6 +128,7 @@ func NewApplication[S any, C any](
 		CreateChatRenderer:   createRenderer,
 		CreateGlobalContext:  createContext,
 		HandleActionExternal: DefaultHandleActionExternal[S, C],
+		Loggers:              loggers,
 	}
 }
 
@@ -134,7 +141,7 @@ func (app *Application[S, C]) globalContext(chatState *ChatState[S, C]) globalCo
 	}
 }
 
-func (a *Application[S, C]) NewHandler(tc *TelegramContext) *ChatHandlerImpl[S, C] {
+func (a *Application[S, C]) NewHandler(tc *TelegramUpdateContext) *ChatHandlerImpl[S, C] {
 	return NewChatHandler[S, C](*a, tc)
 }
 
@@ -142,7 +149,7 @@ func (a *Application[S, C]) ChatsDispatcher() *ChatsDispatcher {
 
 	return NewChatsDispatcher(&ChatsDispatcherProps{
 		ChatFactory: &factoryFunc{
-			f: func(tc *TelegramContext) ChatHandler {
+			f: func(tc *TelegramUpdateContext) ChatHandler {
 				return a.NewHandler(tc)
 			},
 		},
@@ -150,9 +157,9 @@ func (a *Application[S, C]) ChatsDispatcher() *ChatsDispatcher {
 }
 
 type factoryFunc struct {
-	f func(*TelegramContext) ChatHandler
+	f func(*TelegramUpdateContext) ChatHandler
 }
 
-func (f *factoryFunc) CreateChatHandler(tc *TelegramContext) ChatHandler {
+func (f *factoryFunc) CreateChatHandler(tc *TelegramUpdateContext) ChatHandler {
 	return f.f(tc)
 }

@@ -200,7 +200,7 @@ func TestCreate(t *testing.T) {
 	b1 := newButton("button 1", func() any { return 1 }, "button 1", false, false)
 	m.AddButton(b1)
 
-	executeRenderActions(
+	ExecuteRenderActions(
 		context.Background(),
 		re,
 		[]renderActionType{
@@ -208,5 +208,6 @@ func TestCreate(t *testing.T) {
 				NewElement: m,
 			},
 		},
+		DevLogger(),
 	)
 }

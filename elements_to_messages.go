@@ -2,19 +2,42 @@ package tgbot
 
 import (
 	"fmt"
-
-	"go.uber.org/zap"
 )
+
+type inputHandlersType []elementInputHandler
 
 type processElementsResult struct {
 	OutcomingMessages []outcomingMessage
-	InputHandlers     []elementInputHandler
-	CallbackHandler   chatCallbackHandler
+	InputHandlers     inputHandlersType
 	CallbackMap       callbackMap
 	BottomButtons     []elementBottomButton
 	isComplete        bool
+
+	CallbackHandler chatCallbackHandler
+	InputHandler    chatInputHandler
 }
 
+func inputHandler(ihs inputHandlersType) chatInputHandler {
+
+	if len(ihs) == 0 {
+		return nil
+	}
+
+	return func(text string) any {
+
+		for _, h := range ihs {
+			res := h.Handler(text)
+
+			_, goNext := res.(ActionNext)
+
+			if !goNext {
+				return res
+			}
+
+		}
+		return ActionNext{}
+	}
+}
 func (per *processElementsResult) lastTextMessage() *outcomingTextMessage {
 	for i := len(per.OutcomingMessages) - 1; i >= 0; i-- {
 		if per.OutcomingMessages[i].OutcomingKind() == kindOutcomingTextMessage {
@@ -96,7 +119,6 @@ func elementsToMessagesAndHandlers(elements []anyElement) *processElementsResult
 		switch el := element.(type) {
 
 		case *elementMessage:
-			globalLogger.Debug("ElementMessage", zap.Any("el", el))
 
 			outcoming := newOutcomingTextMessage(el.Text)
 			lastMessage = outcoming
@@ -145,5 +167,6 @@ func elementsToMessagesAndHandlers(elements []anyElement) *processElementsResult
 		CallbackMap:       callbackMap,
 		CallbackHandler:   callbackHandler,
 		BottomButtons:     bottomButtons,
+		InputHandler:      inputHandler(inputHandlers),
 	}
 }

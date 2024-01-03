@@ -5,6 +5,7 @@ import "go.uber.org/zap"
 type LoggerCreator = func(*zap.Logger) *zap.Logger
 
 type TgbotLoggers struct {
+	Base             *zap.Logger
 	ChatsDistpatcher LoggerCreator
 	ChatHandler      LoggerCreator
 	Component        LoggerCreator
@@ -23,13 +24,19 @@ func DefaultComponentLogger(logger *zap.Logger) *zap.Logger {
 	return logger.Named("Component")
 }
 
+func DefaultApplicationChat(logger *zap.Logger) *zap.Logger {
+	return logger.Named("ApplicationChat")
+}
+
 var DefaultLoggers = TgbotLoggers{
+	Base:             DevLogger(),
 	ChatsDistpatcher: DefaultChatsDistpatcherLogger,
 	ChatHandler:      DefaultChatHandlerLogger,
 	Component:        DefaultComponentLogger,
+	ApplicationChat:  DefaultApplicationChat,
 }
 
-func GetLogger() *zap.Logger {
+func DevLogger() *zap.Logger {
 	cfg := zap.NewDevelopmentConfig()
 
 	cfg.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
@@ -39,4 +46,13 @@ func GetLogger() *zap.Logger {
 
 }
 
-var globalLogger = GetLogger()
+func ProdLogger() *zap.Logger {
+	cfg := zap.NewProductionConfig()
+
+	cfg.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
+	cfg.EncoderConfig.TimeKey = ""
+
+	return zap.Must(cfg.Build())
+}
+
+var globalLogger = DevLogger()

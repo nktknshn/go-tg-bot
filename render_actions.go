@@ -109,7 +109,7 @@ Rules are:
 */
 func getRenderActions(renderedElements []RenderedElement, nextElements []outcomingMessage) []renderActionType {
 
-	logger := GetLogger()
+	logger := DevLogger()
 
 	logger.Debug("GetRenderActions",
 		zap.Any("renderedElements", len(renderedElements)),
@@ -238,7 +238,7 @@ func create(ctx context.Context, renderer ChatRenderer, action *renderActionCrea
 }
 
 // Takes actions and applies them to the renderer
-func executeRenderActions(ctx context.Context, renderer ChatRenderer, actions []renderActionType) ([]RenderedElement, error) {
+func ExecuteRenderActions(ctx context.Context, renderer ChatRenderer, actions []renderActionType, logger *zap.Logger) ([]RenderedElement, error) {
 	result := make([]RenderedElement, 0)
 	actionsRemove := make([]renderActionRemove, 0)
 	actionsRemoveBot := make([]renderActionRemove, 0)
@@ -261,19 +261,19 @@ func executeRenderActions(ctx context.Context, renderer ChatRenderer, actions []
 	}
 
 	for _, a := range actionsRemoveUser {
-		globalLogger.Debug("ExecuteRenderActions: removing rendered element", zap.Any("a", a))
+		logger.Debug("ExecuteRenderActions: removing rendered element", zap.Any("a", a))
 
 		err := renderer.Delete(a.RenderedElement.ID())
 
 		if err != nil {
-			globalLogger.Error("Error removing rendered element", zap.Error(err))
+			logger.Error("Error removing rendered element", zap.Error(err))
 		}
 	}
 
 	for _, action := range actionsOther {
 		switch a := action.(type) {
 		case *renderActionCreate:
-			globalLogger.Debug("ExecuteRenderActions: creating new element", zap.Any("a", a))
+			logger.Debug("ExecuteRenderActions: creating new element", zap.Any("a", a))
 
 			rendereredMessage, err := create(ctx, renderer, a)
 
@@ -283,7 +283,7 @@ func executeRenderActions(ctx context.Context, renderer ChatRenderer, actions []
 
 			result = append(result, rendereredMessage)
 		case *renderActionKeep:
-			globalLogger.Debug("ExecuteRenderActions: keeping rendered element", zap.Any("a", a))
+			logger.Debug("ExecuteRenderActions: keeping rendered element", zap.Any("a", a))
 
 			if a.RenderedElement.renderedKind() == kindRenderedBotMessage && a.NewElement.OutcomingKind() == kindOutcomingTextMessage {
 				rendereredMessage := &renderedBotMessage{
@@ -297,7 +297,7 @@ func executeRenderActions(ctx context.Context, renderer ChatRenderer, actions []
 		case *renderActionReplace:
 			if a.RenderedElement.renderedKind() == kindRenderedBotMessage && a.NewElement.OutcomingKind() == kindOutcomingTextMessage {
 
-				globalLogger.Debug("ExecuteRenderActions: replacing rendered element", zap.Any("a", a.RenderedElement))
+				logger.Debug("ExecuteRenderActions: replacing rendered element", zap.Any("a", a.RenderedElement))
 
 				outcoming := a.NewElement.(*outcomingTextMessage)
 				renderedElement := a.RenderedElement.(*renderedBotMessage)
@@ -328,12 +328,12 @@ func executeRenderActions(ctx context.Context, renderer ChatRenderer, actions []
 	}
 
 	for _, a := range actionsRemoveBot {
-		globalLogger.Debug("ExecuteRenderActions: removing rendered element", zap.Any("a", a))
+		logger.Debug("ExecuteRenderActions: removing rendered element", zap.Any("a", a))
 
 		err := renderer.Delete(a.RenderedElement.ID())
 
 		if err != nil {
-			globalLogger.Error("Error removing rendered element", zap.Error(err))
+			logger.Error("Error removing rendered element", zap.Error(err))
 		}
 	}
 

@@ -34,8 +34,9 @@ func createElements(
 	comp Comp,
 	gc globalContext[any],
 	stateTree *runResultWithStateTree,
+	logger *zap.Logger,
 ) *createElementsResult {
-	logger := GetLogger()
+	// logger := GetLogger()
 	// logger := zap.NewNop()
 
 	logger.Debug("CreateElements",

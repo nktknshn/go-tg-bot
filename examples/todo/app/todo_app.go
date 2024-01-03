@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	tgbot "github.com/nktknshn/go-tg-bot"
+	"go.uber.org/zap"
 )
 
 // application state
@@ -23,23 +24,31 @@ type TodoGlobalContext struct {
 }
 
 type App = tgbot.Application[TodoState, TodoGlobalContext]
-type AppContext = tgbot.ApplicationChat[TodoState, TodoGlobalContext]
+type AppChat = tgbot.ApplicationChat[TodoState, TodoGlobalContext]
 
 type TodoAppDeps struct {
 	UserService UserService
 }
 
-func createChatState(deps TodoAppDeps, tc *tgbot.TelegramContext) TodoState {
+func createChatState(deps TodoAppDeps, tc *tgbot.TelegramUpdateContext) TodoState {
+
+	logger := tc.UpdateLogger.Named("createChatState")
+
+	logger.Debug("Fetching user")
 
 	user, err := deps.UserService.GetUser(tc.ChatID)
 
 	if err != nil {
+		logger.Error("Fetching user", zap.Error(err))
+
 		return TodoState{
 			Error: fmt.Sprintf("failed to get user: %v", err),
 		}
 	}
 
 	if user == nil {
+		logger.Debug("User not found. Creating a new one")
+
 		user = TodoUserFromTgUser(tc.Update.User)
 
 		err := deps.UserService.SaveUser(user)
@@ -64,7 +73,7 @@ func createChatState(deps TodoAppDeps, tc *tgbot.TelegramContext) TodoState {
 func TodoApp(deps TodoAppDeps) *App {
 	return tgbot.NewApplication(
 		// initial state
-		func(tc *tgbot.TelegramContext) TodoState {
+		func(tc *tgbot.TelegramUpdateContext) TodoState {
 			return createChatState(deps, tc)
 		},
 		// create root component

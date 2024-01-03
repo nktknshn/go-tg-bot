@@ -23,13 +23,13 @@ func main() {
 
 	if runEmul {
 		emulator.Run(
-			tgbot.GetLogger(),
+			tgbot.DevLogger(),
 			dispatcher,
 		)
 	} else {
 		tgbot.Run(
 			context.Background(),
-			tgbot.GetLogger(),
+			tgbot.DevLogger(),
 			dispatcher,
 		)
 	}
