@@ -12,7 +12,7 @@ type TodoState struct {
 	List        TodoList
 	CurrentPage string
 	Error       string
-	User        *User
+	User        *TodoUser
 }
 
 // Context shared between all components
@@ -23,45 +23,49 @@ type TodoGlobalContext struct {
 }
 
 type App = tgbot.Application[TodoState, TodoGlobalContext]
-type AppContext = tgbot.ApplicationContext[TodoState, TodoGlobalContext]
+type AppContext = tgbot.ApplicationChat[TodoState, TodoGlobalContext]
 
 type TodoAppDeps struct {
 	UserService UserService
+}
+
+func createChatState(deps TodoAppDeps, tc *tgbot.TelegramContext) TodoState {
+
+	user, err := deps.UserService.GetUser(tc.ChatID)
+
+	if err != nil {
+		return TodoState{
+			Error: fmt.Sprintf("failed to get user: %v", err),
+		}
+	}
+
+	if user == nil {
+		user = TodoUserFromTgUser(tc.Update.User)
+
+		err := deps.UserService.SaveUser(user)
+
+		if err != nil {
+			return TodoState{
+				Error: fmt.Sprintf("failed to save user: %v", err),
+			}
+		}
+	}
+
+	username := fmt.Sprintf("%v %v @%v", user.FirstName, user.LastName, user.Username)
+
+	return TodoState{
+		User:        user,
+		Username:    username,
+		CurrentPage: ValuePageWelcome,
+		List:        user.TodoList,
+	}
 }
 
 func TodoApp(deps TodoAppDeps) *App {
 	return tgbot.NewApplication(
 		// initial state
 		func(tc *tgbot.TelegramContext) TodoState {
-
-			user, err := deps.UserService.GetUser(tc.ChatID)
-
-			if err != nil {
-				return TodoState{
-					Error: fmt.Sprintf("failed to get user: %v", err),
-				}
-			}
-
-			if user == nil {
-				user = UserFromTgUser(tc.Update.User)
-
-				err := deps.UserService.SaveUser(user)
-
-				if err != nil {
-					return TodoState{
-						Error: fmt.Sprintf("failed to save user: %v", err),
-					}
-				}
-			}
-
-			username := tgbot.UpdateGetUsername(tc.Update)
-
-			return TodoState{
-				User:        user,
-				Username:    username,
-				CurrentPage: ValuePageWelcome,
-				List:        user.TodoList,
-			}
+			return createChatState(deps, tc)
 		},
 		// create root component
 		func(s TodoState) tgbot.Comp {
@@ -72,7 +76,7 @@ func TodoApp(deps TodoAppDeps) *App {
 		// handle actions
 		actionsReducer,
 		// create global context
-	).WithCreateGlobalContext(
+	).WithGlobalContext(
 		func(cs *tgbot.ChatState[TodoState, TodoGlobalContext]) TodoGlobalContext {
 			return TodoGlobalContext{
 				TodoList: cs.AppState.List,

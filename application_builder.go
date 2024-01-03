@@ -35,7 +35,7 @@ func (app *Application[S, C]) WithCreateRenderer(f func(*TelegramContext) ChatRe
 	return app
 }
 
-func (app *Application[S, C]) WithCreateGlobalContext(f func(*ChatState[S, C]) C) *Application[S, C] {
+func (app *Application[S, C]) WithGlobalContext(f func(*ChatState[S, C]) C) *Application[S, C] {
 	app.CreateGlobalContext = f
 	return app
 }

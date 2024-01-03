@@ -21,7 +21,7 @@ func TestTodo(t *testing.T) {
 
 	bot.SetDispatcher(dispatcher)
 
-	user1 := bot.NewUser()
+	user1 := bot.NewUser(emulator.RandomUserID())
 
 	user1.SendTextMessage("/start")
 

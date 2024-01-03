@@ -18,7 +18,6 @@ type ChatsDispatcherProps struct {
 // ChatsDispatcher is a map of chats
 // dispatches updates to ChatHandlers
 // TODO: AB testing
-
 type ChatsDispatcher struct {
 	chatHandlerFactory ChatHandlerFactory
 
@@ -38,6 +37,20 @@ func NewChatsDispatcher(props *ChatsDispatcherProps) *ChatsDispatcher {
 		chatLocks:          make(map[int64]*sync.Mutex),
 		stateLock:          &sync.Mutex{},
 	}
+}
+
+func (cd *ChatsDispatcher) ResetChats() {
+	cd.stateLock.Lock()
+	cd.chatHandlers = make(map[int64]ChatHandler)
+	cd.chatLocks = make(map[int64]*sync.Mutex)
+	cd.stateLock.Unlock()
+}
+
+func (cd *ChatsDispatcher) ResetChat(chatID int64) {
+	cd.stateLock.Lock()
+	delete(cd.chatHandlers, chatID)
+	delete(cd.chatLocks, chatID)
+	cd.stateLock.Unlock()
 }
 
 func (cd *ChatsDispatcher) SetLogger(logger *zap.Logger) {
@@ -123,6 +136,7 @@ func (cd *ChatsDispatcher) HandleUpdate(ctx context.Context, bot TelegramBot, up
 	cd.stateLock.Lock()
 
 	chatLock := cd.getChatLock(chatID)
+
 	chatLock.Lock()
 
 	go cd.handle(ctx, bot, update, chatLock)

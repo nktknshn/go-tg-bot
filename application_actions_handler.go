@@ -5,7 +5,7 @@ import (
 )
 
 // Handles some internal actions sent from handlers
-func internalActionHandle[S any, C any](ac *ApplicationContext[S, C], tc *TelegramContext, action any) {
+func internalActionHandle[S any, C any](ac *ApplicationChat[S, C], tc *TelegramContext, action any) {
 	tc.Logger.Debug("HandleAction", zap.Any("action", reflectStructName(action)))
 
 	switch a := action.(type) {

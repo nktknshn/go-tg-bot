@@ -21,7 +21,7 @@ func (tdl TodoList) IsEmpty() bool {
 	return tdl.Count() == 0
 }
 
-type User struct {
+type TodoUser struct {
 	ChatID     int64 `json:"chat_id"`
 	AccessHash int64 `json:"access_hash"`
 
@@ -32,8 +32,8 @@ type User struct {
 	TodoList TodoList `json:"todo_list"`
 }
 
-func UserFromTgUser(tgUser *tg.User) *User {
-	return &User{
+func TodoUserFromTgUser(tgUser *tg.User) *TodoUser {
+	return &TodoUser{
 		ChatID:     tgUser.ID,
 		AccessHash: tgUser.AccessHash,
 		Username:   tgUser.Username,

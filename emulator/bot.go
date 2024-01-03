@@ -2,7 +2,6 @@ package emulator
 
 import (
 	"context"
-	"math/rand"
 
 	"github.com/gotd/td/tg"
 
@@ -25,12 +24,10 @@ func NewFakeBot() *FakeBot {
 	}
 }
 
-func (fb *FakeBot) NewUser() *FakeBotUser {
-	return &FakeBotUser{
-		UserID: rand.Int63(),
-		ChatID: rand.Int63(),
-		Bot:    fb,
-	}
+func (fb *FakeBot) NewUser(userID int64) *FakeBotUser {
+	u := NewFakeBotUser(userID)
+	u.Bot = fb
+	return u
 }
 
 func (fb *FakeBot) AddUserMessage(message *tg.Message) {

@@ -11,24 +11,17 @@ type preRenderData[S any, C any] struct {
 	ExecuteRender     func(renderer ChatRenderer) ([]RenderedElement, error)
 }
 
-func (a *Application[S, C]) PreRender(ac *ApplicationContext[S, C]) *preRenderData[S, C] {
+func (app *Application[S, C]) PreRender(chatState *ChatState[S, C]) *preRenderData[S, C] {
 	logger := zap.NewNop()
 
-	comp := ac.App.StateToComp(ac.State.AppState)
+	comp := app.StateToComp(chatState.AppState)
 
-	var globalContext globalContext[C]
-
-	if ac.App.CreateGlobalContext != nil {
-		ctxValue := ac.App.CreateGlobalContext(ac.State)
-		globalContext = newGlobalContextTyped[C](ctxValue)
-	} else {
-		globalContext = newEmptyGlobalContext()
-	}
+	globalContext := app.globalContext(chatState)
 
 	createElementsResult := createElements(
 		comp,
 		globalContext,
-		ac.State.treeState,
+		chatState.treeState,
 	)
 
 	els := createElementsResult.Elements
@@ -68,24 +61,24 @@ func (a *Application[S, C]) PreRender(ac *ApplicationContext[S, C]) *preRenderDa
 		}
 	}
 
-	nextState := ChatState[S, C]{
-		ChatID:           ac.State.ChatID,
-		AppState:         ac.State.AppState,
-		renderedElements: ac.State.renderedElements,
+	nextChatState := ChatState[S, C]{
+		ChatID:           chatState.ChatID,
+		AppState:         chatState.AppState,
+		renderedElements: chatState.renderedElements,
 		inputHandler:     inputHandler,
 		callbackHandler:  res.CallbackHandler,
-		Renderer:         ac.State.Renderer,
+		Renderer:         chatState.Renderer,
 		treeState:        &createElementsResult.TreeState,
-		lock:             ac.State.lock,
+		lock:             chatState.lock,
 	}
 
 	return &preRenderData[S, C]{
-		InternalChatState: nextState,
+		InternalChatState: nextChatState,
 		ExecuteRender: func(renderer ChatRenderer) ([]RenderedElement, error) {
 			logger.Info("ExecuteRender")
 
 			actions := getRenderActions(
-				ac.State.renderedElements,
+				chatState.renderedElements,
 				res.OutcomingMessages,
 			)
 
@@ -95,7 +88,7 @@ func (a *Application[S, C]) PreRender(ac *ApplicationContext[S, C]) *preRenderDa
 
 			rendered, err := executeRenderActions(
 				context.Background(),
-				ac.State.Renderer,
+				chatState.Renderer,
 				actions,
 			)
 

@@ -7,12 +7,12 @@ import (
 )
 
 type UserService interface {
-	GetUser(chatID int64) (*User, error)
-	SaveUser(user *User) error
+	GetUser(chatID int64) (*TodoUser, error)
+	SaveUser(user *TodoUser) error
 }
 
 type UserServiceJson struct {
-	users map[int64]*User
+	users map[int64]*TodoUser
 	file  string
 
 	lock *sync.Mutex
@@ -20,13 +20,13 @@ type UserServiceJson struct {
 
 func NewUserServiceJson(file string) *UserServiceJson {
 	return &UserServiceJson{
-		users: make(map[int64]*User),
+		users: make(map[int64]*TodoUser),
 		file:  file,
 		lock:  &sync.Mutex{},
 	}
 }
 
-func (s *UserServiceJson) GetUser(chatID int64) (*User, error) {
+func (s *UserServiceJson) GetUser(chatID int64) (*TodoUser, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -37,7 +37,7 @@ func (s *UserServiceJson) GetUser(chatID int64) (*User, error) {
 	return user, nil
 }
 
-func (s *UserServiceJson) SaveUser(user *User) error {
+func (s *UserServiceJson) SaveUser(user *TodoUser) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 

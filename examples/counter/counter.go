@@ -124,7 +124,7 @@ var counterApp = tgbot.NewApplication[State, any](
 
 		return &app
 	},
-	func(ac *tgbot.ApplicationContext[State, any], tc *tgbot.TelegramContext, a any) {
+	func(ac *tgbot.ApplicationChat[State, any], tc *tgbot.TelegramContext, a any) {
 		// tc.Logger.Info("HandleAction", zap.Any("action", a))
 
 		switch a := a.(type) {

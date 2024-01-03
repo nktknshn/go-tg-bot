@@ -2,29 +2,62 @@ package emulator
 
 import (
 	"context"
+	"math/rand"
 
 	"github.com/gotd/td/tg"
 	tgbot "github.com/nktknshn/go-tg-bot"
 )
 
-type FakeBotUser struct {
-	UserID int64
-	ChatID int64
-	Bot    *FakeBot
+type FakeUserInfo struct {
+	Username   string
+	FirstName  string
+	LastName   string
+	AccessHash int64
 }
 
-func (fbu *FakeBotUser) GetUser() *tg.User {
+type FakeBotUser struct {
+	UserID int64
+	Bot    *FakeBot
+
+	AccessHash int64
+	Username   string
+	FistName   string
+	LastName   string
+}
+
+func RandomUserID() int64 {
+	return rand.Int63()
+}
+
+func NewFakeBotUser(userID int64) *FakeBotUser {
+	return &FakeBotUser{
+		UserID: userID,
+	}
+}
+
+func (fbu *FakeBotUser) SetProfile(profie FakeUserInfo) *FakeBotUser {
+	fbu.Username = profie.Username
+	fbu.FistName = profie.FirstName
+	fbu.LastName = profie.LastName
+	fbu.AccessHash = profie.AccessHash
+
+	return fbu
+}
+
+func (fbu *FakeBotUser) GetTgUser() *tg.User {
 	return &tg.User{
-		ID:       fbu.UserID,
-		Username: "username",
+		ID:         fbu.UserID,
+		Username:   fbu.Username,
+		FirstName:  fbu.FistName,
+		LastName:   fbu.LastName,
+		AccessHash: fbu.AccessHash,
 	}
 }
 
 func (u *FakeBotUser) DisplayedMessages() []*tg.Message {
-	return u.Bot.DisplayedMessages(u.ChatID)
+	return u.Bot.DisplayedMessages(u.UserID)
 }
 
-// construct BotUpdate
 func (u *FakeBotUser) SendTextMessage(text string) tg.UpdateClass {
 
 	bu := tgbot.BotUpdate{}
@@ -40,7 +73,7 @@ func (u *FakeBotUser) SendTextMessage(text string) tg.UpdateClass {
 
 	u.Bot.AddUserMessage(textMessage)
 
-	bu.User = u.GetUser()
+	bu.User = u.GetTgUser()
 
 	u.Bot.dispatcher.HandleUpdate(context.Background(), u.Bot, bu)
 
@@ -54,7 +87,7 @@ func (u *FakeBotUser) SendCallbackQuery(data string) tg.UpdateClass {
 		Data: []byte(data),
 	}
 
-	bu.User = u.GetUser()
+	bu.User = u.GetTgUser()
 
 	u.Bot.dispatcher.HandleUpdate(context.Background(), u.Bot, bu)
 
