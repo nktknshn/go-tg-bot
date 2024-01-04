@@ -7,6 +7,7 @@ import (
 	"github.com/nktknshn/go-tg-bot/tgbot/logging"
 	"github.com/nktknshn/go-tg-bot/tgbot/render"
 	"github.com/nktknshn/go-tg-bot/tgbot/telegram"
+	"go.uber.org/zap"
 )
 
 // Handles text input from the user
@@ -26,11 +27,11 @@ type RenderFuncType[S any, C any] func(context.Context, *ApplicationChat[S, C]) 
 
 type StateToCompFuncType[S any, C any] func(S) component.Comp
 
-type CreateAppStateFunc[S any] func(*telegram.TelegramUpdateContext) S
+type CreateAppStateFunc[S, C any] func(*Application[S, C], *telegram.TelegramUpdateContext, *zap.Logger) S
 
 // Defines Application with state S
 type Application[S any, C any] struct {
-	CreateAppState CreateAppStateFunc[S]
+	CreateAppState CreateAppStateFunc[S, C]
 
 	HandleActionExternal HandleActionFunc[S, C]
 
@@ -76,7 +77,7 @@ func (app *Application[S, C]) globalContext(chatState *ChatState[S, C]) componen
 
 func New[S any, C any](
 	// Creates state
-	createAppState func(*telegram.TelegramUpdateContext) S,
+	createAppState func(*Application[S, C], *telegram.TelegramUpdateContext, *zap.Logger) S,
 	// turns state into basic elements
 	stateToComp StateToCompFuncType[S, C],
 	// handles action

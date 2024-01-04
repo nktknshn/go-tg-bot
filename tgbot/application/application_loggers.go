@@ -7,6 +7,7 @@ import (
 
 type ApplicationChatLoggers struct {
 	Root      *zap.Logger
+	Init      *zap.Logger
 	Component *zap.Logger
 	Handle    *zap.Logger
 	Action    *zap.Logger

@@ -15,9 +15,11 @@ func internalActionHandle[S any, C any](ac *ApplicationChat[S, C], tc *telegram.
 	logger.Debug("HandleAction", zap.Any("action", reflection.ReflectStructName(action)))
 
 	switch a := action.(type) {
+
 	case common.ActionReload:
 		ac.State.ResetRenderedElements()
 		return
+
 	case component.ActionLocalState[any]:
 		logger.Debug("ActionLocalState was caught. Applying it to the local state tree.",
 			zap.Any("index", a.Index),
@@ -30,6 +32,7 @@ func internalActionHandle[S any, C any](ac *ApplicationChat[S, C], tc *telegram.
 			zap.Any("LocalStateTree", ac.State.treeState.LocalStateTree),
 		)
 		return
+
 	case []any:
 		logger.Debug("A list of actions was caught")
 

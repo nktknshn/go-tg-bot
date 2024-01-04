@@ -1,6 +1,8 @@
 package todo_test
 
 import (
+	"fmt"
+	"os"
 	"path"
 	"testing"
 	"time"
@@ -10,6 +12,7 @@ import (
 	"github.com/nktknshn/go-tg-bot/tgbot/dispatcher"
 	"github.com/nktknshn/go-tg-bot/tgbot/logging"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/nktknshn/go-tg-bot/emulator/helpers"
 
@@ -22,6 +25,11 @@ type UserLogsProps struct {
 }
 
 func UserLogs(props UserLogsProps) *logging.TgbotLoggers {
+
+	// file := path.Join(props.LogsFolder, "tgbot.log")
+
+	// zapcore.AddSync()
+
 	return &logging.TgbotLoggers{
 		Base: props.Base,
 		ChatsDistpatcher: func(l *zap.Logger) *zap.Logger {
@@ -30,12 +38,32 @@ func UserLogs(props UserLogsProps) *logging.TgbotLoggers {
 		ChatHandler: func(l *zap.Logger) *zap.Logger {
 			return l.Named("ChatHandler")
 		},
-		ApplicationChat: func(l *zap.Logger) *zap.Logger {
+		ApplicationChat: func(l *zap.Logger, chatID int64) *zap.Logger {
 			// chat specific logger
-			return l.Named("ApplicationChat")
+
+			return l.Named("ApplicationChat").WithOptions(
+				zap.WrapCore(func(core zapcore.Core) zapcore.Core {
+
+					fname := fmt.Sprintf("user_%d.log", chatID)
+					chatLogFile := path.Join(props.LogsFolder, fname)
+
+					file, err := os.OpenFile(chatLogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+
+					if err != nil {
+						l.Error("failed to open log file", zap.Error(err))
+						return core
+					}
+
+					return zapcore.NewCore(
+						zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()),
+						zapcore.AddSync(zapcore.Lock(file)),
+						zap.DebugLevel,
+					)
+				}),
+			)
 		},
 		Component: func(l *zap.Logger) *zap.Logger {
-			return l.Named("Component")
+			return l.Named("Component").WithOptions()
 		},
 	}
 }
@@ -52,10 +80,21 @@ type TestScope struct {
 func NewTestScope(t *testing.T) *TestScope {
 
 	tempDir := t.TempDir()
+
 	usersJson := path.Join(tempDir, "users.json")
 
+	core := zapcore.NewCore(
+		zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()),
+		zapcore.AddSync(os.Stderr),
+		zap.DebugLevel,
+	)
+
+	baseLogger := zap.New(
+		core,
+	)
+
 	loggers := UserLogs(UserLogsProps{
-		Base:       logging.Logger(),
+		Base:       baseLogger,
 		LogsFolder: tempDir,
 	})
 
@@ -73,11 +112,12 @@ func NewTestScope(t *testing.T) *TestScope {
 	bot := emulator.NewFakeBot()
 	bot.SetDispatcher(d)
 
-	user1 := bot.NewUser(123).SetProfile(emulator.FakeUserInfo{
-		Username:  "user1",
-		FirstName: "User",
-		LastName:  "One",
-	})
+	user1 := bot.NewUser(123).SetProfile(
+		emulator.FakeUserInfo{
+			Username:  "user1",
+			FirstName: "User",
+			LastName:  "One",
+		})
 
 	return &TestScope{
 		loggers: loggers,
@@ -89,11 +129,28 @@ func NewTestScope(t *testing.T) *TestScope {
 	}
 }
 
+func TestLogs(t *testing.T) {
+	scope := NewTestScope(t)
+	scope.user1.SendTextMessage("/start")
+
+	time.Sleep(200 * time.Millisecond)
+
+	data, err := os.ReadFile(path.Join(scope.tempDir, "user_123.log"))
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	print("Log content:")
+	println(string(data))
+}
+
 func TestTodoAppInit(t *testing.T) {
 	scope := NewTestScope(t)
 	scope.user1.SendTextMessage("/start")
 
 	time.Sleep(200 * time.Millisecond)
+
 }
 
 func TestTodoApp(t *testing.T) {

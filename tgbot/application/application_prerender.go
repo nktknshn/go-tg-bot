@@ -20,8 +20,12 @@ func (d *preRenderData[S, C]) RenderActionsKinds() []string {
 	}).Collect()
 }
 
+type ComputeNextStateProps struct {
+	Logger *zap.Logger
+}
+
 // ComputeNextState computes the output based on the state
-func (app *Application[S, C]) ComputeNextState(chatState *ChatState[S, C], logger *zap.Logger) *preRenderData[S, C] {
+func (app *Application[S, C]) ComputeNextState(chatState *ChatState[S, C], props ComputeNextStateProps) *preRenderData[S, C] {
 
 	comp := app.StateToComp(chatState.AppState)
 
@@ -31,7 +35,7 @@ func (app *Application[S, C]) ComputeNextState(chatState *ChatState[S, C], logge
 		comp,
 		globalContext,
 		chatState.treeState,
-		logger,
+		props.Logger,
 	)
 
 	res := outcoming.ElementsToMessagesAndHandlers(createElementsResult.Elements)
@@ -52,7 +56,7 @@ func (app *Application[S, C]) ComputeNextState(chatState *ChatState[S, C], logge
 		RenderActions: render.CreateRenderActions(
 			chatState.renderedElements,
 			res.OutcomingMessages,
-			logger,
+			props.Logger,
 		),
 	}
 

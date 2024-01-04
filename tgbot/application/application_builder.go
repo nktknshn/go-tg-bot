@@ -50,7 +50,7 @@ func (app *Application[S, C]) WithStateToComp(f StateToCompFuncType[S, C]) *Appl
 	return app
 }
 
-func (app *Application[S, C]) WithCreateAppState(f func(*telegram.TelegramUpdateContext) S) *Application[S, C] {
+func (app *Application[S, C]) WithCreateAppState(f CreateAppStateFunc[S, C]) *Application[S, C] {
 	app.CreateAppState = f
 	return app
 }

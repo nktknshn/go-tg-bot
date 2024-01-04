@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/nktknshn/go-tg-bot/tgbot/logging"
 	"github.com/nktknshn/go-tg-bot/tgbot/reflection"
 	"github.com/nktknshn/go-tg-bot/tgbot/render"
 	"github.com/nktknshn/go-tg-bot/tgbot/telegram"
@@ -24,7 +25,25 @@ func (ac *ApplicationChat[S, C]) SetChatState(chatState *ChatState[S, C]) {
 }
 
 func NewApplicationChat[S any, C any](app *Application[S, C], tc *telegram.TelegramUpdateContext) *ApplicationChat[S, C] {
-	appState := app.CreateAppState(tc)
+
+	rootLogger := app.Loggers.ApplicationChat(
+		app.Loggers.Base,
+		tc.ChatID,
+	).With(zap.Int64("ChatID", tc.ChatID))
+
+	loggers := &ApplicationChatLoggers{
+		Root: rootLogger,
+		// logger for components rendering
+		// Component: app.Loggers.Component(rootLogger),
+		Component: app.Loggers.Component(rootLogger),
+		// logger for updates
+		Handle: rootLogger.Named(logging.LoggerNameHandle),
+		Action: rootLogger.Named(logging.LoggerNameAction),
+		Render: rootLogger.Named(logging.LoggerNameRender),
+		Init:   rootLogger.Named(logging.LoggerNameInit),
+	}
+
+	appState := app.CreateAppState(app, tc, loggers.Init)
 
 	chatState := ChatState[S, C]{
 		ChatID:           tc.ChatID,
@@ -37,22 +56,10 @@ func NewApplicationChat[S any, C any](app *Application[S, C], tc *telegram.Teleg
 		lock:             &sync.Mutex{},
 	}
 
-	rootLogger := app.Loggers.ApplicationChat(
-		app.Loggers.Base,
-	).With(zap.Int64("ChatID", tc.ChatID))
-
-	loggers := &ApplicationChatLoggers{
-		Root: rootLogger,
-		// logger for components rendering
-		// Component: app.Loggers.Component(rootLogger),
-		Component: app.Loggers.Component(rootLogger),
-		// logger for updates
-		Handle: rootLogger.Named("Handle"),
-		Action: rootLogger.Named("Action"),
-		Render: rootLogger.Named("Render"),
-	}
-
-	res := app.ComputeNextState(&chatState, loggers.Component)
+	// compute the first state
+	res := app.ComputeNextState(&chatState, ComputeNextStateProps{
+		Logger: loggers.Init.Named(logging.LoggerNameComponent),
+	})
 
 	return &ApplicationChat[S, C]{
 		App:     app,
@@ -66,9 +73,11 @@ func DefaultRenderFunc[S any, C any](ctx context.Context, ac *ApplicationChat[S,
 
 	logger := ac.Loggers.Render
 
-	logger.Debug("RenderFunc called")
+	logger.Debug("RenderFunc. Computing next state")
 
-	res := ac.App.ComputeNextState(ac.State, ac.App.Loggers.Component(logger))
+	res := ac.App.ComputeNextState(ac.State, ComputeNextStateProps{
+		Logger: ac.App.Loggers.Component(logger),
+	})
 
 	logger.Debug("RenderFunc computed next state",
 		zap.Any("RenderActions", res.RenderActionsKinds()),
@@ -99,8 +108,8 @@ func DefaultHandlerCallback[S any, C any](ac *ApplicationChat[S, C], tc *telegra
 
 	// ac.Loggers.Root.Debug("LocalStateTree", zap.String("tree", ac.State.treeState.LocalStateTree.String()))
 
-	ac.State.LockState(logger.Named("LockState"))
-	defer ac.State.UnlockState(logger.Named("LockState"))
+	ac.State.LockState(logger.Named(logging.LoggerNameLockState))
+	defer ac.State.UnlockState(logger.Named(logging.LoggerNameLockState))
 
 	if ac.State.callbackHandler != nil {
 		result := ac.State.callbackHandler(string(tc.UpdateBotCallbackQuery.Data))
@@ -136,8 +145,8 @@ func DefaultHandleMessage[S any, C any](ac *ApplicationChat[S, C], tc *telegram.
 	logger.Info("HandleMessage", zap.Any("text", tc.Text))
 	// tc.Logger.Debug("LocalStateTree", zap.String("tree", ac.State.treeState.LocalStateTree.String()))
 
-	ac.State.LockState(logger.Named("LockState"))
-	defer ac.State.UnlockState(logger.Named("LockState"))
+	ac.State.LockState(logger.Named(logging.LoggerNameLockState))
+	defer ac.State.UnlockState(logger.Named(logging.LoggerNameLockState))
 
 	if ac.State.inputHandler != nil {
 
@@ -171,8 +180,8 @@ func DefaultHandleActionExternal[S any, C any](ac *ApplicationChat[S, C], tc *te
 
 	logger.Info("HandleActionExternal")
 
-	ac.State.LockState(logger.Named("LockState"))
-	defer ac.State.UnlockState(logger.Named("LockState"))
+	ac.State.LockState(logger.Named(logging.LoggerNameLockState))
+	defer ac.State.UnlockState(logger.Named(logging.LoggerNameLockState))
 
 	internalActionHandle(ac, tc, action)
 

@@ -8,8 +8,8 @@ type TgbotLoggers struct {
 	Base             *zap.Logger
 	ChatsDistpatcher LoggerCreator
 	ChatHandler      LoggerCreator
+	ApplicationChat  func(*zap.Logger, int64) *zap.Logger
 	Component        LoggerCreator
-	ApplicationChat  LoggerCreator
 }
 
 func DefaultChatsDistpatcherLogger(logger *zap.Logger) *zap.Logger {
@@ -24,8 +24,8 @@ func DefaultComponentLogger(logger *zap.Logger) *zap.Logger {
 	return logger.Named("Component")
 }
 
-func DefaultApplicationChat(logger *zap.Logger) *zap.Logger {
-	return logger.Named("ApplicationChat")
+func DefaultApplicationChat(logger *zap.Logger, chatID int64) *zap.Logger {
+	return logger.Named("ApplicationChat").With(zap.Int64("ChatID", chatID))
 }
 
 var DefaultLoggers = TgbotLoggers{

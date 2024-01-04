@@ -31,9 +31,7 @@ type TodoAppDeps struct {
 type App = application.Application[TodoState, TodoGlobalContext]
 type AppChat = application.ApplicationChat[TodoState, TodoGlobalContext]
 
-func createChatState(deps TodoAppDeps, tc *tgbot.TelegramUpdateContext) TodoState {
-
-	logger := tc.UpdateLogger.Named("createChatState")
+func createAppState(app *App, deps TodoAppDeps, tc *tgbot.TelegramUpdateContext, logger *zap.Logger) TodoState {
 
 	logger.Debug("Fetching user")
 
@@ -74,8 +72,8 @@ func createChatState(deps TodoAppDeps, tc *tgbot.TelegramUpdateContext) TodoStat
 func TodoApp(deps TodoAppDeps) *App {
 	return application.New(
 		// initial state
-		func(tc *tgbot.TelegramUpdateContext) TodoState {
-			return createChatState(deps, tc)
+		func(app *App, tc *tgbot.TelegramUpdateContext, logger *zap.Logger) TodoState {
+			return createAppState(app, deps, tc, logger)
 		},
 		// create root component
 		func(s TodoState) tgbot.Comp {

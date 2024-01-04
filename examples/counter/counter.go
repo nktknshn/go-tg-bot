@@ -110,7 +110,7 @@ func (app *App) Render(o tgbot.O) {
 }
 
 var counterApp = application.New[State, any](
-	func(tc *tgbot.TelegramUpdateContext) State {
+	func(app *application.Application[State, any], tc *tgbot.TelegramUpdateContext, logger *zap.Logger) State {
 		// tc.Logger.Info("CreateAppState")
 		// tc.Message.
 		// uname := fmt.Sprintf("%v (%v)", tc.Message.From.Username, tc.Update.Message.From.ID)
