@@ -1,20 +1,21 @@
-package telegram
+package render
 
 import (
 	"context"
 	"fmt"
 
 	"github.com/gotd/td/tg"
-	"github.com/nktknshn/go-tg-bot/tgbot/render"
+	"github.com/nktknshn/go-tg-bot/tgbot/telegram"
 )
 
-type telegramChatRenderer struct {
-	Bot  TelegramBot
+// wrapping TelegramBot provides ChatRenderer interface
+type telegramBotChatRenderer struct {
+	Bot  telegram.TelegramBot
 	User *tg.User
 }
 
-func (r *telegramChatRenderer) Delete(messageId int) error {
-	removed, err := r.Bot.DeleteMessage(context.Background(), DeleteMessageParams{
+func (r *telegramBotChatRenderer) Delete(messageId int) error {
+	removed, err := r.Bot.DeleteMessage(context.Background(), telegram.DeleteMessageParams{
 		ChatID:     r.User.ID,
 		AccessHash: r.User.AccessHash,
 		MessageID:  messageId,
@@ -31,7 +32,7 @@ func (r *telegramChatRenderer) Delete(messageId int) error {
 	return nil
 }
 
-func (r *telegramChatRenderer) Message(ctx context.Context, props *render.ChatRendererMessageProps) (*tg.Message, error) {
+func (r *telegramBotChatRenderer) Message(ctx context.Context, props *ChatRendererMessageProps) (*tg.Message, error) {
 	if props.TargetMessage != nil {
 
 		// the message must be removed
@@ -42,7 +43,7 @@ func (r *telegramChatRenderer) Message(ctx context.Context, props *render.ChatRe
 				return nil, err
 			}
 		} else {
-			editedMessage, err := r.Bot.EditMessageText(ctx, EditMessageTextParams{
+			editedMessage, err := r.Bot.EditMessageText(ctx, telegram.EditMessageTextParams{
 				ChatID:                r.User.ID,
 				AccessHash:            r.User.AccessHash,
 				MessageID:             props.TargetMessage.ID,
@@ -60,7 +61,7 @@ func (r *telegramChatRenderer) Message(ctx context.Context, props *render.ChatRe
 
 	}
 
-	message, err := r.Bot.SendMessage(ctx, SendMessageParams{
+	message, err := r.Bot.SendMessage(ctx, telegram.SendMessageParams{
 		ChatID:                r.User.ID,
 		AccessHash:            r.User.AccessHash,
 		Text:                  props.Text,
@@ -76,8 +77,8 @@ func (r *telegramChatRenderer) Message(ctx context.Context, props *render.ChatRe
 	return message, nil
 }
 
-func NewTelegramChatRenderer(bot TelegramBot, user *tg.User) *telegramChatRenderer {
-	return &telegramChatRenderer{
+func NewTelegramChatRenderer(bot telegram.TelegramBot, user *tg.User) *telegramBotChatRenderer {
+	return &telegramBotChatRenderer{
 		Bot:  bot,
 		User: user,
 	}

@@ -1,4 +1,4 @@
-package tgbot
+package gotd
 
 import (
 	"context"
@@ -6,10 +6,11 @@ import (
 	"github.com/gotd/td/telegram"
 	"github.com/gotd/td/telegram/message"
 	"github.com/gotd/td/tg"
+	"github.com/nktknshn/go-tg-bot/tgbot/dispatcher"
 	"go.uber.org/zap"
 )
 
-func Run(ctx context.Context, logger *zap.Logger, dispatcher *ChatsDispatcher) error {
+func Run(ctx context.Context, logger *zap.Logger, dispatcher *dispatcher.ChatsDispatcher) error {
 	logger.Debug("Starting real telegram bot")
 
 	handler := NewGotdHandler(dispatcher)

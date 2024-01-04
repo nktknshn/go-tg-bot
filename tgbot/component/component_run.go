@@ -10,7 +10,7 @@ func runComponent(
 	logger *zap.Logger,
 	comp Comp,
 	gc GlobalContext[any],
-	state CompState[any],
+	state State[any],
 ) ([]AnyElement, localStateClosure[any], *usedContextValue) {
 
 	logger.Debug("RunComponent",

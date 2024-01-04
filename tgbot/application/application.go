@@ -15,67 +15,76 @@ import (
 // Handle inline button click. Returns nil if no action has matched the callback data
 
 // User defined function
-type handleMessageFunc[S any, C any] func(*ApplicationChat[S, C], *telegram.TelegramContextTextMessage)
-type handleCallbackFunc[S any, C any] func(*ApplicationChat[S, C], *telegram.TelegramContextCallback)
+type HandleMessageFunc[S any, C any] func(*ApplicationChat[S, C], *telegram.TelegramContextTextMessage)
+type HandleCallbackFunc[S any, C any] func(*ApplicationChat[S, C], *telegram.TelegramContextCallback)
 
-type handleInitFunc[S any] func(*telegram.TelegramUpdateContext)
+type HandleInitFunc[S any] func(*telegram.TelegramUpdateContext)
 
-type handleActionFunc[S any, C any] func(*ApplicationChat[S, C], *telegram.TelegramUpdateContext, any)
+type HandleActionFunc[S any, C any] func(*ApplicationChat[S, C], *telegram.TelegramUpdateContext, any)
 
-type renderFuncType[S any, C any] func(context.Context, *ApplicationChat[S, C]) error
+type RenderFuncType[S any, C any] func(context.Context, *ApplicationChat[S, C]) error
 
-type stateToCompFuncType[S any, C any] func(S) component.Comp
+type StateToCompFuncType[S any, C any] func(S) component.Comp
 
-type createAppStateFunc[S any] func(*telegram.TelegramUpdateContext) S
+type CreateAppStateFunc[S any] func(*telegram.TelegramUpdateContext) S
 
 // Defines Application with state S
 type Application[S any, C any] struct {
-	CreateAppState createAppStateFunc[S]
+	CreateAppState CreateAppStateFunc[S]
 
-	HandleActionExternal handleActionFunc[S, C]
+	HandleActionExternal HandleActionFunc[S, C]
 
 	// actions reducer
-	HandleAction handleActionFunc[S, C]
+	HandleAction HandleActionFunc[S, C]
 
-	HandleMessage handleMessageFunc[S, C]
+	HandleMessage HandleMessageFunc[S, C]
 
-	HandleCallback handleCallbackFunc[S, C]
+	HandleCallback HandleCallbackFunc[S, C]
 
 	CreateGlobalContext func(state *ChatState[S, C]) C
 
 	// not used currently
-	HandleInit handleInitFunc[S]
+	HandleInit HandleInitFunc[S]
 
-	StateToComp stateToCompFuncType[S, C]
+	StateToComp StateToCompFuncType[S, C]
 
 	// use state to render bot interface to the user
-	RenderFunc renderFuncType[S, C]
+	RenderFunc RenderFuncType[S, C]
 
 	CreateChatRenderer func(*telegram.TelegramUpdateContext) render.ChatRenderer
 
 	Loggers logging.TgbotLoggers
 }
 
-type ApplicationProps[S any, C any] struct {
-	HandleMessage       handleMessageFunc[S, C]
-	HandleCallback      handleCallbackFunc[S, C]
-	HandleInit          handleInitFunc[S]
-	RenderFunc          renderFuncType[S, C]
+type NewApplicationProps[S any, C any] struct {
+	HandleMessage       HandleMessageFunc[S, C]
+	HandleCallback      HandleCallbackFunc[S, C]
+	HandleInit          HandleInitFunc[S]
+	RenderFunc          RenderFuncType[S, C]
 	CreateRenderer      func(*telegram.TelegramUpdateContext) render.ChatRenderer
 	CreateGlobalContext func(*ChatState[S, C]) C
 }
 
-func NewApplication[S any, C any](
+func (app *Application[S, C]) globalContext(chatState *ChatState[S, C]) component.GlobalContext[C] {
+	if app.CreateGlobalContext != nil {
+		ctxValue := app.CreateGlobalContext(chatState)
+		return component.NewGlobalContextTyped[C](ctxValue)
+	} else {
+		return component.NewEmptyGlobalContext()
+	}
+}
+
+func New[S any, C any](
 	// Creates state
 	createAppState func(*telegram.TelegramUpdateContext) S,
 	// turns state into basic elements
-	stateToComp stateToCompFuncType[S, C],
+	stateToComp StateToCompFuncType[S, C],
 	// handles action
-	handleAction handleActionFunc[S, C],
-	propss ...*ApplicationProps[S, C],
+	handleAction HandleActionFunc[S, C],
+	propss ...*NewApplicationProps[S, C],
 ) *Application[S, C] {
 
-	props := &ApplicationProps[S, C]{}
+	props := &NewApplicationProps[S, C]{}
 
 	if len(propss) > 0 {
 		props = propss[0]
@@ -108,7 +117,7 @@ func NewApplication[S any, C any](
 
 	if createRenderer == nil {
 		createRenderer = func(tc *telegram.TelegramUpdateContext) render.ChatRenderer {
-			return telegram.NewTelegramChatRenderer(tc.Bot, tc.Update.User)
+			return render.NewTelegramChatRenderer(tc.Bot, tc.Update.User)
 		}
 	}
 
@@ -126,14 +135,5 @@ func NewApplication[S any, C any](
 		CreateGlobalContext:  createContext,
 		HandleActionExternal: DefaultHandleActionExternal[S, C],
 		Loggers:              loggers,
-	}
-}
-
-func (app *Application[S, C]) globalContext(chatState *ChatState[S, C]) component.GlobalContext[C] {
-	if app.CreateGlobalContext != nil {
-		ctxValue := app.CreateGlobalContext(chatState)
-		return component.NewGlobalContextTyped[C](ctxValue)
-	} else {
-		return component.NewEmptyGlobalContext()
 	}
 }

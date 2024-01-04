@@ -79,7 +79,7 @@ func (lst *localStateTree) Get(index []int) *localStateClosure[any] {
 }
 
 type localStateWithGetSet[S any] struct {
-	Getset     CompState[S]
+	Getset     State[S]
 	LocalState *localStateClosure[S]
 }
 
@@ -109,7 +109,7 @@ type ActionLocalState[S any] struct {
 	F     func(S) S
 }
 
-type CompState[S any] struct {
+type State[S any] struct {
 	LocalStateClosure *localStateClosure[S]
 	Index             []int
 }
@@ -119,7 +119,7 @@ type getSetStruct[S any, A any] struct {
 	Set func(func(S) S) A
 }
 
-func (g CompState[S]) Init(initialValue S) getSetStruct[S, any] {
+func (g State[S]) Init(initialValue S) getSetStruct[S, any] {
 
 	if !g.LocalStateClosure.Initialized {
 		// globalLogger.Debug("Initializing",
@@ -146,8 +146,8 @@ func (g CompState[S]) Init(initialValue S) getSetStruct[S, any] {
 	}
 }
 
-func newGetSet[S any](index []int, localState *localStateClosure[S]) CompState[S] {
-	return CompState[S]{
+func newGetSet[S any](index []int, localState *localStateClosure[S]) State[S] {
+	return State[S]{
 		Index:             index,
 		LocalStateClosure: localState,
 	}

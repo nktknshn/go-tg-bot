@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	tgbot "github.com/nktknshn/go-tg-bot/tgbot"
+	"github.com/nktknshn/go-tg-bot/tgbot/application"
 	"go.uber.org/zap"
 )
 
@@ -23,12 +24,12 @@ type TodoGlobalContext struct {
 	TodoList TodoList
 }
 
-type App = tgbot.Application[TodoState, TodoGlobalContext]
-type AppChat = tgbot.ApplicationChat[TodoState, TodoGlobalContext]
-
 type TodoAppDeps struct {
 	UserService UserService
 }
+
+type App = application.Application[TodoState, TodoGlobalContext]
+type AppChat = application.ApplicationChat[TodoState, TodoGlobalContext]
 
 func createChatState(deps TodoAppDeps, tc *tgbot.TelegramUpdateContext) TodoState {
 
@@ -71,7 +72,7 @@ func createChatState(deps TodoAppDeps, tc *tgbot.TelegramUpdateContext) TodoStat
 }
 
 func TodoApp(deps TodoAppDeps) *App {
-	return tgbot.NewApplication(
+	return application.New(
 		// initial state
 		func(tc *tgbot.TelegramUpdateContext) TodoState {
 			return createChatState(deps, tc)
@@ -86,7 +87,7 @@ func TodoApp(deps TodoAppDeps) *App {
 		actionsReducer,
 		// create global context
 	).WithGlobalContext(
-		func(cs *tgbot.ChatState[TodoState, TodoGlobalContext]) TodoGlobalContext {
+		func(cs *application.ChatState[TodoState, TodoGlobalContext]) TodoGlobalContext {
 			return TodoGlobalContext{
 				TodoList: cs.AppState.List,
 				Username: cs.AppState.Username,

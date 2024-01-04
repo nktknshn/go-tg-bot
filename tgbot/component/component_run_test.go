@@ -12,7 +12,7 @@ type TestRunComponent1State struct {
 }
 
 type TestRunComponent1Comp struct {
-	State CompState[TestRunComponent1State]
+	State State[TestRunComponent1State]
 }
 
 func (c TestRunComponent1Comp) Render(o O) {
@@ -32,7 +32,7 @@ func TestRunComponent1(t *testing.T) {
 			111,
 		},
 	}
-	state := CompState[any]{
+	state := State[any]{
 		LocalStateClosure: &localStateClosure,
 		Index:             []int{},
 	}

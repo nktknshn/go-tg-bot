@@ -5,7 +5,7 @@ import (
 	"math/rand"
 
 	"github.com/gotd/td/tg"
-	tgbot "github.com/nktknshn/go-tg-bot/tgbot"
+	"github.com/nktknshn/go-tg-bot/tgbot/telegram"
 )
 
 type FakeUserInfo struct {
@@ -60,7 +60,7 @@ func (u *FakeBotUser) DisplayedMessages() []*tg.Message {
 
 func (u *FakeBotUser) SendTextMessage(text string) tg.UpdateClass {
 
-	bu := tgbot.BotUpdate{}
+	bu := telegram.BotUpdate{}
 
 	textMessage := &tg.Message{
 		Message: text,
@@ -81,7 +81,7 @@ func (u *FakeBotUser) SendTextMessage(text string) tg.UpdateClass {
 }
 
 func (u *FakeBotUser) SendCallbackQuery(data string) tg.UpdateClass {
-	bu := tgbot.BotUpdate{}
+	bu := telegram.BotUpdate{}
 
 	bu.UpdateClass = &tg.UpdateBotCallbackQuery{
 		Data: []byte(data),

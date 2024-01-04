@@ -15,7 +15,7 @@ type App1 struct {
 	// props
 	Counter int
 	// local state
-	State CompState[App1State]
+	State State[App1State]
 }
 
 func (a *App1) Render(o O) {
@@ -55,7 +55,7 @@ func TestRunComponent(t *testing.T) {
 		logging.DevLogger(),
 		&comp,
 		globalContext,
-		CompState[any]{
+		State[any]{
 			LocalStateClosure: &localStateClosure[any]{
 				Initialized: true,
 				Value:       App1State{night: true, hour: 2},

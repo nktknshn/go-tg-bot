@@ -1,4 +1,4 @@
-package tgbot
+package dispatcher
 
 import (
 	"context"

@@ -6,7 +6,9 @@ import (
 
 	"github.com/nktknshn/go-tg-bot/emulator"
 	todo "github.com/nktknshn/go-tg-bot/examples/todo/app"
-	tgbot "github.com/nktknshn/go-tg-bot/tgbot"
+	"github.com/nktknshn/go-tg-bot/tgbot/dispatcher"
+	"github.com/nktknshn/go-tg-bot/tgbot/gotd"
+	"github.com/nktknshn/go-tg-bot/tgbot/logging"
 )
 
 func main() {
@@ -19,17 +21,17 @@ func main() {
 		UserService: userService,
 	})
 
-	dispatcher := app.ChatsDispatcher()
+	dispatcher := dispatcher.ForApplication(app)
 
 	if runEmul {
 		emulator.Run(
-			tgbot.DevLogger(),
+			logging.DevLogger(),
 			dispatcher,
 		)
 	} else {
-		tgbot.Run(
+		gotd.Run(
 			context.Background(),
-			tgbot.DevLogger(),
+			logging.DevLogger(),
 			dispatcher,
 		)
 	}

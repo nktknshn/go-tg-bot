@@ -2,7 +2,7 @@ package emulator
 
 import (
 	"github.com/gotd/td/tg"
-	tgbot "github.com/nktknshn/go-tg-bot/tgbot"
+	"github.com/nktknshn/go-tg-bot/tgbot/logging"
 )
 
 func InlineKeyboardToButtons(ik *tg.ReplyInlineMarkup) MessageButtons {
@@ -45,4 +45,4 @@ func FakeServerToInput(fakeServer *FakeBot) *DrawInput {
 	return result
 }
 
-var logger = tgbot.DevLogger()
+var logger = logging.DevLogger()

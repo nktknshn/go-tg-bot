@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	tgbot "github.com/nktknshn/go-tg-bot/tgbot"
+	"github.com/nktknshn/go-tg-bot/tgbot/component"
 )
 
 var rexItemIdex = regexp.MustCompile(`^/(\d+)`)
@@ -20,7 +21,7 @@ type S = PageTodoListState
 
 type PageTodoList struct {
 	Context TodoGlobalContext
-	State   tgbot.CompState[PageTodoListState]
+	State   component.State[PageTodoListState]
 }
 
 // Select TodoList from the global context.

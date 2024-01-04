@@ -45,3 +45,19 @@ type MessageEditor interface {
 type MessageSender interface {
 	SendMessage(ctx context.Context, params SendMessageParams) (*tg.Message, error)
 }
+
+type AnswerCallbackQueryParams struct {
+	QueryID int64
+}
+
+type CallbackAnswerer interface {
+	AnswerCallbackQuery(context.Context, AnswerCallbackQueryParams) (bool, error)
+}
+
+// Simplified interface for accessing telegram methods
+type TelegramBot interface {
+	MessageDeleter
+	MessageEditor
+	MessageSender
+	CallbackAnswerer
+}

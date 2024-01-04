@@ -5,11 +5,13 @@ import (
 
 	"github.com/gotd/td/tg"
 
-	tgbot "github.com/nktknshn/go-tg-bot/tgbot"
+	"github.com/nktknshn/go-tg-bot/tgbot/dispatcher"
+	"github.com/nktknshn/go-tg-bot/tgbot/render"
+	"github.com/nktknshn/go-tg-bot/tgbot/telegram"
 )
 
 type FakeBot struct {
-	dispatcher *tgbot.ChatsDispatcher
+	dispatcher *dispatcher.ChatsDispatcher
 
 	lastMessageID int
 
@@ -38,7 +40,7 @@ func (fb *FakeBot) AddUserMessage(message *tg.Message) {
 	}
 }
 
-func (fb *FakeBot) SetDispatcher(d *tgbot.ChatsDispatcher) {
+func (fb *FakeBot) SetDispatcher(d *dispatcher.ChatsDispatcher) {
 	fb.dispatcher = d
 }
 
@@ -54,9 +56,9 @@ func (fb *FakeBot) DisplayedMessages(chatID int64) []*tg.Message {
 	return messages
 }
 
-func (fb *FakeBot) SendMessage(ctx context.Context, params tgbot.SendMessageParams) (*tg.Message, error) {
+func (fb *FakeBot) SendMessage(ctx context.Context, params telegram.SendMessageParams) (*tg.Message, error) {
 
-	m := fb.createMessage(params.ChatID, &tgbot.ChatRendererMessageProps{
+	m := fb.createMessage(params.ChatID, &render.ChatRendererMessageProps{
 		Text:        params.Text,
 		ReplyMarkup: params.ReplyMarkup,
 	})
@@ -66,7 +68,7 @@ func (fb *FakeBot) SendMessage(ctx context.Context, params tgbot.SendMessagePara
 	return m, nil
 }
 
-func (fb *FakeBot) AnswerCallbackQuery(ctx context.Context, params tgbot.AnswerCallbackQueryParams) (bool, error) {
+func (fb *FakeBot) AnswerCallbackQuery(ctx context.Context, params telegram.AnswerCallbackQueryParams) (bool, error) {
 
 	if fb.replyCallback != nil {
 		fb.replyCallback()
@@ -75,7 +77,7 @@ func (fb *FakeBot) AnswerCallbackQuery(ctx context.Context, params tgbot.AnswerC
 	return true, nil
 }
 
-func (fb *FakeBot) EditMessageText(ctx context.Context, params tgbot.EditMessageTextParams) (*tg.Message, error) {
+func (fb *FakeBot) EditMessageText(ctx context.Context, params telegram.EditMessageTextParams) (*tg.Message, error) {
 
 	if message, ok := fb.Messages[params.MessageID]; ok {
 		message.Message = params.Text
@@ -88,14 +90,14 @@ func (fb *FakeBot) EditMessageText(ctx context.Context, params tgbot.EditMessage
 	return nil, nil
 }
 
-func (fb *FakeBot) DeleteMessage(ctx context.Context, params tgbot.DeleteMessageParams) (bool, error) {
+func (fb *FakeBot) DeleteMessage(ctx context.Context, params telegram.DeleteMessageParams) (bool, error) {
 	if _, ok := fb.Messages[params.MessageID]; ok {
 		delete(fb.Messages, params.MessageID)
 		fb.notify()
 		return true, nil
 	}
 
-	return false, tgbot.ErrMessageNotFound
+	return false, telegram.ErrMessageNotFound
 }
 
 func (fb *FakeBot) notify() {
@@ -113,7 +115,7 @@ func (fs *FakeBot) getNewID() int {
 	return fs.lastMessageID
 }
 
-func (fs *FakeBot) createMessage(chatID int64, props *tgbot.ChatRendererMessageProps) *tg.Message {
+func (fs *FakeBot) createMessage(chatID int64, props *render.ChatRendererMessageProps) *tg.Message {
 	botMessage := &tg.Message{
 		ID:          fs.getNewID(),
 		Message:     props.Text,

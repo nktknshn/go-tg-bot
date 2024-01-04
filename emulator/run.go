@@ -1,11 +1,11 @@
 package emulator
 
 import (
-	tgbot "github.com/nktknshn/go-tg-bot/tgbot"
+	"github.com/nktknshn/go-tg-bot/tgbot/dispatcher"
 	"go.uber.org/zap"
 )
 
-func Run(logger *zap.Logger, dispatcher *tgbot.ChatsDispatcher) {
+func Run(logger *zap.Logger, dispatcher *dispatcher.ChatsDispatcher) {
 	bot := NewFakeBot()
 	EmulatorMain(bot, dispatcher)
 }

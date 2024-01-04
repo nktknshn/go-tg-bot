@@ -1,4 +1,4 @@
-package tgbot
+package gotd
 
 import (
 	"context"
@@ -8,24 +8,24 @@ import (
 	"github.com/gotd/td/telegram/message"
 	"github.com/gotd/td/telegram/message/unpack"
 	"github.com/gotd/td/tg"
-
 	"github.com/nktknshn/go-tg-bot/gogotd"
 	"github.com/nktknshn/go-tg-bot/helpers"
 	"github.com/nktknshn/go-tg-bot/tgbot/telegram"
 )
 
 // implements TelegramBot
-type GotdBot struct {
+type GotdTelegramBot struct {
 	sender *message.Sender
 	client *tg.Client
 	rand   io.Reader
 }
 
-func NewGotdBot(sender *message.Sender, client *tg.Client) *GotdBot {
-	return &GotdBot{sender: sender, client: client, rand: rand.Reader}
+func NewGotdBot(sender *message.Sender, client *tg.Client) *GotdTelegramBot {
+	return &GotdTelegramBot{sender: sender, client: client, rand: rand.Reader}
 }
 
-func (b *GotdBot) DeleteMessage(ctx context.Context, params telegram.DeleteMessageParams) (bool, error) {
+// impletentation of TelegramBot
+func (b *GotdTelegramBot) DeleteMessage(ctx context.Context, params telegram.DeleteMessageParams) (bool, error) {
 
 	affected, err := b.client.MessagesDeleteMessages(ctx, &tg.MessagesDeleteMessagesRequest{
 		ID:     []int{params.MessageID},
@@ -39,7 +39,8 @@ func (b *GotdBot) DeleteMessage(ctx context.Context, params telegram.DeleteMessa
 	return affected.PtsCount > 0, nil
 }
 
-func (b *GotdBot) EditMessageText(ctx context.Context, params telegram.EditMessageTextParams) (*tg.Message, error) {
+// impletentation of TelegramBot
+func (b *GotdTelegramBot) EditMessageText(ctx context.Context, params telegram.EditMessageTextParams) (*tg.Message, error) {
 
 	outputMsg := &tg.MessagesEditMessageRequest{
 		Peer:      &tg.InputPeerUser{UserID: params.ChatID, AccessHash: params.AccessHash},
@@ -65,7 +66,8 @@ func (b *GotdBot) EditMessageText(ctx context.Context, params telegram.EditMessa
 	return msg, nil
 }
 
-func (b *GotdBot) SendMessage(ctx context.Context, params telegram.SendMessageParams) (*tg.Message, error) {
+// impletentation of TelegramBot
+func (b *GotdTelegramBot) SendMessage(ctx context.Context, params telegram.SendMessageParams) (*tg.Message, error) {
 
 	id, err := helpers.RandInt64(b.rand)
 
@@ -92,8 +94,9 @@ func (b *GotdBot) SendMessage(ctx context.Context, params telegram.SendMessagePa
 	return msg, nil
 }
 
+// impletentation of TelegramBot
 // reply to use button press
-func (b *GotdBot) AnswerCallbackQuery(ctx context.Context, params telegram.AnswerCallbackQueryParams) (bool, error) {
+func (b *GotdTelegramBot) AnswerCallbackQuery(ctx context.Context, params telegram.AnswerCallbackQueryParams) (bool, error) {
 
 	w, err := b.client.MessagesSetBotCallbackAnswer(ctx, &tg.MessagesSetBotCallbackAnswerRequest{
 		QueryID: params.QueryID,
@@ -104,56 +107,4 @@ func (b *GotdBot) AnswerCallbackQuery(ctx context.Context, params telegram.Answe
 	}
 
 	return w, nil
-}
-
-// Updates handler
-type GotdHandler struct {
-	dispatcher *ChatsDispatcher
-	sender     *message.Sender
-	client     *tg.Client
-}
-
-func NewGotdHandler(dispatcher *ChatsDispatcher) *GotdHandler {
-	return &GotdHandler{dispatcher: dispatcher}
-}
-
-func (h *GotdHandler) SetSender(sender *message.Sender) {
-	h.sender = sender
-}
-
-func (h *GotdHandler) SetClient(client *tg.Client) {
-	h.client = client
-}
-
-func (h *GotdHandler) Bot() telegram.TelegramBot {
-	return NewGotdBot(h.sender, h.client)
-}
-
-func (h *GotdHandler) Handle(ctx context.Context, updates tg.UpdatesClass) error {
-
-	extract, err := helpers.ExtractUpdates(updates)
-
-	if err != nil {
-		return err
-	}
-
-	for _, update := range extract.Updates {
-
-		peerUser, ok := helpers.GetUser(extract.Entities, update)
-
-		if !ok {
-			continue
-		}
-
-		u := telegram.BotUpdate{
-			UpdateClass: update,
-			User:        peerUser,
-			Entities:    extract.Entities,
-		}
-
-		h.dispatcher.HandleUpdate(ctx, h.Bot(), u)
-		// multierr.AppendInto(&err, )
-	}
-
-	return err
 }

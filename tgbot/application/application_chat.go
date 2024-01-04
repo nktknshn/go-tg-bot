@@ -10,14 +10,6 @@ import (
 	"go.uber.org/zap"
 )
 
-type ApplicationChatLoggers struct {
-	Root      *zap.Logger
-	Component *zap.Logger
-	Handle    *zap.Logger
-	Action    *zap.Logger
-	Render    *zap.Logger
-}
-
 // tie together an application methods and a chat state
 type ApplicationChat[S any, C any] struct {
 	App   *Application[S, C]
@@ -31,7 +23,7 @@ func (ac *ApplicationChat[S, C]) SetChatState(chatState *ChatState[S, C]) {
 	ac.State = chatState
 }
 
-func NewApplicationChat[S any, C any](app Application[S, C], tc *telegram.TelegramUpdateContext) *ApplicationChat[S, C] {
+func NewApplicationChat[S any, C any](app *Application[S, C], tc *telegram.TelegramUpdateContext) *ApplicationChat[S, C] {
 	appState := app.CreateAppState(tc)
 
 	chatState := ChatState[S, C]{
@@ -63,7 +55,7 @@ func NewApplicationChat[S any, C any](app Application[S, C], tc *telegram.Telegr
 	res := app.ComputeNextState(&chatState, loggers.Component)
 
 	return &ApplicationChat[S, C]{
-		App:     &app,
+		App:     app,
 		State:   &res.NextChatState,
 		Loggers: loggers,
 	}

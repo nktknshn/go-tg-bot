@@ -2,6 +2,7 @@ package telegram
 
 import "github.com/gotd/td/tg"
 
+// wraps UpdateClass
 type BotUpdate struct {
 	UpdateClass tg.UpdateClass
 	User        *tg.User

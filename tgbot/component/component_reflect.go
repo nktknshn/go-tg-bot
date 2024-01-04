@@ -73,7 +73,7 @@ func reflectCompId(comp Comp) string {
 func reflectCompLocalState(
 	logger *zap.Logger,
 	comp Comp,
-	state CompState[any],
+	state State[any],
 ) Comp {
 	logger.Debug("ReflectCompLocalState")
 

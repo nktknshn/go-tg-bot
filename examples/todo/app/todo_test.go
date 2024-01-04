@@ -5,6 +5,7 @@ import (
 
 	"github.com/nktknshn/go-tg-bot/emulator"
 	tgbot "github.com/nktknshn/go-tg-bot/tgbot"
+	"github.com/nktknshn/go-tg-bot/tgbot/dispatcher"
 )
 
 func TestTodo(t *testing.T) {
@@ -16,7 +17,7 @@ func TestTodo(t *testing.T) {
 		userService,
 	})
 
-	dispatcher := app.ChatsDispatcher()
+	dispatcher := dispatcher.ForApplication(app)
 	bot := emulator.NewFakeBot()
 
 	bot.SetDispatcher(dispatcher)

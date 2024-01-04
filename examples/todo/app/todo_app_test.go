@@ -7,7 +7,8 @@ import (
 
 	"github.com/nktknshn/go-tg-bot/btest"
 	emulator "github.com/nktknshn/go-tg-bot/emulator"
-	tgbot "github.com/nktknshn/go-tg-bot/tgbot"
+	"github.com/nktknshn/go-tg-bot/tgbot/dispatcher"
+	"github.com/nktknshn/go-tg-bot/tgbot/logging"
 	"go.uber.org/zap"
 
 	"github.com/nktknshn/go-tg-bot/emulator/helpers"
@@ -22,8 +23,8 @@ func TestTodoApp(t *testing.T) {
 
 	t.Log("TestTodoApp")
 
-	loggers := tgbot.TgbotLoggers{
-		Base: tgbot.DevLogger(),
+	loggers := logging.TgbotLoggers{
+		Base: logging.DevLogger(),
 		ChatsDistpatcher: func(l *zap.Logger) *zap.Logger {
 			return l.Named("ChatsDistpatcher")
 		},
@@ -47,7 +48,7 @@ func TestTodoApp(t *testing.T) {
 
 	app.SetLoggers(loggers)
 
-	d := app.ChatsDispatcher()
+	d := dispatcher.ForApplication(app)
 
 	d.SetLogger(loggers.ChatsDistpatcher(loggers.Base))
 

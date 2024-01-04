@@ -9,6 +9,11 @@ import (
 
 	"github.com/nktknshn/go-tg-bot/emulator"
 	tgbot "github.com/nktknshn/go-tg-bot/tgbot"
+	"github.com/nktknshn/go-tg-bot/tgbot/application"
+	"github.com/nktknshn/go-tg-bot/tgbot/component"
+	"github.com/nktknshn/go-tg-bot/tgbot/dispatcher"
+	"github.com/nktknshn/go-tg-bot/tgbot/gotd"
+	"github.com/nktknshn/go-tg-bot/tgbot/logging"
 	"go.uber.org/zap"
 )
 
@@ -52,7 +57,7 @@ type WelcomState struct {
 
 type Welcom struct {
 	Username string `tgbot:"ctx"`
-	State    tgbot.CompState[WelcomState]
+	State    component.State[WelcomState]
 }
 
 func (w *Welcom) Render(o tgbot.O) {
@@ -104,7 +109,7 @@ func (app *App) Render(o tgbot.O) {
 	})
 }
 
-var counterApp = tgbot.NewApplication[State, any](
+var counterApp = application.New[State, any](
 	func(tc *tgbot.TelegramUpdateContext) State {
 		// tc.Logger.Info("CreateAppState")
 		// tc.Message.
@@ -124,7 +129,7 @@ var counterApp = tgbot.NewApplication[State, any](
 
 		return &app
 	},
-	func(ac *tgbot.ApplicationChat[State, any], tc *tgbot.TelegramUpdateContext, a any) {
+	func(ac *application.ApplicationChat[State, any], tc *tgbot.TelegramUpdateContext, a any) {
 		// tc.Logger.Info("HandleAction", zap.Any("action", a))
 
 		switch a := a.(type) {
@@ -137,7 +142,7 @@ var counterApp = tgbot.NewApplication[State, any](
 	},
 )
 
-var logger = tgbot.DevLogger()
+var logger = logging.DevLogger()
 
 func main() {
 	// if first argument is "emulator", run emulator
@@ -146,12 +151,12 @@ func main() {
 	ctx := context.Background()
 	logger.Debug("Starting bot", zap.Any("args", flag.Args()))
 
-	dispatcher := counterApp.ChatsDispatcher()
+	dispatcher := dispatcher.ForApplication(counterApp)
 
 	if len(flag.Args()) > 0 && flag.Args()[0] == "emulator" {
 		emulator.Run(logger, dispatcher)
 	} else if len(flag.Args()) > 0 && flag.Args()[0] == "real" {
-		tgbot.Run(ctx, logger, dispatcher)
+		gotd.Run(ctx, logger, dispatcher)
 	} else {
 		logger.Fatal("Unknown argument", zap.Any("args", flag.Args()))
 		fmt.Println("emulator or real")

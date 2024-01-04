@@ -7,13 +7,13 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
-	tgbot "github.com/nktknshn/go-tg-bot/tgbot"
+	"github.com/nktknshn/go-tg-bot/tgbot/dispatcher"
 	"go.uber.org/zap"
 )
 
 func EmulatorMain(
 	bot *FakeBot,
-	dispatcher *tgbot.ChatsDispatcher,
+	dispatcher *dispatcher.ChatsDispatcher,
 ) {
 	a := app.New()
 	w := a.NewWindow("Emulator")
