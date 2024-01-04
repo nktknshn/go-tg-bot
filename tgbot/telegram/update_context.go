@@ -13,13 +13,24 @@ type TelegramUpdateContext struct {
 
 	ChatID int64
 
-	// for tracking purposes
+	// random for tracking purposes
 	UpdateID int64
 	Update   BotUpdate
 
 	Bot TelegramBot
 
 	UpdateLogger *zap.Logger
+}
+
+type TelegramContextTextMessage struct {
+	TelegramUpdateContext
+	Text    string
+	Message *tg.Message
+}
+
+type TelegramContextCallback struct {
+	TelegramUpdateContext
+	UpdateBotCallbackQuery *tg.UpdateBotCallbackQuery
 }
 
 func (tc TelegramUpdateContext) AsTextMessage() (*TelegramContextTextMessage, bool) {
@@ -46,15 +57,17 @@ func (tc TelegramUpdateContext) AsTextMessage() (*TelegramContextTextMessage, bo
 	}, true
 }
 
-type TelegramContextTextMessage struct {
-	TelegramUpdateContext
-	Text    string
-	Message *tg.Message
-}
+func (tc TelegramUpdateContext) AsCallback() (*TelegramContextCallback, bool) {
+	u, ok := tc.Update.UpdateClass.(*tg.UpdateBotCallbackQuery)
 
-type TelegramContextCallback struct {
-	TelegramUpdateContext
-	UpdateBotCallbackQuery *tg.UpdateBotCallbackQuery
+	if !ok {
+		return nil, false
+	}
+
+	return &TelegramContextCallback{
+		TelegramUpdateContext:  tc,
+		UpdateBotCallbackQuery: u,
+	}, true
 }
 
 func (tc TelegramContextCallback) AnswerCallbackQuery() {
@@ -69,17 +82,4 @@ func (tc TelegramContextCallback) AnswerCallbackQuery() {
 	tc.Bot.AnswerCallbackQuery(tc.Ctx, AnswerCallbackQueryParams{
 		QueryID: u.QueryID,
 	})
-}
-
-func (tc TelegramUpdateContext) AsCallback() (*TelegramContextCallback, bool) {
-	u, ok := tc.Update.UpdateClass.(*tg.UpdateBotCallbackQuery)
-
-	if !ok {
-		return nil, false
-	}
-
-	return &TelegramContextCallback{
-		TelegramUpdateContext:  tc,
-		UpdateBotCallbackQuery: u,
-	}, true
 }

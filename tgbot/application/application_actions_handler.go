@@ -9,7 +9,9 @@ import (
 )
 
 // Handles some internal actions sent from handlers
-func internalActionHandle[S any, C any](ac *ApplicationChat[S, C], tc *telegram.TelegramUpdateContext, action any, logger *zap.Logger) {
+func internalActionHandle[S any, C any](ac *ApplicationChat[S, C], tc *telegram.TelegramUpdateContext, action any) {
+	logger := ac.Loggers.Action
+
 	logger.Debug("HandleAction", zap.Any("action", reflection.ReflectStructName(action)))
 
 	switch a := action.(type) {
@@ -32,7 +34,7 @@ func internalActionHandle[S any, C any](ac *ApplicationChat[S, C], tc *telegram.
 		logger.Debug("A list of actions was caught")
 
 		for _, a := range a {
-			internalActionHandle[S, C](ac, tc, a, logger)
+			internalActionHandle[S, C](ac, tc, a)
 		}
 		return
 	}

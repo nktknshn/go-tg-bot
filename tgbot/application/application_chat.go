@@ -112,7 +112,7 @@ func DefaultHandlerCallback[S any, C any](ac *ApplicationChat[S, C], tc *telegra
 			return
 		}
 
-		internalActionHandle(ac, &tc.TelegramUpdateContext, result.Action, logger.Named("Action"))
+		internalActionHandle(ac, &tc.TelegramUpdateContext, result.Action)
 
 		if !result.NoAnswer {
 			tc.AnswerCallbackQuery()
@@ -150,7 +150,7 @@ func DefaultHandleMessage[S any, C any](ac *ApplicationChat[S, C], tc *telegram.
 
 		action := ac.State.inputHandler(tc.Message.Message)
 
-		internalActionHandle(ac, &tc.TelegramUpdateContext, action, logger.Named("Action"))
+		internalActionHandle(ac, &tc.TelegramUpdateContext, action)
 
 	} else {
 		logger.Warn("Missing InputHandler")
@@ -174,7 +174,7 @@ func DefaultHandleActionExternal[S any, C any](ac *ApplicationChat[S, C], tc *te
 	ac.State.LockState(logger.Named("LockState"))
 	defer ac.State.UnlockState(logger.Named("LockState"))
 
-	internalActionHandle(ac, tc, action, logger)
+	internalActionHandle(ac, tc, action)
 
 	err := ac.App.RenderFunc(tc.Ctx, ac)
 

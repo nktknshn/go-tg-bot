@@ -6,6 +6,7 @@ import (
 	"github.com/nktknshn/go-tg-bot/tgbot/telegram"
 )
 
+// some exports for convenience
 type Comp = component.Comp
 type O = component.O
 

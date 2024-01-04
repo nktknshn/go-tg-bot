@@ -11,6 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// holds all the state of a chat
 type ChatState[S any, C any] struct {
 	ChatID int64
 
@@ -25,15 +26,16 @@ type ChatState[S any, C any] struct {
 	// elements visible to the user
 	renderedElements []render.RenderedElement
 
-	// handler for text messages
+	// current handler for text messages
 	inputHandler common.ChatInputHandler
 
-	// handler for callback queries
+	// current handler for button presses
 	callbackHandler common.ChatCallbackHandler
 
 	// renderer for the messages
 	Renderer render.ChatRenderer
 
+	// mutex for locking the state
 	lock *sync.Mutex
 }
 

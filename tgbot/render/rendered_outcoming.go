@@ -17,11 +17,11 @@ const (
 )
 
 type RenderedElement interface {
+	ID() int
 	String() string
 	RenderedKind() string
 	CanReplace(outcoming.OutcomingMessage) bool
 	Equal(RenderedElement) bool
-	ID() int
 }
 
 // Messages that have been sent to user
@@ -158,7 +158,7 @@ func (r *RenderedPhotoGroup) renderedKind() string {
 	return KindRenderedPhotoGroup
 }
 
-func (r *RenderedPhotoGroup) canReplace(outcoming outcoming.OutcomingMessage) bool {
+func (r *RenderedPhotoGroup) CanReplace(outcoming outcoming.OutcomingMessage) bool {
 	return false
 }
 

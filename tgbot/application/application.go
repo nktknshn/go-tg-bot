@@ -53,7 +53,7 @@ type Application[S any, C any] struct {
 
 	CreateChatRenderer func(*telegram.TelegramUpdateContext) render.ChatRenderer
 
-	Loggers logging.TgbotLoggers
+	Loggers *logging.TgbotLoggers
 }
 
 type NewApplicationProps[S any, C any] struct {
@@ -121,7 +121,7 @@ func New[S any, C any](
 		}
 	}
 
-	loggers := logging.DefaultLoggers
+	loggers := &logging.DefaultLoggers
 
 	return &Application[S, C]{
 		HandleInit:           handleInit,

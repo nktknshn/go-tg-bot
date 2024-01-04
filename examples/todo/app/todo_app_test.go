@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/nktknshn/go-tg-bot/btest"
-	emulator "github.com/nktknshn/go-tg-bot/emulator"
+	"github.com/nktknshn/go-tg-bot/emulator"
 	"github.com/nktknshn/go-tg-bot/tgbot/dispatcher"
 	"github.com/nktknshn/go-tg-bot/tgbot/logging"
 	"go.uber.org/zap"
@@ -16,29 +16,48 @@ import (
 	todo "github.com/nktknshn/go-tg-bot/examples/todo/app"
 )
 
-func TestTodoApp(t *testing.T) {
+type UserLogsProps struct {
+	Base       *zap.Logger
+	LogsFolder string
+}
 
-	tempDir := t.TempDir()
-	usersJson := path.Join(tempDir, "users.json")
-
-	t.Log("TestTodoApp")
-
-	loggers := logging.TgbotLoggers{
-		Base: logging.DevLogger(),
+func UserLogs(props UserLogsProps) *logging.TgbotLoggers {
+	return &logging.TgbotLoggers{
+		Base: props.Base,
 		ChatsDistpatcher: func(l *zap.Logger) *zap.Logger {
 			return l.Named("ChatsDistpatcher")
 		},
 		ChatHandler: func(l *zap.Logger) *zap.Logger {
 			return l.Named("ChatHandler")
 		},
-		Component: func(l *zap.Logger) *zap.Logger {
-			// return l.Named("Component")
-			return zap.NewNop()
-		},
 		ApplicationChat: func(l *zap.Logger) *zap.Logger {
+			// chat specific logger
 			return l.Named("ApplicationChat")
 		},
+		Component: func(l *zap.Logger) *zap.Logger {
+			return l.Named("Component")
+		},
 	}
+}
+
+type TestScope struct {
+	loggers *logging.TgbotLoggers
+	tempDir string
+	app     *todo.App
+	disp    *dispatcher.ChatsDispatcher
+	bot     *emulator.FakeBot
+	user1   *emulator.FakeBotUser
+}
+
+func NewTestScope(t *testing.T) *TestScope {
+
+	tempDir := t.TempDir()
+	usersJson := path.Join(tempDir, "users.json")
+
+	loggers := UserLogs(UserLogsProps{
+		Base:       logging.Logger(),
+		LogsFolder: tempDir,
+	})
 
 	app := todo.TodoApp(
 		todo.TodoAppDeps{
@@ -49,7 +68,6 @@ func TestTodoApp(t *testing.T) {
 	app.SetLoggers(loggers)
 
 	d := dispatcher.ForApplication(app)
-
 	d.SetLogger(loggers.ChatsDistpatcher(loggers.Base))
 
 	bot := emulator.NewFakeBot()
@@ -60,6 +78,30 @@ func TestTodoApp(t *testing.T) {
 		FirstName: "User",
 		LastName:  "One",
 	})
+
+	return &TestScope{
+		loggers: loggers,
+		tempDir: tempDir,
+		app:     app,
+		disp:    d,
+		bot:     bot,
+		user1:   user1,
+	}
+}
+
+func TestTodoAppInit(t *testing.T) {
+	scope := NewTestScope(t)
+	scope.user1.SendTextMessage("/start")
+
+	time.Sleep(200 * time.Millisecond)
+}
+
+func TestTodoApp(t *testing.T) {
+
+	scope := NewTestScope(t)
+
+	user1 := scope.user1
+	d := scope.disp
 
 	user1.SendTextMessage("/start")
 
