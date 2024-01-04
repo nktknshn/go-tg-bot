@@ -25,8 +25,8 @@ func NewApplicationChatHandler[S any, C any](app *application.Application[S, C],
 		app:     app,
 		appChat: application.NewApplicationChat[S, C](app, tc),
 		logger: app.Loggers.
-			ChatHandler(app.Loggers.Base).
-			With(zap.Int64("ChatID", tc.ChatID)),
+			ChatHandler(app.Loggers.Base, tc),
+		// With(zap.Int64("ChatID", tc.ChatID)),
 	}
 }
 

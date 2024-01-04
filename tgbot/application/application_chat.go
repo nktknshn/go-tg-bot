@@ -26,10 +26,7 @@ func (ac *ApplicationChat[S, C]) SetChatState(chatState *ChatState[S, C]) {
 
 func NewApplicationChat[S any, C any](app *Application[S, C], tc *telegram.TelegramUpdateContext) *ApplicationChat[S, C] {
 
-	rootLogger := app.Loggers.ApplicationChat(
-		app.Loggers.Base,
-		tc.ChatID,
-	).With(zap.Int64("ChatID", tc.ChatID))
+	rootLogger := app.Loggers.ApplicationChat(app.Loggers.Base, tc)
 
 	loggers := &ApplicationChatLoggers{
 		Root: rootLogger,

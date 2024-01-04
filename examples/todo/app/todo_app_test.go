@@ -1,7 +1,6 @@
 package todo_test
 
 import (
-	"fmt"
 	"os"
 	"path"
 	"testing"
@@ -18,55 +17,6 @@ import (
 
 	todo "github.com/nktknshn/go-tg-bot/examples/todo/app"
 )
-
-type UserLogsProps struct {
-	Base       *zap.Logger
-	LogsFolder string
-}
-
-func UserLogs(props UserLogsProps) *logging.TgbotLoggers {
-
-	// file := path.Join(props.LogsFolder, "tgbot.log")
-
-	// zapcore.AddSync()
-
-	return &logging.TgbotLoggers{
-		Base: props.Base,
-		ChatsDistpatcher: func(l *zap.Logger) *zap.Logger {
-			return l.Named("ChatsDistpatcher")
-		},
-		ChatHandler: func(l *zap.Logger) *zap.Logger {
-			return l.Named("ChatHandler")
-		},
-		ApplicationChat: func(l *zap.Logger, chatID int64) *zap.Logger {
-			// chat specific logger
-
-			return l.Named("ApplicationChat").WithOptions(
-				zap.WrapCore(func(core zapcore.Core) zapcore.Core {
-
-					fname := fmt.Sprintf("user_%d.log", chatID)
-					chatLogFile := path.Join(props.LogsFolder, fname)
-
-					file, err := os.OpenFile(chatLogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-
-					if err != nil {
-						l.Error("failed to open log file", zap.Error(err))
-						return core
-					}
-
-					return zapcore.NewCore(
-						zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()),
-						zapcore.AddSync(zapcore.Lock(file)),
-						zap.DebugLevel,
-					)
-				}),
-			)
-		},
-		Component: func(l *zap.Logger) *zap.Logger {
-			return l.Named("Component").WithOptions()
-		},
-	}
-}
 
 type TestScope struct {
 	loggers *logging.TgbotLoggers
@@ -89,14 +39,14 @@ func NewTestScope(t *testing.T) *TestScope {
 		zap.DebugLevel,
 	)
 
-	baseLogger := zap.New(
-		core,
+	baseLogger := zap.New(core)
+
+	logSystem := logging.NewLogsSystem(
+		baseLogger,
+		tempDir,
 	)
 
-	loggers := UserLogs(UserLogsProps{
-		Base:       baseLogger,
-		LogsFolder: tempDir,
-	})
+	loggers := logSystem.TgbotLoggers()
 
 	app := todo.TodoApp(
 		todo.TodoAppDeps{
