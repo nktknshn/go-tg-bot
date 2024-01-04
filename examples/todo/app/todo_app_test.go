@@ -65,8 +65,6 @@ func TestTodoApp(t *testing.T) {
 
 	time.Sleep(200 * time.Millisecond)
 
-	println("user1 messages:")
-
 	btest.AssertDisplayedMessages(t, user1, []helpers.MessageSimple{{
 		Message: "Welcome User One @user1",
 		Buttons: [][]helpers.ButtonSimpl{{{

@@ -1,6 +1,9 @@
 package outcoming
 
-import "github.com/nktknshn/go-tg-bot/tgbot/common"
+import (
+	"github.com/nktknshn/go-tg-bot/tgbot/common"
+	"github.com/nktknshn/go-tg-bot/tgbot/component"
+)
 
 type callbackMap map[string]func() *common.CallbackResult
 
@@ -41,5 +44,27 @@ func callbackMapToHandler(cbmap callbackMap) common.ChatCallbackHandler {
 			return nil
 		}
 
+	}
+}
+
+func buildInputHandler(ihs []component.ElementInputHandler) common.ChatInputHandler {
+
+	if len(ihs) == 0 {
+		return nil
+	}
+
+	return func(text string) any {
+
+		for _, h := range ihs {
+			res := h.Handler(text)
+
+			_, goNext := res.(common.ActionNext)
+
+			if !goNext {
+				return res
+			}
+
+		}
+		return common.ActionNext{}
 	}
 }

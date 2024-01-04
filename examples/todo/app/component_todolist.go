@@ -17,7 +17,7 @@ type PageTodoListState struct {
 	SelectedIndex int
 }
 
-type S = PageTodoListState
+type s = PageTodoListState
 
 type PageTodoList struct {
 	Context TodoGlobalContext
@@ -35,8 +35,8 @@ func (a *PageTodoList) Render(o tgbot.O) {
 
 	// initialize the component state
 	state := a.State.Init(PageTodoListState{})
-	resetState := state.Set(func(ptls S) S {
-		return S{}
+	resetState := state.Set(func(ptls s) s {
+		return s{}
 	})
 
 	candidateItem := state.Get().CandidateItem
@@ -45,26 +45,26 @@ func (a *PageTodoList) Render(o tgbot.O) {
 	isItemSelected := state.Get().Selected
 	selectedIndex := state.Get().SelectedIndex
 
-	o.InputHandler(func(s string) any {
+	o.InputHandler(func(str string) any {
 
 		if hasCandidateItem {
 			return tgbot.Next()
 		}
 
-		if rexItemIdex.Match([]byte(s)) {
-			idxStr := rexItemIdex.FindStringSubmatch(s)[1]
+		if rexItemIdex.Match([]byte(str)) {
+			idxStr := rexItemIdex.FindStringSubmatch(str)[1]
 			idx, _ := strconv.Atoi(idxStr)
 
-			return state.Set(func(ptls S) S {
-				return S{
+			return state.Set(func(ptls s) s {
+				return s{
 					Selected:      true,
 					SelectedIndex: idx,
 				}
 			})
 		}
 
-		return state.Set(func(ptls S) S {
-			return S{CandidateItem: s}
+		return state.Set(func(ptls s) s {
+			return s{CandidateItem: str}
 		})
 	})
 

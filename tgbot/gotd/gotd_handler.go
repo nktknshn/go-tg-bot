@@ -6,7 +6,7 @@ import (
 	"github.com/gotd/td/telegram/message"
 	"github.com/gotd/td/tg"
 
-	"github.com/nktknshn/go-tg-bot/helpers"
+	"github.com/nktknshn/go-tg-bot/gogotd"
 	"github.com/nktknshn/go-tg-bot/tgbot/dispatcher"
 	"github.com/nktknshn/go-tg-bot/tgbot/telegram"
 )
@@ -36,7 +36,7 @@ func (h *GotdHandler) Bot() telegram.TelegramBot {
 
 func (h *GotdHandler) Handle(ctx context.Context, updates tg.UpdatesClass) error {
 
-	extract, err := helpers.ExtractUpdates(updates)
+	extract, err := gogotd.ExtractUpdates(updates)
 
 	if err != nil {
 		return err
@@ -44,7 +44,7 @@ func (h *GotdHandler) Handle(ctx context.Context, updates tg.UpdatesClass) error
 
 	for _, update := range extract.Updates {
 
-		peerUser, ok := helpers.GetUser(extract.Entities, update)
+		peerUser, ok := gogotd.GetUser(extract.Entities, update)
 
 		if !ok {
 			continue

@@ -16,9 +16,7 @@ type telegramBotChatRenderer struct {
 
 func (r *telegramBotChatRenderer) Delete(messageId int) error {
 	removed, err := r.Bot.DeleteMessage(context.Background(), telegram.DeleteMessageParams{
-		ChatID:     r.User.ID,
-		AccessHash: r.User.AccessHash,
-		MessageID:  messageId,
+		MessageID: messageId,
 	})
 
 	if err != nil {

@@ -15,9 +15,9 @@ func Check(
 	t *testing.T,
 	renderedElements []RenderedElement,
 	outcomingMessages []outcoming.OutcomingMessage,
-	expected []RenderActionType,
+	expected []RenderAction,
 ) {
-	res0 := GetRenderActions(renderedElements, outcomingMessages, logging.Logger())
+	res0 := CreateRenderActions(renderedElements, outcomingMessages, logging.Logger())
 
 	if len(res0) != len(expected) {
 		for i, v := range res0 {
@@ -106,7 +106,7 @@ func TestGetRenderActionsInsertedMiddle(t *testing.T) {
 	Check(t,
 		[]RenderedElement{rm1, rm2, rm3},
 		[]outcoming.OutcomingMessage{m1, m2, m4, m3},
-		[]RenderActionType{
+		[]RenderAction{
 			&renderActionKeep{RenderedElement: rm1, NewElement: m1},
 			&renderActionKeep{RenderedElement: rm2, NewElement: m2},
 			&renderActionReplace{RenderedElement: rm3, NewElement: m4},
@@ -119,7 +119,7 @@ func TestGetRenderActionsInsertedFirst(t *testing.T) {
 	Check(t,
 		[]RenderedElement{rm1, rm2, rm3},
 		[]outcoming.OutcomingMessage{m4, m1, m2, m3},
-		[]RenderActionType{
+		[]RenderAction{
 			&renderActionReplace{RenderedElement: rm1, NewElement: m4},
 			&renderActionReplace{RenderedElement: rm2, NewElement: m1},
 			&renderActionReplace{RenderedElement: rm3, NewElement: m2},
@@ -132,14 +132,14 @@ func TestGetRenderActionsBasic(t *testing.T) {
 	Check(t,
 		[]RenderedElement{},
 		[]outcoming.OutcomingMessage{m1},
-		[]RenderActionType{
+		[]RenderAction{
 			&renderActionCreate{NewElement: m1},
 		})
 
 	Check(t,
 		[]RenderedElement{},
 		[]outcoming.OutcomingMessage{m1, m2, m3},
-		[]RenderActionType{
+		[]RenderAction{
 			&renderActionCreate{NewElement: m1},
 			&renderActionCreate{NewElement: m2},
 			&renderActionCreate{NewElement: m3},
@@ -152,7 +152,7 @@ func TestGetRenderActionsBasic(t *testing.T) {
 			},
 		},
 		[]outcoming.OutcomingMessage{m2},
-		[]RenderActionType{
+		[]RenderAction{
 			&renderActionKeep{
 				RenderedElement: &RenderedBotMessage{
 					OutcomingTextMessage: m2,
@@ -165,7 +165,7 @@ func TestGetRenderActionsBasic(t *testing.T) {
 	Check(t,
 		[]RenderedElement{rm1},
 		[]outcoming.OutcomingMessage{m2},
-		[]RenderActionType{
+		[]RenderAction{
 			&renderActionReplace{
 				RenderedElement: rm1,
 				NewElement:      m2,
@@ -176,7 +176,7 @@ func TestGetRenderActionsBasic(t *testing.T) {
 	Check(t,
 		[]RenderedElement{rm1},
 		[]outcoming.OutcomingMessage{},
-		[]RenderActionType{
+		[]RenderAction{
 			&renderActionRemove{
 				RenderedElement: rm1,
 			},
@@ -206,11 +206,13 @@ func TestCreate(t *testing.T) {
 	ExecuteRenderActions(
 		context.Background(),
 		re,
-		[]RenderActionType{
+		[]RenderAction{
 			&renderActionCreate{
 				NewElement: m,
 			},
 		},
-		logging.DevLogger(),
+		ExecuteRenderActionsProps{
+			Logger: logging.DevLogger(),
+		},
 	)
 }

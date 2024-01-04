@@ -19,7 +19,7 @@ type ChatState[S any, C any] struct {
 	// state of the application
 	AppState S
 
-	// state of the application
+	// local state of the application
 	treeState *component.RunResultWithStateTree
 
 	// elements visible to the user
@@ -31,6 +31,7 @@ type ChatState[S any, C any] struct {
 	// handler for callback queries
 	callbackHandler common.ChatCallbackHandler
 
+	// renderer for the messages
 	Renderer render.ChatRenderer
 
 	lock *sync.Mutex

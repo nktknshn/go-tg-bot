@@ -10,9 +10,7 @@ import (
 var ErrMessageNotFound = fmt.Errorf("message not found")
 
 type DeleteMessageParams struct {
-	ChatID     int64
-	AccessHash int64
-	MessageID  int
+	MessageID int
 }
 
 type EditMessageTextParams struct {

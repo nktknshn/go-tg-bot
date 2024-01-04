@@ -14,3 +14,11 @@ func RandInt64(randSource io.Reader) (int64, error) {
 	b := &bin.Buffer{Buf: buf[:]}
 	return b.Long()
 }
+
+func GetOrText(text string, fallback string) string {
+	if text == "" {
+		return fallback
+	}
+
+	return text
+}

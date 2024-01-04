@@ -10,12 +10,12 @@ import (
 
 type preRenderData[S any, C any] struct {
 	NextChatState ChatState[S, C]
-	RenderActions []render.RenderActionType
+	RenderActions []render.RenderAction
 	// ExecuteRender func(ctx context.Context, renderer ChatRenderer) ([]RenderedElement, error)
 }
 
 func (d *preRenderData[S, C]) RenderActionsKinds() []string {
-	return iter.Map(iter.Lift(d.RenderActions), func(a render.RenderActionType) string {
+	return iter.Map(iter.Lift(d.RenderActions), func(a render.RenderAction) string {
 		return a.RenderActionKind()
 	}).Collect()
 }
@@ -49,7 +49,7 @@ func (app *Application[S, C]) ComputeNextState(chatState *ChatState[S, C], logge
 
 	return &preRenderData[S, C]{
 		NextChatState: nextChatState,
-		RenderActions: render.GetRenderActions(
+		RenderActions: render.CreateRenderActions(
 			chatState.renderedElements,
 			res.OutcomingMessages,
 			logger,

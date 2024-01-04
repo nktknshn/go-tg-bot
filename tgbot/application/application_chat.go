@@ -71,14 +71,17 @@ func DefaultRenderFunc[S any, C any](ctx context.Context, ac *ApplicationChat[S,
 	res := ac.App.ComputeNextState(ac.State, ac.App.Loggers.Component(logger))
 
 	logger.Debug("RenderFunc computed next state",
-
 		zap.Any("RenderActions", res.RenderActionsKinds()),
 	)
 
-	rendered, err := render.ExecuteRenderActions(ctx, ac.State.Renderer, res.RenderActions, ac.Loggers.Render)
+	rendered, err := render.ExecuteRenderActions(
+		ctx,
+		ac.State.Renderer,
+		res.RenderActions,
+		render.ExecuteRenderActionsProps{Logger: logger})
 
 	if err != nil {
-		ac.Loggers.Root.Error("Error in RenderFunc", zap.Error(err))
+		logger.Error("Error in RenderFunc", zap.Error(err))
 		return err
 	}
 

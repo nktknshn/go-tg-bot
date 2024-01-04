@@ -39,6 +39,19 @@ func (b *GotdTelegramBot) DeleteMessage(ctx context.Context, params telegram.Del
 	return affected.PtsCount > 0, nil
 }
 
+func (b *GotdTelegramBot) DeleteMultipleMessages(ctx context.Context, params []telegram.DeleteMessageParams) (bool, error) {
+	affected, err := b.client.MessagesDeleteMessages(ctx, &tg.MessagesDeleteMessagesRequest{
+		ID:     []int{params[0].MessageID},
+		Revoke: true,
+	})
+
+	if err != nil {
+		return false, err
+	}
+
+	return affected.PtsCount > 0, nil
+}
+
 // impletentation of TelegramBot
 func (b *GotdTelegramBot) EditMessageText(ctx context.Context, params telegram.EditMessageTextParams) (*tg.Message, error) {
 

@@ -56,7 +56,7 @@ type WelcomState struct {
 }
 
 type Welcom struct {
-	Username string `tgbot:"ctx"`
+	Username string
 	State    component.State[WelcomState]
 }
 
