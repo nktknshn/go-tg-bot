@@ -3,6 +3,7 @@ package todo_test
 import (
 	"os"
 	"path"
+	"strings"
 	"testing"
 	"time"
 
@@ -10,7 +11,6 @@ import (
 	"github.com/nktknshn/go-tg-bot/emulator"
 	"github.com/nktknshn/go-tg-bot/tgbot/dispatcher"
 	"github.com/nktknshn/go-tg-bot/tgbot/logging"
-	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
 	"github.com/nktknshn/go-tg-bot/emulator/helpers"
@@ -19,12 +19,13 @@ import (
 )
 
 type TestScope struct {
-	loggers *logging.TgbotLoggers
-	tempDir string
-	app     *todo.App
-	disp    *dispatcher.ChatsDispatcher
-	bot     *emulator.FakeBot
-	user1   *emulator.FakeBotUser
+	loggers   logging.Loggers
+	logSystem *logging.LogsSystem
+	tempDir   string
+	app       *todo.App
+	disp      *dispatcher.ChatsDispatcher
+	bot       *emulator.FakeBot
+	user1     *emulator.FakeBotUser
 }
 
 func NewTestScope(t *testing.T) *TestScope {
@@ -33,20 +34,21 @@ func NewTestScope(t *testing.T) *TestScope {
 
 	usersJson := path.Join(tempDir, "users.json")
 
-	core := zapcore.NewCore(
-		zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()),
-		zapcore.AddSync(os.Stderr),
-		zap.DebugLevel,
-	)
+	baseLogger := logging.Logger()
 
-	baseLogger := zap.New(core)
-
-	logSystem := logging.NewLogsSystem(
+	logSystem, err := logging.NewLogsSystem(
 		baseLogger,
 		tempDir,
+		logging.LogsSystemProps{
+			TeeUserToConsole: true,
+		},
 	)
 
-	loggers := logSystem.TgbotLoggers()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	loggers := logSystem.Loggers()
 
 	app := todo.TodoApp(
 		todo.TodoAppDeps{
@@ -57,7 +59,7 @@ func NewTestScope(t *testing.T) *TestScope {
 	app.SetLoggers(loggers)
 
 	d := dispatcher.ForApplication(app)
-	d.SetLogger(loggers.ChatsDistpatcher(loggers.Base))
+	d.SetLogger(loggers.ChatsDispatcher())
 
 	bot := emulator.NewFakeBot()
 	bot.SetDispatcher(d)
@@ -70,17 +72,19 @@ func NewTestScope(t *testing.T) *TestScope {
 		})
 
 	return &TestScope{
-		loggers: loggers,
-		tempDir: tempDir,
-		app:     app,
-		disp:    d,
-		bot:     bot,
-		user1:   user1,
+		loggers:   loggers,
+		tempDir:   tempDir,
+		app:       app,
+		disp:      d,
+		bot:       bot,
+		user1:     user1,
+		logSystem: logSystem,
 	}
 }
 
 func TestLogs(t *testing.T) {
 	scope := NewTestScope(t)
+
 	scope.user1.SendTextMessage("/start")
 
 	time.Sleep(200 * time.Millisecond)
@@ -97,10 +101,18 @@ func TestLogs(t *testing.T) {
 
 func TestTodoAppInit(t *testing.T) {
 	scope := NewTestScope(t)
+
+	scope.loggers.SetFilter(func(e zapcore.Entry, f []zapcore.Field) bool {
+		return !strings.Contains(e.LoggerName, logging.LoggerNameComponent)
+	})
+
 	scope.user1.SendTextMessage("/start")
 
 	time.Sleep(200 * time.Millisecond)
 
+	scope.user1.SendCallbackQuery("Go to main")
+
+	time.Sleep(200 * time.Millisecond)
 }
 
 func TestTodoApp(t *testing.T) {
@@ -116,7 +128,7 @@ func TestTodoApp(t *testing.T) {
 
 	btest.AssertDisplayedMessages(t, user1, []helpers.MessageSimple{{
 		Message: "Welcome User One @user1",
-		Buttons: [][]helpers.ButtonSimpl{{{
+		Buttons: helpers.ButtonsSimpl{{{
 			Text: "Go to main",
 			Data: "Go to main",
 		}}}}})

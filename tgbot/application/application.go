@@ -42,7 +42,7 @@ type Application[S any, C any] struct {
 
 	HandleCallback HandleCallbackFunc[S, C]
 
-	CreateGlobalContext func(state *ChatState[S, C]) C
+	CreateGlobalContext func(state *ApplicationChatState[S, C]) C
 
 	// not used currently
 	HandleInit HandleInitFunc[S]
@@ -54,7 +54,7 @@ type Application[S any, C any] struct {
 
 	CreateChatRenderer func(*telegram.TelegramUpdateContext) render.ChatRenderer
 
-	Loggers *logging.TgbotLoggers
+	Loggers logging.Loggers
 }
 
 type NewApplicationProps[S any, C any] struct {
@@ -63,10 +63,10 @@ type NewApplicationProps[S any, C any] struct {
 	HandleInit          HandleInitFunc[S]
 	RenderFunc          RenderFuncType[S, C]
 	CreateRenderer      func(*telegram.TelegramUpdateContext) render.ChatRenderer
-	CreateGlobalContext func(*ChatState[S, C]) C
+	CreateGlobalContext func(*ApplicationChatState[S, C]) C
 }
 
-func (app *Application[S, C]) globalContext(chatState *ChatState[S, C]) component.GlobalContext[C] {
+func (app *Application[S, C]) globalContext(chatState *ApplicationChatState[S, C]) component.GlobalContext[C] {
 	if app.CreateGlobalContext != nil {
 		ctxValue := app.CreateGlobalContext(chatState)
 		return component.NewGlobalContextTyped[C](ctxValue)
@@ -122,7 +122,7 @@ func New[S any, C any](
 		}
 	}
 
-	loggers := &logging.DefaultLoggers
+	loggers := &logging.LoggersDefault{}
 
 	return &Application[S, C]{
 		HandleInit:           handleInit,

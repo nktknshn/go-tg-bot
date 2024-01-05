@@ -9,7 +9,7 @@ import (
 )
 
 type preRenderData[S any, C any] struct {
-	NextChatState ChatState[S, C]
+	NextChatState ApplicationChatState[S, C]
 	RenderActions []render.RenderAction
 	// ExecuteRender func(ctx context.Context, renderer ChatRenderer) ([]RenderedElement, error)
 }
@@ -25,7 +25,7 @@ type ComputeNextStateProps struct {
 }
 
 // ComputeNextState computes the output based on the state
-func (app *Application[S, C]) ComputeNextState(chatState *ChatState[S, C], props ComputeNextStateProps) *preRenderData[S, C] {
+func (app *Application[S, C]) ComputeNextState(chatState *ApplicationChatState[S, C], props ComputeNextStateProps) *preRenderData[S, C] {
 
 	comp := app.StateToComp(chatState.AppState)
 
@@ -40,7 +40,7 @@ func (app *Application[S, C]) ComputeNextState(chatState *ChatState[S, C], props
 
 	res := outcoming.ElementsToMessagesAndHandlers(createElementsResult.Elements)
 
-	nextChatState := ChatState[S, C]{
+	nextChatState := ApplicationChatState[S, C]{
 		ChatID:           chatState.ChatID,
 		AppState:         chatState.AppState,
 		renderedElements: chatState.renderedElements,

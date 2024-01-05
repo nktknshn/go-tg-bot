@@ -10,7 +10,7 @@ import (
 
 // Handles some internal actions sent from handlers
 func internalActionHandle[S any, C any](ac *ApplicationChat[S, C], tc *telegram.TelegramUpdateContext, action any) {
-	logger := ac.Loggers.Action
+	logger := ac.Loggers.Action()
 
 	logger.Debug("HandleAction", zap.Any("action", reflection.ReflectStructName(action)))
 

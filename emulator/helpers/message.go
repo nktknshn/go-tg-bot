@@ -6,11 +6,9 @@ import (
 	"github.com/gotd/td/tg"
 )
 
-type ReplyMarkupInlineSimple = [][]ButtonSimpl
-
 type MessageSimple struct {
 	Message string
-	Buttons ReplyMarkupInlineSimple
+	Buttons ButtonsSimpl
 }
 
 func (mr MessageSimple) ToJson() string {
@@ -28,7 +26,10 @@ type ButtonSimpl struct {
 	Data string
 }
 
-func ReplyMarkupAsSimple(rm tg.ReplyMarkupClass) ReplyMarkupInlineSimple {
+// 2d array of buttons
+type ButtonsSimpl = [][]ButtonSimpl
+
+func ReplyMarkupAsSimple(rm tg.ReplyMarkupClass) ButtonsSimpl {
 
 	m, ok := rm.(*tg.ReplyInlineMarkup)
 

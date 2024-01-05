@@ -18,6 +18,7 @@ type ChatHandlerFactory interface {
 
 type ChatsDispatcherProps struct {
 	ChatFactory ChatHandlerFactory
+	loggers     logging.Loggers
 }
 
 // ChatsDispatcher is a map of chats
@@ -27,7 +28,9 @@ type ChatsDispatcher struct {
 	chatHandlerFactory ChatHandlerFactory
 
 	chatHandlers map[int64]ChatHandler
-	logger       *zap.Logger
+
+	logger  *zap.Logger
+	loggers logging.Loggers
 
 	chatLocks map[int64]*sync.Mutex
 
@@ -37,10 +40,20 @@ type ChatsDispatcher struct {
 }
 
 func NewChatsDispatcher(props *ChatsDispatcherProps) *ChatsDispatcher {
+
+	loggers := props.loggers
+
+	if props.loggers == nil {
+		loggers = logging.NewLoggersDefault(logging.Logger())
+	}
+
+	logger := loggers.ChatsDispatcher()
+
 	return &ChatsDispatcher{
 		chatHandlers:       make(map[int64]ChatHandler),
 		chatHandlerFactory: props.ChatFactory,
-		logger:             logging.Logger(),
+		logger:             logger,
+		loggers:            loggers,
 		chatLocks:          make(map[int64]*sync.Mutex),
 		stateLock:          &sync.Mutex{},
 		randReader:         rand.Reader,
@@ -65,16 +78,6 @@ func (cd *ChatsDispatcher) SetLogger(logger *zap.Logger) {
 	cd.logger = logger
 }
 
-func (cd *ChatsDispatcher) newTelegramContextLogger(bot telegram.TelegramBot, chatID int64, update telegram.BotUpdate, updateID int64) *zap.Logger {
-
-	return logging.Logger().
-		Named("TelegramUpdateContext").
-		With(
-			zap.Int64("chatID", chatID),
-			zap.Int64("updateID", updateID),
-		)
-}
-
 func (cd *ChatsDispatcher) createChatHandler(tc *telegram.TelegramUpdateContext) ChatHandler {
 	chat := cd.chatHandlerFactory.CreateChatHandler(tc)
 	cd.chatHandlers[tc.ChatID] = chat
@@ -85,7 +88,7 @@ func (cd *ChatsDispatcher) createTelegramContext(ctx context.Context, bot telegr
 
 	chatID := update.User.ID
 	updateID, err := helpers.RandInt64(cd.randReader)
-	logger := cd.newTelegramContextLogger(bot, chatID, update, updateID)
+	logger := cd.loggers.Update(update, updateID)
 
 	if err != nil {
 		cd.logger.Error("Failed to generate update id. UpdateID will be 0", zap.Error(err))
@@ -115,6 +118,7 @@ func (cd *ChatsDispatcher) GetChatHandler(chatID int64) (ChatHandler, bool) {
 	return chat, ok
 }
 
+// run in the goroutine
 func (cd *ChatsDispatcher) handle(ctx context.Context, bot telegram.TelegramBot, update telegram.BotUpdate, chatLock *sync.Mutex) {
 
 	tc := cd.createTelegramContext(ctx, bot, update)
@@ -122,6 +126,7 @@ func (cd *ChatsDispatcher) handle(ctx context.Context, bot telegram.TelegramBot,
 	chatID := tc.ChatID
 	logger := cd.logger.With(zap.Int64("ChatID", chatID))
 
+	// ready for the next update
 	defer chatLock.Unlock()
 
 	chat, ok := cd.GetChatHandler(chatID)

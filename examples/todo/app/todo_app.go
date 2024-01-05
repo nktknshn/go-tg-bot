@@ -85,7 +85,7 @@ func TodoApp(deps TodoAppDeps) *App {
 		actionsReducer,
 		// create global context
 	).WithGlobalContext(
-		func(cs *application.ChatState[TodoState, TodoGlobalContext]) TodoGlobalContext {
+		func(cs *application.ApplicationChatState[TodoState, TodoGlobalContext]) TodoGlobalContext {
 			return TodoGlobalContext{
 				TodoList: cs.AppState.List,
 				Username: cs.AppState.Username,

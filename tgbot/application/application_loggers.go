@@ -14,6 +14,6 @@ type ApplicationChatLoggers struct {
 	Render    *zap.Logger
 }
 
-func (app *Application[S, C]) SetLoggers(loggers *logging.TgbotLoggers) {
+func (app *Application[S, C]) SetLoggers(loggers logging.Loggers) {
 	app.Loggers = loggers
 }

@@ -8,8 +8,11 @@ import (
 func ForApplication[S, C any](app *application.Application[S, C]) *ChatsDispatcher {
 	return NewChatsDispatcher(&ChatsDispatcherProps{
 		ChatFactory: &factoryFromFunc{
-			f: func(tuc *telegram.TelegramUpdateContext) ChatHandler {
-				return NewApplicationChatHandler[S, C](app, tuc)
+			f: func(tc *telegram.TelegramUpdateContext) ChatHandler {
+				return application.NewApplicationChat[S, C](
+					app,
+					tc,
+				)
 			},
 		},
 	})

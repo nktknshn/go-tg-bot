@@ -9,4 +9,7 @@ const (
 	LoggerNameComponent       = "Component"
 	LoggerNameLockState       = "LockState"
 	LoggerNameLogsSystem      = "LogsSystem"
+	LoggerNameChatsDispatcher = "ChatsDispatcher"
+	LoggerNameTgbot           = "Tgbot"
+	LoggerNameUpdate          = "Update"
 )

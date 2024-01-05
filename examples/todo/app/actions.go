@@ -29,7 +29,7 @@ var actionsReducer = func(ac *AppChat, tc *tgbot.TelegramUpdateContext, a any) {
 		appState.CurrentPage = a.Page
 
 	case ActionAddTodoItem:
-		ac.Loggers.Root.Info("adding item",
+		ac.Loggers.Action().Info("adding item",
 			zap.String("text", a.Text),
 			zap.Int("len", len(appState.List.Items)),
 		)
